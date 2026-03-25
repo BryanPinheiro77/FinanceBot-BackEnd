@@ -1,4 +1,4 @@
-package com.financebot.config;
+package com.financebot.security.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
