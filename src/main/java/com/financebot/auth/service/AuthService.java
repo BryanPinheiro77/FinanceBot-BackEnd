@@ -3,6 +3,7 @@ package com.financebot.auth.service;
 import com.financebot.auth.dto.AuthResponse;
 import com.financebot.auth.dto.LoginRequest;
 import com.financebot.auth.dto.RegisterRequest;
+import com.financebot.security.jwt.JwtService;
 import com.financebot.user.domain.User;
 import com.financebot.user.domain.UserRole;
 import com.financebot.user.repository.UserRepository;
@@ -14,10 +15,14 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AuthService(UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       JwtService jwtService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -32,9 +37,10 @@ public class AuthService {
         user.setRole(UserRole.USER);
 
         User savedUser = userRepository.save(user);
+        String token = jwtService.generateToken(savedUser);
 
         return new AuthResponse(
-                null,
+                token,
                 "Bearer",
                 savedUser.getId(),
                 savedUser.getName(),
@@ -53,8 +59,10 @@ public class AuthService {
             throw new RuntimeException("Email ou senha inválidos");
         }
 
+        String token = jwtService.generateToken(user);
+
         return new AuthResponse(
-                null,
+                token,
                 "Bearer",
                 user.getId(),
                 user.getName(),
