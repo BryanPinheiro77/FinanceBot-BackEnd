@@ -1,4 +1,6 @@
 package com.financebot.user.domain;
 
-public class UserRole {
+public enum UserRole {
+    USER,
+    ADMIN
 }
