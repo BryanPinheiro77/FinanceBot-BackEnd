@@ -1,25 +1,29 @@
 package com.financebot.user.domain;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
 
 @Entity
 @Table(
         name = "users",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_users_email", columnNames = "email")
+                @UniqueConstraint(name = "uk_users_email", columnNames = "email"),
+                @UniqueConstraint(name = "uk_users_telegram_id", columnNames = "telegram_id")
         }
 )
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-public class User {
+public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,9 +31,6 @@ public class User {
 
     @Column(name = "name", nullable = false, length = 120)
     private String name;
-
-    @Column(name = "telegram_id", unique = true)
-    private Long telegramId;
 
     @Column(name = "email", nullable = false, length = 150)
     private String email;
@@ -41,16 +42,30 @@ public class User {
     @Column(name = "role", nullable = false, length = 30)
     private UserRole role;
 
+    @Column(name = "telegram_id", unique = true)
+    private Long telegramId;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     public void prePersist() {
-        LocalDateTime now = LocalDateTime.now();
-        this.createdAt = now;
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
 
         if (this.role == null) {
             this.role = UserRole.USER;
         }
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+    }
+
+    @Override
+    public String getUsername() {
+        return this.email;
     }
 }
