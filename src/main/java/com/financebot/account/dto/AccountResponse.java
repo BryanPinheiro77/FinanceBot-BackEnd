@@ -10,6 +10,7 @@ public record AccountResponse(
         String name,
         AccountType type,
         BigDecimal initialBalance,
+        BigDecimal currentBalance,
         LocalDateTime createdAt
 ) {
 }

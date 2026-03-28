@@ -6,6 +6,8 @@ import com.financebot.account.dto.CreateAccountRequest;
 import com.financebot.account.dto.UpdateAccountRequest;
 import com.financebot.account.mapper.AccountMapper;
 import com.financebot.account.repository.AccountRepository;
+import com.financebot.transaction.domain.TransactionType;
+import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.user.domain.User;
 import com.financebot.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -23,6 +25,7 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
+    private final TransactionRepository transactionRepository;
     private final AccountMapper accountMapper;
 
     @Transactional
@@ -36,7 +39,10 @@ public class AccountService {
         account.setUser(user);
 
         Account saved = accountRepository.save(account);
-        return accountMapper.toResponse(saved);
+
+        BigDecimal currentBalance = calculateCurrentBalance(saved);
+
+        return accountMapper.toResponse(saved, currentBalance);
     }
 
     @Transactional(readOnly = true)
@@ -45,7 +51,7 @@ public class AccountService {
 
         return accountRepository.findAllByUserIdOrderByNameAsc(user.getId())
                 .stream()
-                .map(accountMapper::toResponse)
+                .map(account -> accountMapper.toResponse(account, calculateCurrentBalance(account)))
                 .toList();
     }
 
@@ -56,7 +62,9 @@ public class AccountService {
         Account account = accountRepository.findByIdAndUserId(id, user.getId())
                 .orElseThrow(() -> new EntityNotFoundException("Account not found"));
 
-        return accountMapper.toResponse(account);
+        BigDecimal currentBalance = calculateCurrentBalance(account);
+
+        return accountMapper.toResponse(account, currentBalance);
     }
 
     @Transactional
@@ -77,7 +85,10 @@ public class AccountService {
         accountMapper.updateEntity(request, account);
 
         Account updated = accountRepository.save(account);
-        return accountMapper.toResponse(updated);
+
+        BigDecimal currentBalance = calculateCurrentBalance(updated);
+
+        return accountMapper.toResponse(updated, currentBalance);
     }
 
     @Transactional
@@ -88,6 +99,24 @@ public class AccountService {
                 .orElseThrow(() -> new EntityNotFoundException("Account not found"));
 
         accountRepository.delete(account);
+    }
+
+    private BigDecimal calculateCurrentBalance(Account account) {
+        BigDecimal totalIncome = transactionRepository.sumAmountByAccountAndUserAndType(
+                account.getId(),
+                account.getUser().getId(),
+                TransactionType.INCOME
+        );
+
+        BigDecimal totalExpense = transactionRepository.sumAmountByAccountAndUserAndType(
+                account.getId(),
+                account.getUser().getId(),
+                TransactionType.EXPENSE
+        );
+
+        return account.getInitialBalance()
+                .add(totalIncome)
+                .subtract(totalExpense);
     }
 
     private void validateDuplicateAccountName(String name, Long userId) {

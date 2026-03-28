@@ -1,4 +1,6 @@
 package com.financebot.transaction.domain;
 
-public class TransactionType {
+public enum TransactionType {
+    INCOME,
+    EXPENSE
 }
