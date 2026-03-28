@@ -1,4 +1,120 @@
 package com.financebot.account.service;
 
+import com.financebot.account.domain.Account;
+import com.financebot.account.dto.AccountResponse;
+import com.financebot.account.dto.CreateAccountRequest;
+import com.financebot.account.dto.UpdateAccountRequest;
+import com.financebot.account.mapper.AccountMapper;
+import com.financebot.account.repository.AccountRepository;
+import com.financebot.user.domain.User;
+import com.financebot.user.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
 public class AccountService {
+
+    private final AccountRepository accountRepository;
+    private final UserRepository userRepository;
+    private final AccountMapper accountMapper;
+
+    @Transactional
+    public AccountResponse create(CreateAccountRequest request, Authentication authentication) {
+        User user = getAuthenticatedUser(authentication);
+
+        validateDuplicateAccountName(request.name(), user.getId());
+        validateInitialBalance(request.initialBalance());
+
+        Account account = accountMapper.toEntity(request);
+        account.setUser(user);
+
+        Account saved = accountRepository.save(account);
+        return accountMapper.toResponse(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AccountResponse> findAll(Authentication authentication) {
+        User user = getAuthenticatedUser(authentication);
+
+        return accountRepository.findAllByUserIdOrderByNameAsc(user.getId())
+                .stream()
+                .map(accountMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public AccountResponse findById(Long id, Authentication authentication) {
+        User user = getAuthenticatedUser(authentication);
+
+        Account account = accountRepository.findByIdAndUserId(id, user.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+
+        return accountMapper.toResponse(account);
+    }
+
+    @Transactional
+    public AccountResponse update(Long id, UpdateAccountRequest request, Authentication authentication) {
+        User user = getAuthenticatedUser(authentication);
+
+        Account account = accountRepository.findByIdAndUserId(id, user.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+
+        boolean changedName = !account.getName().equalsIgnoreCase(request.name().trim());
+
+        if (changedName) {
+            validateDuplicateAccountName(request.name(), user.getId());
+        }
+
+        validateInitialBalance(request.initialBalance());
+
+        accountMapper.updateEntity(request, account);
+
+        Account updated = accountRepository.save(account);
+        return accountMapper.toResponse(updated);
+    }
+
+    @Transactional
+    public void delete(Long id, Authentication authentication) {
+        User user = getAuthenticatedUser(authentication);
+
+        Account account = accountRepository.findByIdAndUserId(id, user.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+
+        accountRepository.delete(account);
+    }
+
+    private void validateDuplicateAccountName(String name, Long userId) {
+        boolean alreadyExists = accountRepository.existsByNameIgnoreCaseAndUserId(
+                name.trim(),
+                userId
+        );
+
+        if (alreadyExists) {
+            throw new IllegalArgumentException("Account already exists for this user");
+        }
+    }
+
+    private void validateInitialBalance(BigDecimal initialBalance) {
+        if (initialBalance == null) {
+            throw new IllegalArgumentException("Initial balance is required");
+        }
+
+        if (initialBalance.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Initial balance cannot be negative");
+        }
+    }
+
+    private User getAuthenticatedUser(Authentication authentication) {
+        String email = authentication.getName();
+
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("Authenticated user not found"));
+    }
 }
