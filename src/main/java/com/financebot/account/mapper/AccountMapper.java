@@ -6,6 +6,8 @@ import com.financebot.account.dto.CreateAccountRequest;
 import com.financebot.account.dto.UpdateAccountRequest;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+
 @Component
 public class AccountMapper {
 
@@ -23,12 +25,13 @@ public class AccountMapper {
         account.setInitialBalance(dto.initialBalance());
     }
 
-    public AccountResponse toResponse(Account account) {
+    public AccountResponse toResponse(Account account, BigDecimal currentBalance) {
         return new AccountResponse(
                 account.getId(),
                 account.getName(),
                 account.getType(),
                 account.getInitialBalance(),
+                currentBalance,
                 account.getCreatedAt()
         );
     }
