@@ -7,7 +7,9 @@ import com.financebot.category.domain.CategoryType;
 import com.financebot.category.repository.CategoryRepository;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
+import com.financebot.transaction.dto.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.dto.CreateTransactionRequest;
+import com.financebot.transaction.dto.InstallmentTransactionResponse;
 import com.financebot.transaction.dto.TransactionFilter;
 import com.financebot.transaction.dto.TransactionResponse;
 import com.financebot.transaction.dto.UpdateTransactionRequest;
@@ -24,7 +26,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -49,9 +56,85 @@ public class TransactionService {
         transaction.setUser(user);
         transaction.setAccount(account);
         transaction.setCategory(category);
+        transaction.setInstallment(false);
+        transaction.setInstallmentNumber(null);
+        transaction.setTotalInstallments(null);
+        transaction.setInstallmentGroupId(null);
 
         Transaction savedTransaction = transactionRepository.save(transaction);
         return transactionMapper.toResponse(savedTransaction);
+    }
+
+    @Transactional
+    public InstallmentTransactionResponse createInstallment(
+            CreateInstallmentTransactionRequest request,
+            Authentication authentication
+    ) {
+        User user = getAuthenticatedUser(authentication);
+
+        if (request.type() != TransactionType.EXPENSE) {
+            throw new IllegalArgumentException("Installment transactions are allowed only for expenses");
+        }
+
+        if (request.totalInstallments() == null || request.totalInstallments() < 2) {
+            throw new IllegalArgumentException("Total installments must be at least 2");
+        }
+
+        Account account = getUserAccount(request.accountId(), user.getId());
+        Category category = getUserCategory(request.categoryId(), user.getId());
+
+        validateCategoryMatchesTransactionType(category, request.type());
+
+        String installmentGroupId = UUID.randomUUID().toString();
+        int totalInstallments = request.totalInstallments();
+        BigDecimal totalAmount = request.totalAmount();
+
+        BigDecimal installmentAmount = totalAmount.divide(
+                BigDecimal.valueOf(totalInstallments),
+                2,
+                RoundingMode.HALF_UP
+        );
+
+        BigDecimal accumulated = BigDecimal.ZERO;
+        List<Transaction> transactions = new ArrayList<>();
+
+        for (int i = 1; i <= totalInstallments; i++) {
+            BigDecimal currentAmount = installmentAmount;
+
+            if (i < totalInstallments) {
+                accumulated = accumulated.add(currentAmount);
+            } else {
+                currentAmount = totalAmount.subtract(accumulated);
+            }
+
+            Transaction transaction = new Transaction();
+            transaction.setAmount(currentAmount);
+            transaction.setDescription(request.description().trim() + " - " + i + "/" + totalInstallments);
+            transaction.setDate(request.firstInstallmentDate().plusMonths(i - 1));
+            transaction.setType(request.type());
+            transaction.setSourceType(request.sourceType());
+            transaction.setUser(user);
+            transaction.setAccount(account);
+            transaction.setCategory(category);
+            transaction.setInstallment(true);
+            transaction.setInstallmentNumber(i);
+            transaction.setTotalInstallments(totalInstallments);
+            transaction.setInstallmentGroupId(installmentGroupId);
+
+            transactions.add(transaction);
+        }
+
+        List<Transaction> savedTransactions = transactionRepository.saveAll(transactions);
+
+        List<TransactionResponse> responses = savedTransactions.stream()
+                .map(transactionMapper::toResponse)
+                .toList();
+
+        return new InstallmentTransactionResponse(
+                installmentGroupId,
+                totalInstallments,
+                responses
+        );
     }
 
     @Transactional(readOnly = true)

@@ -2,7 +2,9 @@ package com.financebot.transaction.controller;
 
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.TransactionType;
+import com.financebot.transaction.dto.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.dto.CreateTransactionRequest;
+import com.financebot.transaction.dto.InstallmentTransactionResponse;
 import com.financebot.transaction.dto.TransactionFilter;
 import com.financebot.transaction.dto.TransactionResponse;
 import com.financebot.transaction.dto.UpdateTransactionRequest;
@@ -32,6 +34,15 @@ public class TransactionController {
             Authentication authentication
     ) {
         return transactionService.create(request, authentication);
+    }
+
+    @PostMapping("/installments")
+    @ResponseStatus(HttpStatus.CREATED)
+    public InstallmentTransactionResponse createInstallment(
+            @RequestBody @Valid CreateInstallmentTransactionRequest request,
+            Authentication authentication
+    ) {
+        return transactionService.createInstallment(request, authentication);
     }
 
     @GetMapping

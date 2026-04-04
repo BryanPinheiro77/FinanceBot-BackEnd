@@ -40,6 +40,18 @@ public class Transaction {
     @Column(name = "source_type", nullable = false, length = 20)
     private SourceType sourceType;
 
+    @Column(name = "is_installment", nullable = false)
+    private Boolean installment = false;
+
+    @Column(name = "installment_number")
+    private Integer installmentNumber;
+
+    @Column(name = "total_installments")
+    private Integer totalInstallments;
+
+    @Column(name = "installment_group_id", length = 100)
+    private String installmentGroupId;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
             name = "user_id",
@@ -79,6 +91,10 @@ public class Transaction {
 
         if (this.sourceType == null) {
             this.sourceType = SourceType.WEB;
+        }
+
+        if (this.installment == null) {
+            this.installment = false;
         }
     }
 }
