@@ -49,6 +49,12 @@ public class User implements UserDetails {
     @Column(name = "telegram_id", unique = true)
     private Long telegramId;
 
+    @Column(name = "telegram_link_code", length = 30)
+    private String telegramLinkCode;
+
+    @Column(name = "telegram_link_code_expires_at")
+    private LocalDateTime telegramLinkCodeExpiresAt;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
