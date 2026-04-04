@@ -1,4 +1,4 @@
-package com.financebot.transaction.dto;
+package com.financebot.transaction.dto.response;
 
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.TransactionType;
