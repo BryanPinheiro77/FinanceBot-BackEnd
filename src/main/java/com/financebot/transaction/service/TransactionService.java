@@ -20,9 +20,11 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
 import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -48,13 +50,19 @@ public class TransactionService {
         transaction.setAccount(account);
         transaction.setCategory(category);
 
-        Transaction saved = transactionRepository.save(transaction);
-        return transactionMapper.toResponse(saved);
+        Transaction savedTransaction = transactionRepository.save(transaction);
+        return transactionMapper.toResponse(savedTransaction);
     }
 
     @Transactional(readOnly = true)
-    public Page<TransactionResponse> findAll(TransactionFilter filter, Authentication authentication, Pageable pageable) {
+    public Page<TransactionResponse> findAll(
+            TransactionFilter filter,
+            Authentication authentication,
+            Pageable pageable
+    ) {
         User user = getAuthenticatedUser(authentication);
+
+        validatePeriod(filter.startDate(), filter.endDate());
 
         return transactionRepository.findAll(
                         TransactionSpecification.withFilters(user.getId(), filter),
@@ -67,9 +75,7 @@ public class TransactionService {
     public TransactionResponse findById(Long id, Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
 
-        Transaction transaction = transactionRepository.findByIdAndUserId(id, user.getId())
-                .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
-
+        Transaction transaction = getUserTransaction(id, user.getId());
         return transactionMapper.toResponse(transaction);
     }
 
@@ -77,9 +83,7 @@ public class TransactionService {
     public TransactionResponse update(Long id, UpdateTransactionRequest request, Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
 
-        Transaction transaction = transactionRepository.findByIdAndUserId(id, user.getId())
-                .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
-
+        Transaction transaction = getUserTransaction(id, user.getId());
         Account account = getUserAccount(request.accountId(), user.getId());
         Category category = getUserCategory(request.categoryId(), user.getId());
 
@@ -89,28 +93,39 @@ public class TransactionService {
         transaction.setAccount(account);
         transaction.setCategory(category);
 
-        Transaction updated = transactionRepository.save(transaction);
-        return transactionMapper.toResponse(updated);
+        Transaction updatedTransaction = transactionRepository.save(transaction);
+        return transactionMapper.toResponse(updatedTransaction);
     }
 
     @Transactional
     public void delete(Long id, Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
 
-        Transaction transaction = transactionRepository.findByIdAndUserId(id, user.getId())
-                .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
-
+        Transaction transaction = getUserTransaction(id, user.getId());
         transactionRepository.delete(transaction);
     }
 
     private void validateCategoryMatchesTransactionType(Category category, TransactionType transactionType) {
-        boolean isValid =
-                (category.getType() == CategoryType.INCOME && transactionType == TransactionType.INCOME) ||
-                        (category.getType() == CategoryType.EXPENSE && transactionType == TransactionType.EXPENSE);
+        boolean isIncomeMatch =
+                category.getType() == CategoryType.INCOME && transactionType == TransactionType.INCOME;
 
-        if (!isValid) {
+        boolean isExpenseMatch =
+                category.getType() == CategoryType.EXPENSE && transactionType == TransactionType.EXPENSE;
+
+        if (!isIncomeMatch && !isExpenseMatch) {
             throw new IllegalArgumentException("Category type does not match transaction type");
         }
+    }
+
+    private void validatePeriod(LocalDate startDate, LocalDate endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("Start date cannot be after end date");
+        }
+    }
+
+    private Transaction getUserTransaction(Long transactionId, Long userId) {
+        return transactionRepository.findByIdAndUserId(transactionId, userId)
+                .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
     }
 
     private Account getUserAccount(Long accountId, Long userId) {
@@ -124,9 +139,11 @@ public class TransactionService {
     }
 
     private User getAuthenticatedUser(Authentication authentication) {
-        String email = authentication.getName();
+        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
+            throw new IllegalArgumentException("Authenticated user is invalid");
+        }
 
-        return userRepository.findByEmail(email)
+        return userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new EntityNotFoundException("Authenticated user not found"));
     }
 }
