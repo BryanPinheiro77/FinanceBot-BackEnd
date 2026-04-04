@@ -1,13 +1,17 @@
 package com.financebot.transaction.controller;
 
+import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
+import com.financebot.analysis.dto.response.InstallmentTransactionCreationResponse;
+import com.financebot.analysis.dto.response.TransactionCreationResponse;
+import com.financebot.analysis.service.FinancialAnalysisService;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.TransactionType;
-import com.financebot.transaction.dto.CreateInstallmentTransactionRequest;
-import com.financebot.transaction.dto.CreateTransactionRequest;
-import com.financebot.transaction.dto.InstallmentTransactionResponse;
+import com.financebot.transaction.dto.request.CreateInstallmentTransactionRequest;
+import com.financebot.transaction.dto.request.CreateTransactionRequest;
+import com.financebot.transaction.dto.response.InstallmentTransactionResponse;
 import com.financebot.transaction.dto.TransactionFilter;
-import com.financebot.transaction.dto.TransactionResponse;
-import com.financebot.transaction.dto.UpdateTransactionRequest;
+import com.financebot.transaction.dto.response.TransactionResponse;
+import com.financebot.transaction.dto.request.UpdateTransactionRequest;
 import com.financebot.transaction.service.TransactionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,23 +30,32 @@ import java.time.LocalDate;
 public class TransactionController {
 
     private final TransactionService transactionService;
+    private final FinancialAnalysisService financialAnalysisService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public TransactionResponse create(
+    public TransactionCreationResponse create(
             @RequestBody @Valid CreateTransactionRequest request,
             Authentication authentication
     ) {
-        return transactionService.create(request, authentication);
+        TransactionResponse transaction = transactionService.create(request, authentication);
+        FinancialCommitmentResponse analysis = financialAnalysisService.getFinancialCommitment(authentication);
+
+        return new TransactionCreationResponse(transaction, analysis);
     }
 
     @PostMapping("/installments")
     @ResponseStatus(HttpStatus.CREATED)
-    public InstallmentTransactionResponse createInstallment(
+    public InstallmentTransactionCreationResponse createInstallment(
             @RequestBody @Valid CreateInstallmentTransactionRequest request,
             Authentication authentication
     ) {
-        return transactionService.createInstallment(request, authentication);
+        InstallmentTransactionResponse installment =
+                transactionService.createInstallment(request, authentication);
+
+        FinancialCommitmentResponse analysis = financialAnalysisService.getFinancialCommitment(authentication);
+
+        return new InstallmentTransactionCreationResponse(installment, analysis);
     }
 
     @GetMapping
