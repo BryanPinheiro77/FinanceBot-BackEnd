@@ -1,4 +1,9 @@
 package com.financebot.account.domain;
 
-public class AccountType {
+public enum AccountType {
+    CHECKING_ACCOUNT,
+    SAVINGS_ACCOUNT,
+    CASH,
+    INVESTMENT,
+    DIGITAL_WALLET
 }
