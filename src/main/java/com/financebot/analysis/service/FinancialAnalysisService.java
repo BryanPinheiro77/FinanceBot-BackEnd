@@ -6,6 +6,8 @@ import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.category.domain.Category;
 import com.financebot.category.domain.CategoryType;
 import com.financebot.category.repository.CategoryRepository;
+import com.financebot.recurring.domain.RecurringTransaction;
+import com.financebot.recurring.repository.RecurringTransactionRepository;
 import com.financebot.transaction.domain.TransactionType;
 import com.financebot.transaction.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.dto.request.CreateTransactionRequest;
@@ -22,12 +24,14 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class FinancialAnalysisService {
 
     private final TransactionRepository transactionRepository;
+    private final RecurringTransactionRepository recurringTransactionRepository;
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
     private final CategoryRepository categoryRepository;
@@ -55,6 +59,8 @@ public class FinancialAnalysisService {
         BigDecimal totalFutureInstallments = currentAnalysis.totalFutureInstallments();
         BigDecimal nextMonthProjectedExpense = currentAnalysis.nextMonthProjectedExpense();
         BigDecimal monthlyIncomeReference = currentAnalysis.monthlyIncomeReference();
+        BigDecimal projectedRecurringExpenseNextMonth = currentAnalysis.projectedRecurringExpenseNextMonth();
+        BigDecimal projectedRecurringIncomeNextMonth = currentAnalysis.projectedRecurringIncomeNextMonth();
         Long activeInstallmentCount = currentAnalysis.activeInstallmentCount();
 
         YearMonth nextMonth = YearMonth.now().plusMonths(1);
@@ -63,10 +69,17 @@ public class FinancialAnalysisService {
             nextMonthProjectedExpense = nextMonthProjectedExpense.add(request.amount());
         }
 
+        if (request.type() == TransactionType.INCOME && YearMonth.from(request.date()).equals(nextMonth)) {
+            // Mantemos monthlyIncomeReference como base e consideramos entradas extras como projeção adicional.
+            projectedRecurringIncomeNextMonth = projectedRecurringIncomeNextMonth.add(request.amount());
+        }
+
         return buildResponse(
                 totalFutureInstallments,
                 nextMonthProjectedExpense,
                 monthlyIncomeReference,
+                projectedRecurringExpenseNextMonth,
+                projectedRecurringIncomeNextMonth,
                 activeInstallmentCount
         );
     }
@@ -96,6 +109,8 @@ public class FinancialAnalysisService {
         BigDecimal totalFutureInstallments = currentAnalysis.totalFutureInstallments();
         BigDecimal nextMonthProjectedExpense = currentAnalysis.nextMonthProjectedExpense();
         BigDecimal monthlyIncomeReference = currentAnalysis.monthlyIncomeReference();
+        BigDecimal projectedRecurringExpenseNextMonth = currentAnalysis.projectedRecurringExpenseNextMonth();
+        BigDecimal projectedRecurringIncomeNextMonth = currentAnalysis.projectedRecurringIncomeNextMonth();
         Long activeInstallmentCount = currentAnalysis.activeInstallmentCount();
 
         int totalInstallments = request.totalInstallments();
@@ -137,6 +152,8 @@ public class FinancialAnalysisService {
                 totalFutureInstallments,
                 nextMonthProjectedExpense,
                 monthlyIncomeReference,
+                projectedRecurringExpenseNextMonth,
+                projectedRecurringIncomeNextMonth,
                 activeInstallmentCount
         );
     }
@@ -162,10 +179,20 @@ public class FinancialAnalysisService {
         Long activeInstallmentCount =
                 transactionRepository.countDistinctActiveInstallmentGroupsByUser(user.getId(), today);
 
+        RecurringProjection recurringProjection = calculateRecurringProjectionForNextMonth(
+                user,
+                nextMonthStart,
+                nextMonthEnd
+        );
+
+        nextMonthProjectedExpense = nextMonthProjectedExpense.add(recurringProjection.recurringExpense());
+
         return buildResponse(
                 totalFutureInstallments,
                 nextMonthProjectedExpense,
                 monthlyIncomeReference,
+                recurringProjection.recurringExpense(),
+                recurringProjection.recurringIncome(),
                 activeInstallmentCount
         );
     }
@@ -186,10 +213,83 @@ public class FinancialAnalysisService {
         );
     }
 
+    private RecurringProjection calculateRecurringProjectionForNextMonth(
+            User user,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        List<RecurringTransaction> recurringTransactions =
+                recurringTransactionRepository.findAllByUserIdAndActiveTrue(user.getId());
+
+        BigDecimal recurringExpense = BigDecimal.ZERO;
+        BigDecimal recurringIncome = BigDecimal.ZERO;
+
+        for (RecurringTransaction recurringTransaction : recurringTransactions) {
+            if (hasOccurrenceInPeriod(recurringTransaction, startDate, endDate)) {
+                if (recurringTransaction.getType() == TransactionType.EXPENSE) {
+                    recurringExpense = recurringExpense.add(recurringTransaction.getAmount());
+                } else if (recurringTransaction.getType() == TransactionType.INCOME) {
+                    recurringIncome = recurringIncome.add(recurringTransaction.getAmount());
+                }
+            }
+        }
+
+        return new RecurringProjection(recurringExpense, recurringIncome);
+    }
+
+    private boolean hasOccurrenceInPeriod(
+            RecurringTransaction recurringTransaction,
+            LocalDate periodStart,
+            LocalDate periodEnd
+    ) {
+        if (!recurringTransaction.isActive()) {
+            return false;
+        }
+
+        LocalDate occurrenceDate = recurringTransaction.getNextExecutionDate();
+
+        if (occurrenceDate == null) {
+            occurrenceDate = recurringTransaction.getStartDate();
+        }
+
+        if (occurrenceDate == null) {
+            return false;
+        }
+
+        while (!occurrenceDate.isAfter(periodEnd)) {
+            if (!occurrenceDate.isBefore(periodStart) && isWithinRecurrenceRange(recurringTransaction, occurrenceDate)) {
+                return true;
+            }
+
+            occurrenceDate = getNextOccurrenceDate(occurrenceDate, recurringTransaction);
+        }
+
+        return false;
+    }
+
+    private boolean isWithinRecurrenceRange(RecurringTransaction recurringTransaction, LocalDate date) {
+        if (date.isBefore(recurringTransaction.getStartDate())) {
+            return false;
+        }
+
+        return recurringTransaction.getEndDate() == null || !date.isAfter(recurringTransaction.getEndDate());
+    }
+
+    private LocalDate getNextOccurrenceDate(LocalDate currentDate, RecurringTransaction recurringTransaction) {
+        return switch (recurringTransaction.getFrequency()) {
+            case DAILY -> currentDate.plusDays(1);
+            case WEEKLY -> currentDate.plusWeeks(1);
+            case MONTHLY -> currentDate.plusMonths(1);
+            case YEARLY -> currentDate.plusYears(1);
+        };
+    }
+
     private FinancialCommitmentResponse buildResponse(
             BigDecimal totalFutureInstallments,
             BigDecimal nextMonthProjectedExpense,
             BigDecimal monthlyIncomeReference,
+            BigDecimal projectedRecurringExpenseNextMonth,
+            BigDecimal projectedRecurringIncomeNextMonth,
             Long activeInstallmentCount
     ) {
         if (totalFutureInstallments == null) {
@@ -204,9 +304,20 @@ public class FinancialAnalysisService {
             monthlyIncomeReference = BigDecimal.ZERO;
         }
 
+        if (projectedRecurringExpenseNextMonth == null) {
+            projectedRecurringExpenseNextMonth = BigDecimal.ZERO;
+        }
+
+        if (projectedRecurringIncomeNextMonth == null) {
+            projectedRecurringIncomeNextMonth = BigDecimal.ZERO;
+        }
+
         if (activeInstallmentCount == null) {
             activeInstallmentCount = 0L;
         }
+
+        BigDecimal nextMonthProjectedIncome = monthlyIncomeReference.add(projectedRecurringIncomeNextMonth);
+        BigDecimal projectedNetNextMonth = nextMonthProjectedIncome.subtract(nextMonthProjectedExpense);
 
         BigDecimal commitmentPercentage = BigDecimal.ZERO;
 
@@ -219,7 +330,9 @@ public class FinancialAnalysisService {
         boolean excessiveInstallments = activeInstallmentCount >= 5;
         boolean tightBudgetRisk = commitmentPercentage.compareTo(BigDecimal.valueOf(60)) >= 0;
         boolean highRisk = commitmentPercentage.compareTo(BigDecimal.valueOf(80)) >= 0
-                || activeInstallmentCount >= 8;
+                || activeInstallmentCount >= 8
+                || projectedNetNextMonth.compareTo(BigDecimal.ZERO) < 0;
+
         boolean riskDetected = excessiveInstallments || tightBudgetRisk || highRisk;
 
         String riskLevel;
@@ -244,6 +357,10 @@ public class FinancialAnalysisService {
                 totalFutureInstallments,
                 nextMonthProjectedExpense,
                 monthlyIncomeReference,
+                projectedRecurringExpenseNextMonth,
+                projectedRecurringIncomeNextMonth,
+                nextMonthProjectedIncome,
+                projectedNetNextMonth,
                 commitmentPercentage,
                 activeInstallmentCount,
                 excessiveInstallments,
@@ -283,5 +400,11 @@ public class FinancialAnalysisService {
 
         return userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new EntityNotFoundException("Authenticated user not found"));
+    }
+
+    private record RecurringProjection(
+            BigDecimal recurringExpense,
+            BigDecimal recurringIncome
+    ) {
     }
 }
