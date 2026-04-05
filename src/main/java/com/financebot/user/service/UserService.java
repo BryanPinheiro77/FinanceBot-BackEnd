@@ -1,9 +1,11 @@
 package com.financebot.user.service;
 
 import com.financebot.user.domain.User;
+import com.financebot.user.dto.request.TelegramLinkConfirmRequest;
 import com.financebot.user.dto.request.UpdateMonthlyBaseIncomeRequest;
 import com.financebot.user.dto.response.CurrentUserResponse;
 import com.financebot.user.dto.response.TelegramLinkCodeResponse;
+import com.financebot.user.dto.response.TelegramLinkConfirmResponse;
 import com.financebot.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -68,6 +70,44 @@ public class UserService {
                 code,
                 expiresAt,
                 "Send this code to the Telegram bot to link your account."
+        );
+    }
+
+    @Transactional
+    public TelegramLinkConfirmResponse confirmTelegramLink(TelegramLinkConfirmRequest request) {
+        User user = userRepository.findByTelegramLinkCode(request.linkCode())
+                .orElseThrow(() -> new EntityNotFoundException("Código de vínculo inválido"));
+
+        if (user.getTelegramLinkCodeExpiresAt() == null || user.getTelegramLinkCodeExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Código de vínculo expirado");
+        }
+
+        if (user.getTelegramId() != null && user.getTelegramId().equals(request.telegramId())) {
+            user.setTelegramLinkCode(null);
+            user.setTelegramLinkCodeExpiresAt(null);
+            userRepository.save(user);
+
+            return new TelegramLinkConfirmResponse(
+                    true,
+                    "Sua conta já estava conectada a este Telegram."
+            );
+        }
+
+        boolean telegramAlreadyLinked = userRepository.existsByTelegramId(request.telegramId());
+
+        if (telegramAlreadyLinked) {
+            throw new IllegalArgumentException("Este Telegram já está vinculado a outra conta");
+        }
+
+        user.setTelegramId(request.telegramId());
+        user.setTelegramLinkCode(null);
+        user.setTelegramLinkCodeExpiresAt(null);
+
+        userRepository.save(user);
+
+        return new TelegramLinkConfirmResponse(
+                true,
+                "Conta conectada com sucesso ao Telegram."
         );
     }
 
