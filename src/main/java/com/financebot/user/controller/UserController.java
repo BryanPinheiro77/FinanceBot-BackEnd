@@ -1,8 +1,10 @@
 package com.financebot.user.controller;
 
+import com.financebot.user.dto.request.TelegramLinkConfirmRequest;
 import com.financebot.user.dto.request.UpdateMonthlyBaseIncomeRequest;
 import com.financebot.user.dto.response.CurrentUserResponse;
 import com.financebot.user.dto.response.TelegramLinkCodeResponse;
+import com.financebot.user.dto.response.TelegramLinkConfirmResponse;
 import com.financebot.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,13 @@ public class UserController {
     @PostMapping("/me/telegram-link-code")
     public TelegramLinkCodeResponse generateTelegramLinkCode(Authentication authentication) {
         return userService.generateTelegramLinkCode(authentication);
+    }
+
+    @PostMapping("/telegram/confirm-link")
+    public TelegramLinkConfirmResponse confirmTelegramLink(
+            @RequestBody @Valid TelegramLinkConfirmRequest request
+    ) {
+        return userService.confirmTelegramLink(request);
     }
 
     @DeleteMapping("/me/telegram-link")
