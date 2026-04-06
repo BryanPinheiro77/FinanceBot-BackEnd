@@ -2,7 +2,10 @@ package com.financebot.telegram.service;
 
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
+import com.financebot.telegram.dto.MonthlyAmountSummaryResponse;
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
+import com.financebot.transaction.domain.TransactionType;
+import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.user.domain.User;
 import com.financebot.user.dto.response.TelegramUserProfileResponse;
 import com.financebot.user.dto.request.UpdateMonthlyBaseIncomeRequest;
@@ -11,12 +14,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.YearMonth;
+
 @Service
 @RequiredArgsConstructor
 public class TelegramIntegrationService {
 
     private final UserRepository userRepository;
     private final FinancialAnalysisService financialAnalysisService;
+    private final TransactionRepository transactionRepository;
 
     @Transactional(readOnly = true)
     public TelegramUserProfileResponse getMe(Long telegramId) {
@@ -68,5 +76,49 @@ public class TelegramIntegrationService {
     private User findUserByTelegramId(Long telegramId) {
         return userRepository.findByTelegramId(telegramId)
                 .orElseThrow(TelegramUserNotFoundException::new);
+    }
+
+    @Transactional(readOnly = true)
+    public MonthlyAmountSummaryResponse getCurrentMonthExpenseSummary(Long telegramId) {
+        User user = findUserByTelegramId(telegramId);
+
+        YearMonth currentMonth = YearMonth.now();
+        LocalDate startDate = currentMonth.atDay(1);
+        LocalDate endDate = currentMonth.atEndOfMonth();
+
+        BigDecimal totalAmount = transactionRepository.sumAmountByUserAndTypeBetweenDates(
+                user.getId(),
+                TransactionType.EXPENSE,
+                startDate,
+                endDate
+        );
+
+        return new MonthlyAmountSummaryResponse(
+                "EXPENSE",
+                currentMonth,
+                totalAmount
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public MonthlyAmountSummaryResponse getCurrentMonthIncomeSummary(Long telegramId) {
+        User user = findUserByTelegramId(telegramId);
+
+        YearMonth currentMonth = YearMonth.now();
+        LocalDate startDate = currentMonth.atDay(1);
+        LocalDate endDate = currentMonth.atEndOfMonth();
+
+        BigDecimal totalAmount = transactionRepository.sumAmountByUserAndTypeBetweenDates(
+                user.getId(),
+                TransactionType.INCOME,
+                startDate,
+                endDate
+        );
+
+        return new MonthlyAmountSummaryResponse(
+                "INCOME",
+                currentMonth,
+                totalAmount
+        );
     }
 }

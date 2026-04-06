@@ -80,4 +80,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
             @Param("userId") Long userId,
             @Param("today") LocalDate today
     );
+
+    @Query("""
+       select coalesce(sum(t.amount), 0)
+       from Transaction t
+       where t.user.id = :userId
+         and t.type = :type
+         and t.date between :startDate and :endDate
+       """)
+    BigDecimal sumAmountByUserAndTypeBetweenDates(
+            @Param("userId") Long userId,
+            @Param("type") TransactionType type,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
 }
