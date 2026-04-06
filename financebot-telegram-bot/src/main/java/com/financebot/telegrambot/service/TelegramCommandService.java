@@ -1,13 +1,7 @@
 package com.financebot.telegrambot.service;
 
 import com.financebot.telegrambot.client.FinanceBotApiClient;
-import com.financebot.telegrambot.dto.FinancialCommitmentResponse;
-import com.financebot.telegrambot.dto.MonthlyAmountSummaryResponse;
-import com.financebot.telegrambot.dto.ParsedTelegramMessage;
-import com.financebot.telegrambot.dto.TelegramLinkConfirmRequest;
-import com.financebot.telegrambot.dto.TelegramLinkConfirmResponse;
-import com.financebot.telegrambot.dto.UpdateMonthlyBaseIncomeRequest;
-import com.financebot.telegrambot.dto.UserProfileResponse;
+import com.financebot.telegrambot.dto.*;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -470,13 +464,36 @@ public class TelegramCommandService {
             return "Não há nenhuma operação pendente para confirmar.";
         }
 
-        telegramPendingConfirmationService.clearPending(telegramId);
+        try {
+            CreateTransactionFromTelegramRequest request =
+                    new CreateTransactionFromTelegramRequest(
+                            telegramId,
+                            mapIntentToTransactionType(pending.intentType()),
+                            pending.amount(),
+                            pending.description(),
+                            pending.date()
+                    );
 
-        return """
-                ✅ Confirmação recebida.
+            financeBotApiClient.createTransaction(request);
+            telegramPendingConfirmationService.clearPending(telegramId);
+
+            String transactionLabel = pending.intentType() == TelegramIntentType.CREATE_EXPENSE
+                    ? "despesa"
+                    : "receita";
+
+            return """
+                ✅ Transação registrada com sucesso!
                 
-                O próximo passo é ligar essa confirmação ao endpoint real de criação da transação no backend.
+                Sua %s foi salva no sistema.
+                """.formatted(transactionLabel);
+        } catch (RestClientResponseException e) {
+            return mapDefaultBotErrors(e);
+        } catch (Exception e) {
+            return """
+                Não foi possível salvar sua transação agora.
+                Você pode tentar confirmar novamente em instantes.
                 """;
+        }
     }
 
     private String handleCancellation(Long telegramId) {
@@ -605,5 +622,13 @@ public class TelegramCommandService {
         }
 
         return new BigDecimal(normalized);
+    }
+
+    private String mapIntentToTransactionType(TelegramIntentType intentType) {
+        return switch (intentType) {
+            case CREATE_EXPENSE -> "EXPENSE";
+            case CREATE_INCOME -> "INCOME";
+            default -> throw new IllegalArgumentException("Intento inválido para criação de transação.");
+        };
     }
 }
