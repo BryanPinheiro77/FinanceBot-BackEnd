@@ -3,9 +3,11 @@ package com.financebot.telegram.service;
 import com.financebot.account.domain.Account;
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
+import com.financebot.category.domain.Category;
 import com.financebot.telegram.dto.CreateTransactionFromTelegramRequest;
 import com.financebot.telegram.dto.MonthlyAmountSummaryResponse;
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
+import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
 import com.financebot.transaction.repository.TransactionRepository;
@@ -29,6 +31,7 @@ public class TelegramIntegrationService {
     private final FinancialAnalysisService financialAnalysisService;
     private final TransactionRepository transactionRepository;
     private final TelegramAccountResolverService telegramAccountResolverService;
+    private final TelegramCategoryResolverService telegramCategoryResolverService;
 
     @Transactional(readOnly = true)
     public TelegramUserProfileResponse getMe(Long telegramId) {
@@ -129,15 +132,24 @@ public class TelegramIntegrationService {
     @Transactional
     public void createTransactionFromTelegram(CreateTransactionFromTelegramRequest request) {
         User user = findUserByTelegramId(request.telegramId());
+        TransactionType transactionType = TransactionType.valueOf(request.type());
+
         Account account = telegramAccountResolverService.resolveDefaultAccount(user);
+        Category category = telegramCategoryResolverService.resolveCategory(
+                user,
+                transactionType,
+                request.description()
+        );
 
         Transaction transaction = new Transaction();
         transaction.setUser(user);
         transaction.setAccount(account);
+        transaction.setCategory(category);
         transaction.setAmount(request.amount());
         transaction.setDescription(request.description());
         transaction.setDate(request.date());
-        transaction.setType(TransactionType.valueOf(request.type()));
+        transaction.setType(transactionType);
+        transaction.setSourceType(SourceType.BOT_TEXT);
 
         transactionRepository.save(transaction);
     }

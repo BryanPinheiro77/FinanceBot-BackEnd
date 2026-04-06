@@ -393,13 +393,13 @@ public class TelegramCommandService {
     private String handleNaturalLanguageTransactionPreview(Long telegramId, ParsedTelegramMessage parsedMessage) {
         if (parsedMessage.amount() == null) {
             return """
-                    Entendi a intenção, mas não consegui identificar o valor.
-                    
-                    Exemplos:
-                    - gastei 50 no mercado
-                    - paguei 120 de gasolina
-                    - recebi 1500 de salário
-                    """;
+                Entendi a intenção, mas não consegui identificar o valor.
+                
+                Exemplos:
+                - gastei 50 no mercado
+                - paguei 120 de gasolina
+                - recebi 1500 de salário
+                """;
         }
 
         telegramPendingConfirmationService.savePending(telegramId, parsedMessage);
@@ -407,18 +407,16 @@ public class TelegramCommandService {
         String type = parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE ? "despesa" : "receita";
 
         return """
-                Entendi esta %s:
-                
-                Valor: %s
-                Descrição: %s
-                Data: %s
-                
-                Responda com:
-                - sim / confirmar / confirmado
-                para salvar
-                - cancelar / cancelar operação
-                para desistir
-                """.formatted(
+            Entendi esta %s:
+            
+            Valor: %s
+            Descrição: %s
+            Data: %s
+            Conta: conta padrão
+            Categoria: automática
+            
+            Deseja confirmar e salvar?
+            """.formatted(
                 type,
                 formatCurrency(parsedMessage.amount()),
                 parsedMessage.description() != null ? parsedMessage.description() : "Não informada",
