@@ -35,6 +35,9 @@ public class Account {
     @Column(name = "type", nullable = false, length = 30)
     private AccountType type;
 
+    @Column(name = "default_account", nullable = false)
+    private boolean defaultAccount = false;
+
     @Column(name = "initial_balance", nullable = false, precision = 19, scale = 2)
     private BigDecimal initialBalance;
 

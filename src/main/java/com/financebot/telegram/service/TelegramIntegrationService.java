@@ -1,5 +1,6 @@
 package com.financebot.telegram.service;
 
+import com.financebot.account.domain.Account;
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
 import com.financebot.telegram.dto.CreateTransactionFromTelegramRequest;
@@ -9,8 +10,8 @@ import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.user.domain.User;
-import com.financebot.user.dto.response.TelegramUserProfileResponse;
 import com.financebot.user.dto.request.UpdateMonthlyBaseIncomeRequest;
+import com.financebot.user.dto.response.TelegramUserProfileResponse;
 import com.financebot.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,7 @@ public class TelegramIntegrationService {
     private final UserRepository userRepository;
     private final FinancialAnalysisService financialAnalysisService;
     private final TransactionRepository transactionRepository;
+    private final TelegramAccountResolverService telegramAccountResolverService;
 
     @Transactional(readOnly = true)
     public TelegramUserProfileResponse getMe(Long telegramId) {
@@ -127,9 +129,11 @@ public class TelegramIntegrationService {
     @Transactional
     public void createTransactionFromTelegram(CreateTransactionFromTelegramRequest request) {
         User user = findUserByTelegramId(request.telegramId());
+        Account account = telegramAccountResolverService.resolveDefaultAccount(user);
 
         Transaction transaction = new Transaction();
         transaction.setUser(user);
+        transaction.setAccount(account);
         transaction.setAmount(request.amount());
         transaction.setDescription(request.description());
         transaction.setDate(request.date());

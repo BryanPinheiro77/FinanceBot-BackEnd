@@ -13,4 +13,8 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     Optional<Account> findByIdAndUserId(Long id, Long userId);
 
     boolean existsByNameIgnoreCaseAndUserId(String name, Long userId);
+
+    Optional<Account> findByUserIdAndDefaultAccountTrue(Long userId);
+
+    List<Account> findAllByUserId(Long userId);
 }
