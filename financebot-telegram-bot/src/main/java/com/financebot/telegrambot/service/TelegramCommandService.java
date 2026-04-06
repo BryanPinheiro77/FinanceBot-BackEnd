@@ -1,7 +1,13 @@
 package com.financebot.telegrambot.service;
 
 import com.financebot.telegrambot.client.FinanceBotApiClient;
-import com.financebot.telegrambot.dto.*;
+import com.financebot.telegrambot.dto.FinancialCommitmentResponse;
+import com.financebot.telegrambot.dto.MonthlyAmountSummaryResponse;
+import com.financebot.telegrambot.dto.ParsedTelegramMessage;
+import com.financebot.telegrambot.dto.TelegramLinkConfirmRequest;
+import com.financebot.telegrambot.dto.TelegramLinkConfirmResponse;
+import com.financebot.telegrambot.dto.UpdateMonthlyBaseIncomeRequest;
+import com.financebot.telegrambot.dto.UserProfileResponse;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +27,7 @@ public class TelegramCommandService {
 
     private final FinanceBotApiClient financeBotApiClient;
     private final TelegramIntentService telegramIntentService;
+    private final TelegramPendingConfirmationService telegramPendingConfirmationService;
 
     public String handleMessage(
             String messageText,
@@ -83,6 +90,14 @@ public class TelegramCommandService {
                     """;
         }
 
+        if (isConfirmationMessage(normalizedMessage)) {
+            return handleConfirmation(telegramId);
+        }
+
+        if (isCancellationMessage(normalizedMessage)) {
+            return handleCancellation(telegramId);
+        }
+
         ParsedTelegramMessage parsedMessage = telegramIntentService.parse(normalizedMessage);
 
         if (parsedMessage.intentType() != null && parsedMessage.intentType().name().startsWith("QUERY_")) {
@@ -91,7 +106,7 @@ public class TelegramCommandService {
 
         if (parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE
                 || parsedMessage.intentType() == TelegramIntentType.CREATE_INCOME) {
-            return handleNaturalLanguageTransactionPreview(parsedMessage);
+            return handleNaturalLanguageTransactionPreview(telegramId, parsedMessage);
         }
 
         return """
@@ -255,6 +270,8 @@ public class TelegramCommandService {
     private String handleDisconnect(Long telegramId) {
         try {
             financeBotApiClient.disconnectTelegram(telegramId);
+            telegramPendingConfirmationService.clearPending(telegramId);
+
             return """
                     ✅ Sua conta do Telegram foi desconectada com sucesso.
                     
@@ -379,7 +396,7 @@ public class TelegramCommandService {
         }
     }
 
-    private String handleNaturalLanguageTransactionPreview(ParsedTelegramMessage parsedMessage) {
+    private String handleNaturalLanguageTransactionPreview(Long telegramId, ParsedTelegramMessage parsedMessage) {
         if (parsedMessage.amount() == null) {
             return """
                     Entendi a intenção, mas não consegui identificar o valor.
@@ -391,6 +408,8 @@ public class TelegramCommandService {
                     """;
         }
 
+        telegramPendingConfirmationService.savePending(telegramId, parsedMessage);
+
         String type = parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE ? "despesa" : "receita";
 
         return """
@@ -400,7 +419,11 @@ public class TelegramCommandService {
                 Descrição: %s
                 Data: %s
                 
-                Em seguida podemos ligar isso ao fluxo de confirmação para salvar.
+                Responda com:
+                - sim / confirmar / confirmado
+                para salvar
+                - cancelar / cancelar operação
+                para desistir
                 """.formatted(
                 type,
                 formatCurrency(parsedMessage.amount()),
@@ -416,19 +439,19 @@ public class TelegramCommandService {
                     MonthlyAmountSummaryResponse response = financeBotApiClient.getCurrentMonthExpenseSummary(telegramId);
 
                     yield """
-                        💸 Total gasto no mês
-                        
-                        Você gastou %s neste mês.
-                        """.formatted(formatCurrency(response.totalAmount()));
+                            💸 Total gasto no mês
+                            
+                            Você gastou %s neste mês.
+                            """.formatted(formatCurrency(response.totalAmount()));
                 }
                 case QUERY_MONTH_INCOME_TOTAL -> {
                     MonthlyAmountSummaryResponse response = financeBotApiClient.getCurrentMonthIncomeSummary(telegramId);
 
                     yield """
-                        💰 Total recebido no mês
-                        
-                        Você recebeu %s neste mês.
-                        """.formatted(formatCurrency(response.totalAmount()));
+                            💰 Total recebido no mês
+                            
+                            Você recebeu %s neste mês.
+                            """.formatted(formatCurrency(response.totalAmount()));
                 }
                 case QUERY_MONTH_ANALYSIS -> handleAnalysis(telegramId);
                 default -> "Não consegui interpretar sua consulta.";
@@ -438,6 +461,32 @@ public class TelegramCommandService {
         } catch (Exception e) {
             return "Não foi possível consultar essas informações agora.";
         }
+    }
+
+    private String handleConfirmation(Long telegramId) {
+        ParsedTelegramMessage pending = telegramPendingConfirmationService.getPending(telegramId);
+
+        if (pending == null) {
+            return "Não há nenhuma operação pendente para confirmar.";
+        }
+
+        telegramPendingConfirmationService.clearPending(telegramId);
+
+        return """
+                ✅ Confirmação recebida.
+                
+                O próximo passo é ligar essa confirmação ao endpoint real de criação da transação no backend.
+                """;
+    }
+
+    private String handleCancellation(Long telegramId) {
+        if (!telegramPendingConfirmationService.hasPending(telegramId)) {
+            return "Não há nenhuma operação pendente para cancelar.";
+        }
+
+        telegramPendingConfirmationService.clearPending(telegramId);
+
+        return "❌ Operação cancelada com sucesso.";
     }
 
     private String mapDefaultBotErrors(RestClientResponseException e) {
@@ -493,6 +542,26 @@ public class TelegramCommandService {
                 || lower.contains("ligar conta")
                 || lower.contains("linkar")
                 || lower.contains("telegram");
+    }
+
+    private boolean isConfirmationMessage(String messageText) {
+        String lower = messageText.toLowerCase();
+
+        return lower.equals("sim")
+                || lower.equals("confirmar")
+                || lower.equals("confirmado")
+                || lower.equals("ok");
+    }
+
+    private boolean isCancellationMessage(String messageText) {
+        String lower = messageText.toLowerCase();
+
+        return lower.equals("cancelar")
+                || lower.equals("cancelado")
+                || lower.equals("cancelar operação")
+                || lower.equals("cancelar operacao")
+                || lower.equals("não")
+                || lower.equals("nao");
     }
 
     private boolean startsWithCommand(String messageText, String... commands) {
