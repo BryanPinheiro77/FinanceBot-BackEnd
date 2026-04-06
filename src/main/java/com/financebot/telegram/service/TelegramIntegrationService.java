@@ -2,8 +2,10 @@ package com.financebot.telegram.service;
 
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
+import com.financebot.telegram.dto.CreateTransactionFromTelegramRequest;
 import com.financebot.telegram.dto.MonthlyAmountSummaryResponse;
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
+import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.user.domain.User;
@@ -120,5 +122,19 @@ public class TelegramIntegrationService {
                 currentMonth.toString(),
                 totalAmount
         );
+    }
+
+    @Transactional
+    public void createTransactionFromTelegram(CreateTransactionFromTelegramRequest request) {
+        User user = findUserByTelegramId(request.telegramId());
+
+        Transaction transaction = new Transaction();
+        transaction.setUser(user);
+        transaction.setAmount(request.amount());
+        transaction.setDescription(request.description());
+        transaction.setDate(request.date());
+        transaction.setType(TransactionType.valueOf(request.type()));
+
+        transactionRepository.save(transaction);
     }
 }

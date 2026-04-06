@@ -1,6 +1,7 @@
 package com.financebot.telegram.controller;
 
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
+import com.financebot.telegram.dto.CreateTransactionFromTelegramRequest;
 import com.financebot.telegram.dto.MonthlyAmountSummaryResponse;
 import com.financebot.telegram.service.TelegramIntegrationService;
 import com.financebot.user.dto.response.TelegramUserProfileResponse;
@@ -47,5 +48,10 @@ public class TelegramIntegrationController {
     @GetMapping("/income/current-month")
     public MonthlyAmountSummaryResponse getCurrentMonthIncomeSummary(@RequestParam Long telegramId) {
         return telegramIntegrationService.getCurrentMonthIncomeSummary(telegramId);
+    }
+
+    @PostMapping("/transactions")
+    public void createTransaction(@RequestBody CreateTransactionFromTelegramRequest request) {
+        telegramIntegrationService.createTransactionFromTelegram(request);
     }
 }
