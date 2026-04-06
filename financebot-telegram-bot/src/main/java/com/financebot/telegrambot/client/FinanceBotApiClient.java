@@ -1,10 +1,6 @@
 package com.financebot.telegrambot.client;
 
-import com.financebot.telegrambot.dto.FinancialCommitmentResponse;
-import com.financebot.telegrambot.dto.TelegramLinkConfirmRequest;
-import com.financebot.telegrambot.dto.TelegramLinkConfirmResponse;
-import com.financebot.telegrambot.dto.UpdateMonthlyBaseIncomeRequest;
-import com.financebot.telegrambot.dto.UserProfileResponse;
+import com.financebot.telegrambot.dto.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -70,5 +66,25 @@ public class FinanceBotApiClient {
                         .build())
                 .retrieve()
                 .toBodilessEntity();
+    }
+
+    public MonthlyAmountSummaryResponse getCurrentMonthExpenseSummary(Long telegramId) {
+        return restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/telegram/expenses/current-month")
+                        .queryParam("telegramId", telegramId)
+                        .build())
+                .retrieve()
+                .body(MonthlyAmountSummaryResponse.class);
+    }
+
+    public MonthlyAmountSummaryResponse getCurrentMonthIncomeSummary(Long telegramId) {
+        return restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/telegram/income/current-month")
+                        .queryParam("telegramId", telegramId)
+                        .build())
+                .retrieve()
+                .body(MonthlyAmountSummaryResponse.class);
     }
 }

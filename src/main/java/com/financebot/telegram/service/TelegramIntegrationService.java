@@ -95,7 +95,7 @@ public class TelegramIntegrationService {
 
         return new MonthlyAmountSummaryResponse(
                 "EXPENSE",
-                currentMonth,
+                currentMonth.toString(),
                 totalAmount
         );
     }
@@ -117,7 +117,7 @@ public class TelegramIntegrationService {
 
         return new MonthlyAmountSummaryResponse(
                 "INCOME",
-                currentMonth,
+                currentMonth.toString(),
                 totalAmount
         );
     }

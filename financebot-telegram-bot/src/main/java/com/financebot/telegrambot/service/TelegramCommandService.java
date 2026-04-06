@@ -1,12 +1,7 @@
 package com.financebot.telegrambot.service;
 
 import com.financebot.telegrambot.client.FinanceBotApiClient;
-import com.financebot.telegrambot.dto.FinancialCommitmentResponse;
-import com.financebot.telegrambot.dto.ParsedTelegramMessage;
-import com.financebot.telegrambot.dto.TelegramLinkConfirmRequest;
-import com.financebot.telegrambot.dto.TelegramLinkConfirmResponse;
-import com.financebot.telegrambot.dto.UpdateMonthlyBaseIncomeRequest;
-import com.financebot.telegrambot.dto.UserProfileResponse;
+import com.financebot.telegrambot.dto.*;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -415,14 +410,34 @@ public class TelegramCommandService {
     }
 
     private String handleNaturalLanguageQuery(ParsedTelegramMessage parsedMessage, Long telegramId) {
-        return switch (parsedMessage.intentType()) {
-            case QUERY_MONTH_EXPENSE_TOTAL ->
-                    "Essa intenção foi identificada: consulta de total gasto no mês. Agora precisamos ligar ao endpoint do backend.";
-            case QUERY_MONTH_INCOME_TOTAL ->
-                    "Essa intenção foi identificada: consulta de total recebido no mês. Agora precisamos ligar ao endpoint do backend.";
-            case QUERY_MONTH_ANALYSIS -> handleAnalysis(telegramId);
-            default -> "Não consegui interpretar sua consulta.";
-        };
+        try {
+            return switch (parsedMessage.intentType()) {
+                case QUERY_MONTH_EXPENSE_TOTAL -> {
+                    MonthlyAmountSummaryResponse response = financeBotApiClient.getCurrentMonthExpenseSummary(telegramId);
+
+                    yield """
+                        💸 Total gasto no mês
+                        
+                        Você gastou %s neste mês.
+                        """.formatted(formatCurrency(response.totalAmount()));
+                }
+                case QUERY_MONTH_INCOME_TOTAL -> {
+                    MonthlyAmountSummaryResponse response = financeBotApiClient.getCurrentMonthIncomeSummary(telegramId);
+
+                    yield """
+                        💰 Total recebido no mês
+                        
+                        Você recebeu %s neste mês.
+                        """.formatted(formatCurrency(response.totalAmount()));
+                }
+                case QUERY_MONTH_ANALYSIS -> handleAnalysis(telegramId);
+                default -> "Não consegui interpretar sua consulta.";
+            };
+        } catch (RestClientResponseException e) {
+            return mapDefaultBotErrors(e);
+        } catch (Exception e) {
+            return "Não foi possível consultar essas informações agora.";
+        }
     }
 
     private String mapDefaultBotErrors(RestClientResponseException e) {

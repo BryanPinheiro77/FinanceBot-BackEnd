@@ -1,4 +1,4 @@
-package com.financebot.telegram.dto;
+package com.financebot.telegrambot.dto;
 
 import java.math.BigDecimal;
 
