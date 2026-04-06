@@ -2,23 +2,30 @@ package com.financebot.telegrambot.service;
 
 import com.financebot.telegrambot.client.FinanceBotApiClient;
 import com.financebot.telegrambot.dto.FinancialCommitmentResponse;
+import com.financebot.telegrambot.dto.ParsedTelegramMessage;
 import com.financebot.telegrambot.dto.TelegramLinkConfirmRequest;
 import com.financebot.telegrambot.dto.TelegramLinkConfirmResponse;
 import com.financebot.telegrambot.dto.UpdateMonthlyBaseIncomeRequest;
 import com.financebot.telegrambot.dto.UserProfileResponse;
+import com.financebot.telegrambot.intent.TelegramIntentType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.math.BigDecimal;
 import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
 public class TelegramCommandService {
 
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
     private final FinanceBotApiClient financeBotApiClient;
+    private final TelegramIntentService telegramIntentService;
 
     public String handleMessage(
             String messageText,
@@ -81,18 +88,35 @@ public class TelegramCommandService {
                     """;
         }
 
+        ParsedTelegramMessage parsedMessage = telegramIntentService.parse(normalizedMessage);
+
+        if (parsedMessage.intentType() != null && parsedMessage.intentType().name().startsWith("QUERY_")) {
+            return handleNaturalLanguageQuery(parsedMessage, telegramId);
+        }
+
+        if (parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE
+                || parsedMessage.intentType() == TelegramIntentType.CREATE_INCOME) {
+            return handleNaturalLanguageTransactionPreview(parsedMessage);
+        }
+
         return """
                 Não reconheci sua mensagem.
                 
-                Tente um destes comandos:
-                /start ou /iniciar - Iniciar o bot
-                /help ou /ajuda - Ver ajuda
-                /connect ou /conectar CODIGO - Conectar sua conta
-                /me ou /perfil - Ver seu perfil
-                /status ou /resumo - Ver resumo da conta
-                /analysis ou /analise - Ver análise financeira
-                /setincome ou /definirrenda VALOR - Definir renda mensal base
-                /disconnect ou /desconectar - Desconectar conta
+                Você pode usar comandos:
+                /start ou /iniciar
+                /help ou /ajuda
+                /connect ou /conectar CODIGO
+                /me ou /perfil
+                /status ou /resumo
+                /analysis ou /analise
+                /setincome ou /definirrenda VALOR
+                /disconnect ou /desconectar
+                
+                Ou pode escrever naturalmente, por exemplo:
+                - gastei 50 no mercado
+                - recebi 1200 de salário
+                - quanto gastei esse mês?
+                - me dá a análise desse mês
                 """;
     }
 
@@ -104,7 +128,7 @@ public class TelegramCommandService {
                 
                 Eu posso ajudar você a conectar sua conta e acompanhar suas finanças direto pelo Telegram.
                 
-                Comandos disponíveis:
+                Você pode usar comandos:
                 /start ou /iniciar - Iniciar o bot
                 /help ou /ajuda - Ver ajuda
                 /connect ou /conectar CODIGO - Conectar sua conta
@@ -113,6 +137,12 @@ public class TelegramCommandService {
                 /analysis ou /analise - Ver análise financeira
                 /setincome ou /definirrenda VALOR - Definir renda mensal base
                 /disconnect ou /desconectar - Desconectar conta
+                
+                Ou pode escrever naturalmente, por exemplo:
+                - gastei 50 no mercado
+                - recebi 1200 de salário
+                - quanto gastei esse mês?
+                - me dá a análise desse mês
                 """.formatted(name != null ? ", " + name : "");
     }
 
@@ -129,11 +159,19 @@ public class TelegramCommandService {
                 /setincome ou /definirrenda VALOR - Definir renda mensal base
                 /disconnect ou /desconectar - Desconectar conta
                 
-                Exemplos:
+                Exemplos com comandos:
                 /connect FIN-ABC123
                 /conectar FIN-ABC123
                 /setincome 3500
                 /definirrenda 3500
+                
+                Exemplos com linguagem natural:
+                - gastei 50 no mercado
+                - paguei 120 de gasolina ontem
+                - recebi 1500 de salário
+                - quanto gastei esse mês?
+                - quanto recebi esse mês?
+                - me dá a análise desse mês
                 """;
     }
 
@@ -144,13 +182,17 @@ public class TelegramCommandService {
                 Olá%s! 👋
                 
                 Eu sou seu assistente financeiro no Telegram.
-                Você pode usar:
                 
-                /start ou /iniciar - Iniciar o bot
+                Você pode usar comandos:
                 /help ou /ajuda - Ver ajuda
                 /connect ou /conectar CODIGO - Conectar sua conta
                 /me ou /perfil - Ver seu perfil
                 /analysis ou /analise - Ver análise financeira
+                
+                Ou escrever naturalmente:
+                - gastei 50 no mercado
+                - recebi 1200
+                - quanto gastei esse mês?
                 """.formatted(name != null ? ", " + name : "");
     }
 
@@ -342,6 +384,47 @@ public class TelegramCommandService {
         }
     }
 
+    private String handleNaturalLanguageTransactionPreview(ParsedTelegramMessage parsedMessage) {
+        if (parsedMessage.amount() == null) {
+            return """
+                    Entendi a intenção, mas não consegui identificar o valor.
+                    
+                    Exemplos:
+                    - gastei 50 no mercado
+                    - paguei 120 de gasolina
+                    - recebi 1500 de salário
+                    """;
+        }
+
+        String type = parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE ? "despesa" : "receita";
+
+        return """
+                Entendi esta %s:
+                
+                Valor: %s
+                Descrição: %s
+                Data: %s
+                
+                Em seguida podemos ligar isso ao fluxo de confirmação para salvar.
+                """.formatted(
+                type,
+                formatCurrency(parsedMessage.amount()),
+                parsedMessage.description() != null ? parsedMessage.description() : "Não informada",
+                formatDate(parsedMessage.date())
+        );
+    }
+
+    private String handleNaturalLanguageQuery(ParsedTelegramMessage parsedMessage, Long telegramId) {
+        return switch (parsedMessage.intentType()) {
+            case QUERY_MONTH_EXPENSE_TOTAL ->
+                    "Essa intenção foi identificada: consulta de total gasto no mês. Agora precisamos ligar ao endpoint do backend.";
+            case QUERY_MONTH_INCOME_TOTAL ->
+                    "Essa intenção foi identificada: consulta de total recebido no mês. Agora precisamos ligar ao endpoint do backend.";
+            case QUERY_MONTH_ANALYSIS -> handleAnalysis(telegramId);
+            default -> "Não consegui interpretar sua consulta.";
+        };
+    }
+
     private String mapDefaultBotErrors(RestClientResponseException e) {
         return switch (e.getStatusCode().value()) {
             case 400 -> "A solicitação está inválida.";
@@ -416,6 +499,14 @@ public class TelegramCommandService {
         }
 
         return NumberFormat.getCurrencyInstance(Locale.forLanguageTag("pt-BR")).format(value);
+    }
+
+    private String formatDate(LocalDate date) {
+        if (date == null) {
+            return "Hoje";
+        }
+
+        return date.format(DATE_FORMATTER);
     }
 
     private BigDecimal parseBrazilianNumber(String value) {
