@@ -43,6 +43,15 @@ public class FinancialAnalysisService {
     }
 
     @Transactional(readOnly = true)
+    public FinancialCommitmentResponse getFinancialCommitment(User user) {
+        if (user == null) {
+            throw new IllegalArgumentException("User is required");
+        }
+
+        return buildCurrentAnalysis(user);
+    }
+
+    @Transactional(readOnly = true)
     public FinancialCommitmentResponse previewTransactionAlert(
             CreateTransactionRequest request,
             Authentication authentication
@@ -58,6 +67,7 @@ public class FinancialAnalysisService {
 
         BigDecimal totalFutureInstallments = currentAnalysis.totalFutureInstallments();
         BigDecimal nextMonthProjectedExpense = currentAnalysis.nextMonthProjectedExpense();
+        BigDecimal monthlyBaseIncome = currentAnalysis.monthlyBaseIncome();
         BigDecimal monthlyIncomeReference = currentAnalysis.monthlyIncomeReference();
         BigDecimal projectedRecurringExpenseNextMonth = currentAnalysis.projectedRecurringExpenseNextMonth();
         BigDecimal projectedRecurringIncomeNextMonth = currentAnalysis.projectedRecurringIncomeNextMonth();
@@ -70,13 +80,13 @@ public class FinancialAnalysisService {
         }
 
         if (request.type() == TransactionType.INCOME && YearMonth.from(request.date()).equals(nextMonth)) {
-            // Mantemos monthlyIncomeReference como base e consideramos entradas extras como projeção adicional.
             projectedRecurringIncomeNextMonth = projectedRecurringIncomeNextMonth.add(request.amount());
         }
 
         return buildResponse(
                 totalFutureInstallments,
                 nextMonthProjectedExpense,
+                monthlyBaseIncome,
                 monthlyIncomeReference,
                 projectedRecurringExpenseNextMonth,
                 projectedRecurringIncomeNextMonth,
@@ -108,6 +118,7 @@ public class FinancialAnalysisService {
 
         BigDecimal totalFutureInstallments = currentAnalysis.totalFutureInstallments();
         BigDecimal nextMonthProjectedExpense = currentAnalysis.nextMonthProjectedExpense();
+        BigDecimal monthlyBaseIncome = currentAnalysis.monthlyBaseIncome();
         BigDecimal monthlyIncomeReference = currentAnalysis.monthlyIncomeReference();
         BigDecimal projectedRecurringExpenseNextMonth = currentAnalysis.projectedRecurringExpenseNextMonth();
         BigDecimal projectedRecurringIncomeNextMonth = currentAnalysis.projectedRecurringIncomeNextMonth();
@@ -151,6 +162,7 @@ public class FinancialAnalysisService {
         return buildResponse(
                 totalFutureInstallments,
                 nextMonthProjectedExpense,
+                monthlyBaseIncome,
                 monthlyIncomeReference,
                 projectedRecurringExpenseNextMonth,
                 projectedRecurringIncomeNextMonth,
@@ -174,6 +186,7 @@ public class FinancialAnalysisService {
                         nextMonthEnd
                 );
 
+        BigDecimal monthlyBaseIncome = user.getMonthlyBaseIncome();
         BigDecimal monthlyIncomeReference = resolveMonthlyIncomeReference(user);
 
         Long activeInstallmentCount =
@@ -190,6 +203,7 @@ public class FinancialAnalysisService {
         return buildResponse(
                 totalFutureInstallments,
                 nextMonthProjectedExpense,
+                monthlyBaseIncome,
                 monthlyIncomeReference,
                 recurringProjection.recurringExpense(),
                 recurringProjection.recurringIncome(),
@@ -287,6 +301,7 @@ public class FinancialAnalysisService {
     private FinancialCommitmentResponse buildResponse(
             BigDecimal totalFutureInstallments,
             BigDecimal nextMonthProjectedExpense,
+            BigDecimal monthlyBaseIncome,
             BigDecimal monthlyIncomeReference,
             BigDecimal projectedRecurringExpenseNextMonth,
             BigDecimal projectedRecurringIncomeNextMonth,
@@ -298,6 +313,10 @@ public class FinancialAnalysisService {
 
         if (nextMonthProjectedExpense == null) {
             nextMonthProjectedExpense = BigDecimal.ZERO;
+        }
+
+        if (monthlyBaseIncome == null) {
+            monthlyBaseIncome = BigDecimal.ZERO;
         }
 
         if (monthlyIncomeReference == null) {
@@ -340,22 +359,23 @@ public class FinancialAnalysisService {
 
         if (highRisk) {
             riskLevel = "HIGH";
-            message = "High financial risk detected. Your projected expenses may significantly impact your budget.";
+            message = "Alto risco financeiro detectado. Suas despesas projetadas podem comprometer significativamente seu orçamento.";
         } else if (riskDetected) {
             riskLevel = "MEDIUM";
-            message = "Attention: your financial commitment is rising. Review future expenses and installments.";
+            message = "Atenção: seu comprometimento financeiro está aumentando. Revise despesas futuras e parcelamentos.";
         } else {
             riskLevel = "LOW";
-            message = "Your financial commitment is under control.";
+            message = "Seu comprometimento financeiro está sob controle.";
         }
 
         if (monthlyIncomeReference.compareTo(BigDecimal.ZERO) == 0) {
-            message = "Income reference not configured. Set your monthly base income for a more accurate analysis.";
+            message = "Renda de referência não configurada. Defina sua renda mensal base para uma análise mais precisa.";
         }
 
         return new FinancialCommitmentResponse(
                 totalFutureInstallments,
                 nextMonthProjectedExpense,
+                monthlyBaseIncome,
                 monthlyIncomeReference,
                 projectedRecurringExpenseNextMonth,
                 projectedRecurringIncomeNextMonth,

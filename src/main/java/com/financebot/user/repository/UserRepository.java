@@ -14,4 +14,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByTelegramLinkCode(String telegramLinkCode);
 
     boolean existsByTelegramId(Long telegramId);
+
+    Optional<User> findByTelegramId(Long telegramId);
 }
