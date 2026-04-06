@@ -1,5 +1,6 @@
 package com.financebot.common.exception;
 
+import com.financebot.telegram.exception.TelegramUserNotFoundException;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -13,6 +14,14 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleEntityNotFound(EntityNotFoundException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
         problemDetail.setTitle("Resource not found");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    @ExceptionHandler(TelegramUserNotFoundException.class)
+    public ProblemDetail handleTelegramUserNotFound(TelegramUserNotFoundException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        problemDetail.setTitle("Telegram user not found");
         problemDetail.setDetail(ex.getMessage());
         return problemDetail;
     }

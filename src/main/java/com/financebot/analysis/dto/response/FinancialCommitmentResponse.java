@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 public record FinancialCommitmentResponse(
         BigDecimal totalFutureInstallments,
         BigDecimal nextMonthProjectedExpense,
+        BigDecimal monthlyBaseIncome,
         BigDecimal monthlyIncomeReference,
         BigDecimal projectedRecurringExpenseNextMonth,
         BigDecimal projectedRecurringIncomeNextMonth,

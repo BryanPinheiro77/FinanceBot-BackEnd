@@ -52,7 +52,8 @@ public class SecurityConfig {
                                 "/actuator/info",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**"
+                                "/v3/api-docs/**",
+                                "/telegram/**"
                         ).permitAll()
                         .requestMatchers("/users/telegram/confirm-link").permitAll()
                         .anyRequest().authenticated()

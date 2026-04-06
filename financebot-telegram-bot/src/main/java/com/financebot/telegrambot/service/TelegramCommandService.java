@@ -27,40 +27,40 @@ public class TelegramCommandService {
             String telegramFirstName
     ) {
         if (messageText == null || messageText.isBlank()) {
-            return "Não consegui entender sua mensagem. Tente /start, /help ou /connect CODIGO.";
+            return "Não consegui entender sua mensagem. Tente /start, /iniciar, /help ou /ajuda.";
         }
 
         String normalizedMessage = messageText.trim();
 
-        if (normalizedMessage.startsWith("/start")) {
+        if (startsWithCommand(normalizedMessage, "/start", "/iniciar")) {
             return handleStart(telegramFirstName, telegramUsername);
         }
 
-        if (normalizedMessage.startsWith("/help")) {
+        if (startsWithCommand(normalizedMessage, "/help", "/ajuda")) {
             return handleHelp();
         }
 
-        if (normalizedMessage.startsWith("/connect")) {
+        if (startsWithCommand(normalizedMessage, "/connect", "/conectar")) {
             return handleConnect(normalizedMessage, telegramId, telegramUsername);
         }
 
-        if (normalizedMessage.startsWith("/me")) {
+        if (startsWithCommand(normalizedMessage, "/me", "/perfil")) {
             return handleMe(telegramId);
         }
 
-        if (normalizedMessage.startsWith("/disconnect")) {
+        if (startsWithCommand(normalizedMessage, "/disconnect", "/desconectar")) {
             return handleDisconnect(telegramId);
         }
 
-        if (normalizedMessage.startsWith("/setincome")) {
+        if (startsWithCommand(normalizedMessage, "/setincome", "/definirrenda")) {
             return handleSetIncome(normalizedMessage, telegramId);
         }
 
-        if (normalizedMessage.startsWith("/analysis")) {
+        if (startsWithCommand(normalizedMessage, "/analysis", "/analise")) {
             return handleAnalysis(telegramId);
         }
 
-        if (normalizedMessage.startsWith("/status")) {
+        if (startsWithCommand(normalizedMessage, "/status", "/resumo")) {
             return handleStatus(telegramId);
         }
 
@@ -70,9 +70,11 @@ public class TelegramCommandService {
 
         if (looksLikeConnectionIntent(normalizedMessage)) {
             return """
-                    Para conectar sua conta, gere um código no sistema e envie aqui assim:
+                    Para conectar sua conta, gere um código no sistema e envie assim:
                     
                     /connect SEU_CODIGO
+                    ou
+                    /conectar SEU_CODIGO
                     
                     Exemplo:
                     /connect FIN-ABC123
@@ -83,14 +85,14 @@ public class TelegramCommandService {
                 Não reconheci sua mensagem.
                 
                 Tente um destes comandos:
-                /start - Iniciar o bot
-                /help - Ver ajuda
-                /connect CODIGO - Conectar sua conta
-                /me - Ver seu perfil
-                /status - Ver resumo da conta
-                /analysis - Ver análise financeira
-                /setincome VALOR - Definir renda mensal base
-                /disconnect - Desconectar conta
+                /start ou /iniciar - Iniciar o bot
+                /help ou /ajuda - Ver ajuda
+                /connect ou /conectar CODIGO - Conectar sua conta
+                /me ou /perfil - Ver seu perfil
+                /status ou /resumo - Ver resumo da conta
+                /analysis ou /analise - Ver análise financeira
+                /setincome ou /definirrenda VALOR - Definir renda mensal base
+                /disconnect ou /desconectar - Desconectar conta
                 """;
     }
 
@@ -103,14 +105,14 @@ public class TelegramCommandService {
                 Eu posso ajudar você a conectar sua conta e acompanhar suas finanças direto pelo Telegram.
                 
                 Comandos disponíveis:
-                /start - Iniciar o bot
-                /help - Ver ajuda
-                /connect CODIGO - Conectar sua conta
-                /me - Ver seu perfil
-                /status - Ver resumo da conta
-                /analysis - Ver análise financeira
-                /setincome VALOR - Definir renda mensal base
-                /disconnect - Desconectar conta
+                /start ou /iniciar - Iniciar o bot
+                /help ou /ajuda - Ver ajuda
+                /connect ou /conectar CODIGO - Conectar sua conta
+                /me ou /perfil - Ver seu perfil
+                /status ou /resumo - Ver resumo da conta
+                /analysis ou /analise - Ver análise financeira
+                /setincome ou /definirrenda VALOR - Definir renda mensal base
+                /disconnect ou /desconectar - Desconectar conta
                 """.formatted(name != null ? ", " + name : "");
     }
 
@@ -118,18 +120,20 @@ public class TelegramCommandService {
         return """
                 Comandos disponíveis:
                 
-                /start - Iniciar o bot
-                /help - Ver ajuda
-                /connect CODIGO - Conectar sua conta
-                /me - Ver seu perfil
-                /status - Ver resumo da conta
-                /analysis - Ver análise financeira
-                /setincome VALOR - Definir renda mensal base
-                /disconnect - Desconectar conta
+                /start ou /iniciar - Iniciar o bot
+                /help ou /ajuda - Ver ajuda
+                /connect ou /conectar CODIGO - Conectar sua conta
+                /me ou /perfil - Ver seu perfil
+                /status ou /resumo - Ver resumo da conta
+                /analysis ou /analise - Ver análise financeira
+                /setincome ou /definirrenda VALOR - Definir renda mensal base
+                /disconnect ou /desconectar - Desconectar conta
                 
                 Exemplos:
                 /connect FIN-ABC123
+                /conectar FIN-ABC123
                 /setincome 3500
+                /definirrenda 3500
                 """;
     }
 
@@ -142,11 +146,11 @@ public class TelegramCommandService {
                 Eu sou seu assistente financeiro no Telegram.
                 Você pode usar:
                 
-                /start - Iniciar o bot
-                /help - Ver ajuda
-                /connect CODIGO - Conectar sua conta
-                /me - Ver seu perfil
-                /analysis - Ver análise financeira
+                /start ou /iniciar - Iniciar o bot
+                /help ou /ajuda - Ver ajuda
+                /connect ou /conectar CODIGO - Conectar sua conta
+                /me ou /perfil - Ver seu perfil
+                /analysis ou /analise - Ver análise financeira
                 """.formatted(name != null ? ", " + name : "");
     }
 
@@ -159,6 +163,8 @@ public class TelegramCommandService {
                     
                     Exemplo:
                     /connect FIN-ABC123
+                    ou
+                    /conectar FIN-ABC123
                     """;
         }
 
@@ -215,8 +221,10 @@ public class TelegramCommandService {
             return """
                     ✅ Sua conta do Telegram foi desconectada com sucesso.
                     
-                    Se quiser conectar novamente depois, gere um novo código no sistema e use:
+                    Se quiser conectar novamente, gere um novo código no sistema e use:
                     /connect SEU_CODIGO
+                    ou
+                    /conectar SEU_CODIGO
                     """;
         } catch (RestClientResponseException e) {
             return mapDefaultBotErrors(e);
@@ -234,6 +242,8 @@ public class TelegramCommandService {
                     
                     Exemplo:
                     /setincome 3500
+                    ou
+                    /definirrenda 3500
                     """;
         }
 
@@ -257,7 +267,8 @@ public class TelegramCommandService {
                     Exemplos válidos:
                     /setincome 3500
                     /setincome 3500,50
-                    /setincome 4200.75
+                    /definirrenda 3500
+                    /definirrenda 3500,50
                     """;
         } catch (RestClientResponseException e) {
             return mapDefaultBotErrors(e);
@@ -274,6 +285,7 @@ public class TelegramCommandService {
                     📊 Análise financeira
                     
                     Renda mensal base: %s
+                    Renda de referência: %s
                     Receita recorrente prevista: %s
                     Despesa recorrente prevista: %s
                     Receita projetada no próximo mês: %s
@@ -282,16 +294,20 @@ public class TelegramCommandService {
                     Comprometimento: %s%%
                     Grupos de parcelamento ativos: %s
                     Nível de risco: %s
+                    
+                    %s
                     """.formatted(
                     formatCurrency(response.monthlyBaseIncome()),
+                    formatCurrency(response.monthlyIncomeReference()),
                     formatCurrency(response.projectedRecurringIncomeNextMonth()),
                     formatCurrency(response.projectedRecurringExpenseNextMonth()),
                     formatCurrency(response.nextMonthProjectedIncome()),
                     formatCurrency(response.nextMonthProjectedExpense()),
                     formatCurrency(response.projectedNetNextMonth()),
                     response.commitmentPercentage() != null ? response.commitmentPercentage() : BigDecimal.ZERO,
-                    response.activeInstallmentGroups() != null ? response.activeInstallmentGroups() : 0,
-                    defaultText(response.riskLevel())
+                    response.activeInstallmentCount() != null ? response.activeInstallmentCount() : 0L,
+                    translateRiskLevel(response.riskLevel()),
+                    defaultText(response.message())
             );
         } catch (RestClientResponseException e) {
             return mapDefaultBotErrors(e);
@@ -317,7 +333,7 @@ public class TelegramCommandService {
                     defaultText(profile.email()),
                     formatCurrency(profile.monthlyBaseIncome()),
                     formatCurrency(analysis.projectedNetNextMonth()),
-                    defaultText(analysis.riskLevel())
+                    translateRiskLevel(analysis.riskLevel())
             );
         } catch (RestClientResponseException e) {
             return mapDefaultBotErrors(e);
@@ -329,9 +345,22 @@ public class TelegramCommandService {
     private String mapDefaultBotErrors(RestClientResponseException e) {
         return switch (e.getStatusCode().value()) {
             case 400 -> "A solicitação está inválida.";
-            case 404 -> "Não encontrei uma conta vinculada a este Telegram. Use /connect CODIGO.";
+            case 404 -> "Não encontrei uma conta vinculada a este Telegram. Use /connect ou /conectar CODIGO.";
             case 401, 403 -> "O bot não tem permissão para acessar esse recurso agora.";
             default -> "Ocorreu um erro ao processar sua solicitação.";
+        };
+    }
+
+    private String translateRiskLevel(String riskLevel) {
+        if (riskLevel == null || riskLevel.isBlank()) {
+            return "Não informado";
+        }
+
+        return switch (riskLevel.toUpperCase()) {
+            case "LOW" -> "Baixo";
+            case "MEDIUM" -> "Médio";
+            case "HIGH" -> "Alto";
+            default -> riskLevel;
         };
     }
 
@@ -368,6 +397,15 @@ public class TelegramCommandService {
                 || lower.contains("telegram");
     }
 
+    private boolean startsWithCommand(String messageText, String... commands) {
+        for (String command : commands) {
+            if (messageText.startsWith(command)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private String defaultText(String value) {
         return value != null && !value.isBlank() ? value : "Não informado";
     }
@@ -377,15 +415,19 @@ public class TelegramCommandService {
             return "Não informado";
         }
 
-        return NumberFormat.getCurrencyInstance(new Locale("pt", "BR")).format(value);
+        return NumberFormat.getCurrencyInstance(Locale.forLanguageTag("pt-BR")).format(value);
     }
 
     private BigDecimal parseBrazilianNumber(String value) {
         String normalized = value.trim()
                 .replace("R$", "")
-                .replace(" ", "")
-                .replace(".", "")
-                .replace(",", ".");
+                .replace(" ", "");
+
+        if (normalized.contains(",") && normalized.contains(".")) {
+            normalized = normalized.replace(".", "").replace(",", ".");
+        } else if (normalized.contains(",")) {
+            normalized = normalized.replace(",", ".");
+        }
 
         return new BigDecimal(normalized);
     }

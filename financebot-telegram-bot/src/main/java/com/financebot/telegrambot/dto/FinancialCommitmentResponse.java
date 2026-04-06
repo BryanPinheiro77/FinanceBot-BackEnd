@@ -3,14 +3,20 @@ package com.financebot.telegrambot.dto;
 import java.math.BigDecimal;
 
 public record FinancialCommitmentResponse(
-        BigDecimal monthlyBaseIncome,
+        BigDecimal totalFutureInstallments,
         BigDecimal nextMonthProjectedExpense,
+        BigDecimal monthlyBaseIncome,
+        BigDecimal monthlyIncomeReference,
         BigDecimal projectedRecurringExpenseNextMonth,
         BigDecimal projectedRecurringIncomeNextMonth,
         BigDecimal nextMonthProjectedIncome,
         BigDecimal projectedNetNextMonth,
         BigDecimal commitmentPercentage,
-        Integer activeInstallmentGroups,
-        String riskLevel
+        Long activeInstallmentCount,
+        boolean excessiveInstallments,
+        boolean tightBudgetRisk,
+        boolean riskDetected,
+        String riskLevel,
+        String message
 ) {
 }
