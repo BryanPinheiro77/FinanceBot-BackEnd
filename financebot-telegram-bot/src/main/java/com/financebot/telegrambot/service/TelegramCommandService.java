@@ -406,21 +406,31 @@ public class TelegramCommandService {
 
         String type = parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE ? "despesa" : "receita";
 
+        String conta = parsedMessage.accountName() != null
+                ? parsedMessage.accountName()
+                : "conta padrão";
+
+        String categoria = parsedMessage.categoryName() != null
+                ? parsedMessage.categoryName()
+                : "automática";
+
         return """
             Entendi esta %s:
             
             Valor: %s
             Descrição: %s
             Data: %s
-            Conta: conta padrão
-            Categoria: automática
+            Conta: %s
+            Categoria: %s
             
             Deseja confirmar e salvar?
             """.formatted(
                 type,
                 formatCurrency(parsedMessage.amount()),
                 parsedMessage.description() != null ? parsedMessage.description() : "Não informada",
-                formatDate(parsedMessage.date())
+                formatDate(parsedMessage.date()),
+                conta,
+                categoria
         );
     }
 
@@ -431,21 +441,58 @@ public class TelegramCommandService {
                     MonthlyAmountSummaryResponse response = financeBotApiClient.getCurrentMonthExpenseSummary(telegramId);
 
                     yield """
-                            💸 Total gasto no mês
-                            
-                            Você gastou %s neste mês.
-                            """.formatted(formatCurrency(response.totalAmount()));
+                        💸 Total gasto no mês
+                        
+                        Você gastou %s neste mês.
+                        """.formatted(formatCurrency(response.totalAmount()));
                 }
                 case QUERY_MONTH_INCOME_TOTAL -> {
                     MonthlyAmountSummaryResponse response = financeBotApiClient.getCurrentMonthIncomeSummary(telegramId);
 
                     yield """
-                            💰 Total recebido no mês
-                            
-                            Você recebeu %s neste mês.
-                            """.formatted(formatCurrency(response.totalAmount()));
+                        💰 Total recebido no mês
+                        
+                        Você recebeu %s neste mês.
+                        """.formatted(formatCurrency(response.totalAmount()));
                 }
                 case QUERY_MONTH_ANALYSIS -> handleAnalysis(telegramId);
+
+                case QUERY_TRANSACTION_TOTAL -> {
+                    String type = parsedMessage.originalMessage().toLowerCase().contains("recebi")
+                            || parsedMessage.originalMessage().toLowerCase().contains("entrou")
+                            ? "INCOME"
+                            : "EXPENSE";
+
+                    TelegramTransactionSummaryResponse response = financeBotApiClient.getTransactionSummary(
+                            new TelegramTransactionSummaryRequest(
+                                    telegramId,
+                                    type,
+                                    parsedMessage.categoryName(),
+                                    parsedMessage.accountName(),
+                                    parsedMessage.startDate(),
+                                    parsedMessage.endDate()
+                            )
+                    );
+
+                    String label = "EXPENSE".equals(type) ? "gasto" : "recebido";
+
+                    String complemento = response.categoryName() != null
+                            ? " em " + response.categoryName()
+                            : response.accountName() != null
+                            ? " na conta " + response.accountName()
+                            : "";
+
+                    yield """
+                        📊 Total %s%s
+                        
+                        O total foi %s.
+                        """.formatted(
+                            label,
+                            complemento,
+                            formatCurrency(response.totalAmount())
+                    );
+                }
+
                 default -> "Não consegui interpretar sua consulta.";
             };
         } catch (RestClientResponseException e) {

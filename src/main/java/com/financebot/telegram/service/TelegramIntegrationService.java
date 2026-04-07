@@ -6,6 +6,8 @@ import com.financebot.analysis.service.FinancialAnalysisService;
 import com.financebot.category.domain.Category;
 import com.financebot.telegram.dto.CreateTransactionFromTelegramRequest;
 import com.financebot.telegram.dto.MonthlyAmountSummaryResponse;
+import com.financebot.telegram.dto.TelegramTransactionSummaryRequest;
+import com.financebot.telegram.dto.TelegramTransactionSummaryResponse;
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.Transaction;
@@ -152,5 +154,66 @@ public class TelegramIntegrationService {
         transaction.setSourceType(SourceType.BOT_TEXT);
 
         transactionRepository.save(transaction);
+    }
+
+    @Transactional(readOnly = true)
+    public TelegramTransactionSummaryResponse getTransactionSummary(TelegramTransactionSummaryRequest request) {
+        User user = findUserByTelegramId(request.telegramId());
+        TransactionType type = TransactionType.valueOf(request.type());
+
+        String categoryName = normalizeBlankToNull(request.categoryName());
+        String accountName = normalizeBlankToNull(request.accountName());
+
+        BigDecimal totalAmount;
+
+        if (categoryName != null && accountName != null) {
+            totalAmount = transactionRepository.sumAmountByUserAndTypeAndDateBetweenAndCategoryAndAccount(
+                    user.getId(),
+                    type,
+                    request.startDate(),
+                    request.endDate(),
+                    categoryName,
+                    accountName
+            );
+        } else if (categoryName != null) {
+            totalAmount = transactionRepository.sumAmountByUserAndTypeAndDateBetweenAndCategory(
+                    user.getId(),
+                    type,
+                    request.startDate(),
+                    request.endDate(),
+                    categoryName
+            );
+        } else if (accountName != null) {
+            totalAmount = transactionRepository.sumAmountByUserAndTypeAndDateBetweenAndAccount(
+                    user.getId(),
+                    type,
+                    request.startDate(),
+                    request.endDate(),
+                    accountName
+            );
+        } else {
+            totalAmount = transactionRepository.sumAmountByUserAndTypeAndDateBetween(
+                    user.getId(),
+                    type,
+                    request.startDate(),
+                    request.endDate()
+            );
+        }
+
+        return new TelegramTransactionSummaryResponse(
+                request.type(),
+                categoryName,
+                accountName,
+                request.startDate(),
+                request.endDate(),
+                totalAmount
+        );
+    }
+
+    private String normalizeBlankToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 }

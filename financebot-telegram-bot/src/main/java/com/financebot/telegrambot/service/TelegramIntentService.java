@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -13,6 +14,8 @@ import java.util.regex.Pattern;
 public class TelegramIntentService {
 
     private static final Pattern AMOUNT_PATTERN = Pattern.compile("(\\d+[\\.,]?\\d{0,2})");
+    private static final Pattern ACCOUNT_PATTERN = Pattern.compile("(?:conta|cartao|cartão)\\s+(?:da|do|de)?\\s*([a-zA-Z0-9\\s]+)");
+    private static final Pattern CATEGORY_PATTERN = Pattern.compile("\\b(mercado|supermercado|gasolina|combustivel|combustível|farmacia|farmácia|uber|ifood|salario|salário|freela|alimentacao|alimentação)\\b");
 
     public ParsedTelegramMessage parse(String messageText) {
         if (messageText == null || messageText.isBlank()) {
@@ -27,27 +30,25 @@ public class TelegramIntentService {
                     null,
                     null,
                     LocalDate.now(),
-                    messageText
+                    messageText,
+                    null,
+                    null,
+                    YearMonth.now().atDay(1),
+                    YearMonth.now().atEndOfMonth()
             );
         }
 
-        if (isMonthExpenseQuery(normalized)) {
+        if (isTransactionTotalQuery(normalized)) {
             return new ParsedTelegramMessage(
-                    TelegramIntentType.QUERY_MONTH_EXPENSE_TOTAL,
+                    TelegramIntentType.QUERY_TRANSACTION_TOTAL,
                     null,
                     null,
                     LocalDate.now(),
-                    messageText
-            );
-        }
-
-        if (isMonthIncomeQuery(normalized)) {
-            return new ParsedTelegramMessage(
-                    TelegramIntentType.QUERY_MONTH_INCOME_TOTAL,
-                    null,
-                    null,
-                    LocalDate.now(),
-                    messageText
+                    messageText,
+                    extractCategoryName(normalized),
+                    extractAccountName(normalized),
+                    extractStartDate(normalized),
+                    extractEndDate(normalized)
             );
         }
 
@@ -57,7 +58,11 @@ public class TelegramIntentService {
                     extractAmount(normalized),
                     extractDescriptionForTransaction(normalized),
                     extractDate(normalized),
-                    messageText
+                    messageText,
+                    extractCategoryName(normalized),
+                    extractAccountName(normalized),
+                    null,
+                    null
             );
         }
 
@@ -67,7 +72,11 @@ public class TelegramIntentService {
                     extractAmount(normalized),
                     extractDescriptionForTransaction(normalized),
                     extractDate(normalized),
-                    messageText
+                    messageText,
+                    extractCategoryName(normalized),
+                    extractAccountName(normalized),
+                    null,
+                    null
             );
         }
 
@@ -80,18 +89,21 @@ public class TelegramIntentService {
                 null,
                 null,
                 null,
-                messageText
+                messageText,
+                null,
+                null,
+                null,
+                null
         );
     }
 
-    private boolean isMonthExpenseQuery(String text) {
-        return (text.contains("quanto gastei") || text.contains("quanto ja gastei") || text.contains("total gasto"))
-                && text.contains("mes");
-    }
-
-    private boolean isMonthIncomeQuery(String text) {
-        return (text.contains("quanto recebi") || text.contains("total recebido") || text.contains("quanto entrou"))
-                && text.contains("mes");
+    private boolean isTransactionTotalQuery(String text) {
+        return (text.contains("quanto gastei")
+                || text.contains("quanto recebi")
+                || text.contains("quanto entrou")
+                || text.contains("total gasto")
+                || text.contains("total recebido"))
+                && (text.contains("mes") || text.contains("hoje") || text.contains("ontem"));
     }
 
     private boolean isMonthAnalysisQuery(String text) {
@@ -133,9 +145,10 @@ public class TelegramIntentService {
 
     private String extractDescriptionForTransaction(String text) {
         String cleaned = text
-                .replaceAll("\\b(gastei|paguei|comprei|despesa|recebi|ganhei|entrou|entrada)\\b", "")
+                .replaceAll("\\b(gastei|paguei|comprei|despesa|recebi|ganhei|entrou|entrada|reais|real)\\b", "")
                 .replaceAll("\\b(hoje|ontem|amanha|amanhã)\\b", "")
                 .replaceAll("(\\d+[\\.,]?\\d{0,2})", "")
+                .replaceAll("\\b(da conta|do cartao|do cartão|na conta|no cartao|no cartão)\\b.*", "")
                 .trim();
 
         cleaned = cleaned.replaceAll("\\s+", " ");
@@ -145,6 +158,45 @@ public class TelegramIntentService {
         }
 
         return cleaned;
+    }
+
+    private String extractCategoryName(String text) {
+        Matcher matcher = CATEGORY_PATTERN.matcher(text);
+
+        if (!matcher.find()) {
+            return null;
+        }
+
+        String value = matcher.group(1);
+
+        return switch (value) {
+            case "mercado", "supermercado" -> "Mercado";
+            case "gasolina", "combustivel", "combustível" -> "Combustível";
+            case "farmacia", "farmácia" -> "Saúde";
+            case "uber" -> "Transporte";
+            case "ifood", "alimentacao", "alimentação" -> "Alimentação";
+            case "salario", "salário" -> "Salário";
+            case "freela" -> "Freelance";
+            default -> null;
+        };
+    }
+
+    private String extractAccountName(String text) {
+        Matcher matcher = ACCOUNT_PATTERN.matcher(text);
+
+        if (!matcher.find()) {
+            return null;
+        }
+
+        String account = matcher.group(1)
+                .replaceAll("\\b(esse mes|este mes|mes|hoje|ontem)\\b", "")
+                .trim();
+
+        if (account.isBlank()) {
+            return null;
+        }
+
+        return capitalizeWords(account);
     }
 
     private LocalDate extractDate(String text) {
@@ -159,6 +211,34 @@ public class TelegramIntentService {
         }
 
         return today;
+    }
+
+    private LocalDate extractStartDate(String text) {
+        LocalDate today = LocalDate.now();
+
+        if (text.contains("ontem")) {
+            return today.minusDays(1);
+        }
+
+        if (text.contains("hoje")) {
+            return today;
+        }
+
+        return YearMonth.now().atDay(1);
+    }
+
+    private LocalDate extractEndDate(String text) {
+        LocalDate today = LocalDate.now();
+
+        if (text.contains("ontem")) {
+            return today.minusDays(1);
+        }
+
+        if (text.contains("hoje")) {
+            return today;
+        }
+
+        return YearMonth.now().atEndOfMonth();
     }
 
     private String normalize(String text) {
@@ -176,5 +256,25 @@ public class TelegramIntentService {
                 .replace("ú", "u")
                 .replaceAll("\\s+", " ")
                 .trim();
+    }
+
+    private String capitalizeWords(String text) {
+        String[] parts = text.split("\\s+");
+        StringBuilder result = new StringBuilder();
+
+        for (String part : parts) {
+            if (part.isBlank()) {
+                continue;
+            }
+
+            if (!result.isEmpty()) {
+                result.append(" ");
+            }
+
+            result.append(part.substring(0, 1).toUpperCase())
+                    .append(part.substring(1).toLowerCase());
+        }
+
+        return result.toString();
     }
 }

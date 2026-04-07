@@ -10,6 +10,10 @@ public record ParsedTelegramMessage(
         BigDecimal amount,
         String description,
         LocalDate date,
-        String originalMessage
+        String originalMessage,
+        String categoryName,
+        String accountName,
+        LocalDate startDate,
+        LocalDate endDate
 ) {
 }

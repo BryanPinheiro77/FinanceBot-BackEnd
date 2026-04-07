@@ -94,4 +94,68 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+
+    @Query("""
+       select coalesce(sum(t.amount), 0)
+       from Transaction t
+       where t.user.id = :userId
+         and t.type = :type
+         and t.date between :startDate and :endDate
+       """)
+    BigDecimal sumAmountByUserAndTypeAndDateBetween(
+            @Param("userId") Long userId,
+            @Param("type") TransactionType type,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    @Query("""
+       select coalesce(sum(t.amount), 0)
+       from Transaction t
+       where t.user.id = :userId
+         and t.type = :type
+         and t.date between :startDate and :endDate
+         and lower(t.category.name) = lower(:categoryName)
+       """)
+    BigDecimal sumAmountByUserAndTypeAndDateBetweenAndCategory(
+            @Param("userId") Long userId,
+            @Param("type") TransactionType type,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("categoryName") String categoryName
+    );
+
+    @Query("""
+       select coalesce(sum(t.amount), 0)
+       from Transaction t
+       where t.user.id = :userId
+         and t.type = :type
+         and t.date between :startDate and :endDate
+         and lower(t.account.name) = lower(:accountName)
+       """)
+    BigDecimal sumAmountByUserAndTypeAndDateBetweenAndAccount(
+            @Param("userId") Long userId,
+            @Param("type") TransactionType type,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("accountName") String accountName
+    );
+
+    @Query("""
+       select coalesce(sum(t.amount), 0)
+       from Transaction t
+       where t.user.id = :userId
+         and t.type = :type
+         and t.date between :startDate and :endDate
+         and lower(t.category.name) = lower(:categoryName)
+         and lower(t.account.name) = lower(:accountName)
+       """)
+    BigDecimal sumAmountByUserAndTypeAndDateBetweenAndCategoryAndAccount(
+            @Param("userId") Long userId,
+            @Param("type") TransactionType type,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("categoryName") String categoryName,
+            @Param("accountName") String accountName
+    );
 }

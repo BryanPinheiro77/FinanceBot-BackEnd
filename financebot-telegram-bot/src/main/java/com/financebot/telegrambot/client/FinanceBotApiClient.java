@@ -95,4 +95,13 @@ public class FinanceBotApiClient {
                 .retrieve()
                 .body(MonthlyAmountSummaryResponse.class);
     }
+
+    public TelegramTransactionSummaryResponse getTransactionSummary(TelegramTransactionSummaryRequest request) {
+        return restClient.post()
+                .uri("/telegram/transactions/summary")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .body(TelegramTransactionSummaryResponse.class);
+    }
 }
