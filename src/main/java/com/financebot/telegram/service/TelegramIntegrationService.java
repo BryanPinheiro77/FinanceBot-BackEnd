@@ -1,0 +1,219 @@
+package com.financebot.telegram.service;
+
+import com.financebot.account.domain.Account;
+import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
+import com.financebot.analysis.service.FinancialAnalysisService;
+import com.financebot.category.domain.Category;
+import com.financebot.telegram.dto.CreateTransactionFromTelegramRequest;
+import com.financebot.telegram.dto.MonthlyAmountSummaryResponse;
+import com.financebot.telegram.dto.TelegramTransactionSummaryRequest;
+import com.financebot.telegram.dto.TelegramTransactionSummaryResponse;
+import com.financebot.telegram.exception.TelegramUserNotFoundException;
+import com.financebot.transaction.domain.SourceType;
+import com.financebot.transaction.domain.Transaction;
+import com.financebot.transaction.domain.TransactionType;
+import com.financebot.transaction.repository.TransactionRepository;
+import com.financebot.user.domain.User;
+import com.financebot.user.dto.request.UpdateMonthlyBaseIncomeRequest;
+import com.financebot.user.dto.response.TelegramUserProfileResponse;
+import com.financebot.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.YearMonth;
+
+@Service
+@RequiredArgsConstructor
+public class TelegramIntegrationService {
+
+    private final UserRepository userRepository;
+    private final FinancialAnalysisService financialAnalysisService;
+    private final TransactionRepository transactionRepository;
+    private final TelegramAccountResolverService telegramAccountResolverService;
+    private final TelegramCategoryResolverService telegramCategoryResolverService;
+
+    @Transactional(readOnly = true)
+    public TelegramUserProfileResponse getMe(Long telegramId) {
+        User user = findUserByTelegramId(telegramId);
+
+        return new TelegramUserProfileResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getMonthlyBaseIncome(),
+                user.getTelegramId()
+        );
+    }
+
+    @Transactional
+    public TelegramUserProfileResponse updateMonthlyBaseIncome(
+            Long telegramId,
+            UpdateMonthlyBaseIncomeRequest request
+    ) {
+        User user = findUserByTelegramId(telegramId);
+        user.setMonthlyBaseIncome(request.monthlyBaseIncome());
+
+        User savedUser = userRepository.save(user);
+
+        return new TelegramUserProfileResponse(
+                savedUser.getId(),
+                savedUser.getName(),
+                savedUser.getEmail(),
+                savedUser.getMonthlyBaseIncome(),
+                savedUser.getTelegramId()
+        );
+    }
+
+    @Transactional
+    public void disconnectTelegram(Long telegramId) {
+        User user = findUserByTelegramId(telegramId);
+        user.setTelegramId(null);
+        user.setTelegramLinkCode(null);
+        user.setTelegramLinkCodeExpiresAt(null);
+        userRepository.save(user);
+    }
+
+    @Transactional(readOnly = true)
+    public FinancialCommitmentResponse getFinancialAnalysis(Long telegramId) {
+        User user = findUserByTelegramId(telegramId);
+        return financialAnalysisService.getFinancialCommitment(user);
+    }
+
+    private User findUserByTelegramId(Long telegramId) {
+        return userRepository.findByTelegramId(telegramId)
+                .orElseThrow(TelegramUserNotFoundException::new);
+    }
+
+    @Transactional(readOnly = true)
+    public MonthlyAmountSummaryResponse getCurrentMonthExpenseSummary(Long telegramId) {
+        User user = findUserByTelegramId(telegramId);
+
+        YearMonth currentMonth = YearMonth.now();
+        LocalDate startDate = currentMonth.atDay(1);
+        LocalDate endDate = currentMonth.atEndOfMonth();
+
+        BigDecimal totalAmount = transactionRepository.sumAmountByUserAndTypeBetweenDates(
+                user.getId(),
+                TransactionType.EXPENSE,
+                startDate,
+                endDate
+        );
+
+        return new MonthlyAmountSummaryResponse(
+                "EXPENSE",
+                currentMonth.toString(),
+                totalAmount
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public MonthlyAmountSummaryResponse getCurrentMonthIncomeSummary(Long telegramId) {
+        User user = findUserByTelegramId(telegramId);
+
+        YearMonth currentMonth = YearMonth.now();
+        LocalDate startDate = currentMonth.atDay(1);
+        LocalDate endDate = currentMonth.atEndOfMonth();
+
+        BigDecimal totalAmount = transactionRepository.sumAmountByUserAndTypeBetweenDates(
+                user.getId(),
+                TransactionType.INCOME,
+                startDate,
+                endDate
+        );
+
+        return new MonthlyAmountSummaryResponse(
+                "INCOME",
+                currentMonth.toString(),
+                totalAmount
+        );
+    }
+
+    @Transactional
+    public void createTransactionFromTelegram(CreateTransactionFromTelegramRequest request) {
+        User user = findUserByTelegramId(request.telegramId());
+        TransactionType transactionType = TransactionType.valueOf(request.type());
+
+        Account account = telegramAccountResolverService.resolveDefaultAccount(user);
+        Category category = telegramCategoryResolverService.resolveCategory(
+                user,
+                transactionType,
+                request.description()
+        );
+
+        Transaction transaction = new Transaction();
+        transaction.setUser(user);
+        transaction.setAccount(account);
+        transaction.setCategory(category);
+        transaction.setAmount(request.amount());
+        transaction.setDescription(request.description());
+        transaction.setDate(request.date());
+        transaction.setType(transactionType);
+        transaction.setSourceType(SourceType.BOT_TEXT);
+
+        transactionRepository.save(transaction);
+    }
+
+    @Transactional(readOnly = true)
+    public TelegramTransactionSummaryResponse getTransactionSummary(TelegramTransactionSummaryRequest request) {
+        User user = findUserByTelegramId(request.telegramId());
+        TransactionType type = TransactionType.valueOf(request.type());
+
+        String categoryName = normalizeBlankToNull(request.categoryName());
+        String accountName = normalizeBlankToNull(request.accountName());
+
+        BigDecimal totalAmount;
+
+        if (categoryName != null && accountName != null) {
+            totalAmount = transactionRepository.sumAmountByUserAndTypeAndDateBetweenAndCategoryAndAccount(
+                    user.getId(),
+                    type,
+                    request.startDate(),
+                    request.endDate(),
+                    categoryName,
+                    accountName
+            );
+        } else if (categoryName != null) {
+            totalAmount = transactionRepository.sumAmountByUserAndTypeAndDateBetweenAndCategory(
+                    user.getId(),
+                    type,
+                    request.startDate(),
+                    request.endDate(),
+                    categoryName
+            );
+        } else if (accountName != null) {
+            totalAmount = transactionRepository.sumAmountByUserAndTypeAndDateBetweenAndAccount(
+                    user.getId(),
+                    type,
+                    request.startDate(),
+                    request.endDate(),
+                    accountName
+            );
+        } else {
+            totalAmount = transactionRepository.sumAmountByUserAndTypeAndDateBetween(
+                    user.getId(),
+                    type,
+                    request.startDate(),
+                    request.endDate()
+            );
+        }
+
+        return new TelegramTransactionSummaryResponse(
+                request.type(),
+                categoryName,
+                accountName,
+                request.startDate(),
+                request.endDate(),
+                totalAmount
+        );
+    }
+
+    private String normalizeBlankToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
+}

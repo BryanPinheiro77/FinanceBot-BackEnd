@@ -8,6 +8,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -35,6 +36,9 @@ public class User implements UserDetails {
     @Column(name = "email", nullable = false, length = 150)
     private String email;
 
+    @Column(name = "monthly_base_income", precision = 15, scale = 2)
+    private BigDecimal monthlyBaseIncome;
+
     @Column(name = "password", nullable = false, length = 255)
     private String password;
 
@@ -44,6 +48,12 @@ public class User implements UserDetails {
 
     @Column(name = "telegram_id", unique = true)
     private Long telegramId;
+
+    @Column(name = "telegram_link_code", length = 30)
+    private String telegramLinkCode;
+
+    @Column(name = "telegram_link_code_expires_at")
+    private LocalDateTime telegramLinkCodeExpiresAt;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
