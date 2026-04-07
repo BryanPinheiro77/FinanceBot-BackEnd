@@ -1,24 +1,27 @@
 package com.financebot.telegrambot.service;
 
 import com.financebot.telegrambot.client.FinanceBotApiClient;
-import com.financebot.telegrambot.dto.FinancialCommitmentResponse;
-import com.financebot.telegrambot.dto.TelegramLinkConfirmRequest;
-import com.financebot.telegrambot.dto.TelegramLinkConfirmResponse;
-import com.financebot.telegrambot.dto.UpdateMonthlyBaseIncomeRequest;
-import com.financebot.telegrambot.dto.UserProfileResponse;
+import com.financebot.telegrambot.dto.*;
+import com.financebot.telegrambot.intent.TelegramIntentType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.math.BigDecimal;
 import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
 public class TelegramCommandService {
 
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
     private final FinanceBotApiClient financeBotApiClient;
+    private final TelegramIntentService telegramIntentService;
+    private final TelegramPendingConfirmationService telegramPendingConfirmationService;
 
     public String handleMessage(
             String messageText,
@@ -81,18 +84,43 @@ public class TelegramCommandService {
                     """;
         }
 
+        if (isConfirmationMessage(normalizedMessage)) {
+            return handleConfirmation(telegramId);
+        }
+
+        if (isCancellationMessage(normalizedMessage)) {
+            return handleCancellation(telegramId);
+        }
+
+        ParsedTelegramMessage parsedMessage = telegramIntentService.parse(normalizedMessage);
+
+        if (parsedMessage.intentType() != null && parsedMessage.intentType().name().startsWith("QUERY_")) {
+            return handleNaturalLanguageQuery(parsedMessage, telegramId);
+        }
+
+        if (parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE
+                || parsedMessage.intentType() == TelegramIntentType.CREATE_INCOME) {
+            return handleNaturalLanguageTransactionPreview(telegramId, parsedMessage);
+        }
+
         return """
                 Não reconheci sua mensagem.
                 
-                Tente um destes comandos:
-                /start ou /iniciar - Iniciar o bot
-                /help ou /ajuda - Ver ajuda
-                /connect ou /conectar CODIGO - Conectar sua conta
-                /me ou /perfil - Ver seu perfil
-                /status ou /resumo - Ver resumo da conta
-                /analysis ou /analise - Ver análise financeira
-                /setincome ou /definirrenda VALOR - Definir renda mensal base
-                /disconnect ou /desconectar - Desconectar conta
+                Você pode usar comandos:
+                /start ou /iniciar
+                /help ou /ajuda
+                /connect ou /conectar CODIGO
+                /me ou /perfil
+                /status ou /resumo
+                /analysis ou /analise
+                /setincome ou /definirrenda VALOR
+                /disconnect ou /desconectar
+                
+                Ou pode escrever naturalmente, por exemplo:
+                - gastei 50 no mercado
+                - recebi 1200 de salário
+                - quanto gastei esse mês?
+                - me dá a análise desse mês
                 """;
     }
 
@@ -104,7 +132,7 @@ public class TelegramCommandService {
                 
                 Eu posso ajudar você a conectar sua conta e acompanhar suas finanças direto pelo Telegram.
                 
-                Comandos disponíveis:
+                Você pode usar comandos:
                 /start ou /iniciar - Iniciar o bot
                 /help ou /ajuda - Ver ajuda
                 /connect ou /conectar CODIGO - Conectar sua conta
@@ -113,6 +141,12 @@ public class TelegramCommandService {
                 /analysis ou /analise - Ver análise financeira
                 /setincome ou /definirrenda VALOR - Definir renda mensal base
                 /disconnect ou /desconectar - Desconectar conta
+                
+                Ou pode escrever naturalmente, por exemplo:
+                - gastei 50 no mercado
+                - recebi 1200 de salário
+                - quanto gastei esse mês?
+                - me dá a análise desse mês
                 """.formatted(name != null ? ", " + name : "");
     }
 
@@ -129,11 +163,19 @@ public class TelegramCommandService {
                 /setincome ou /definirrenda VALOR - Definir renda mensal base
                 /disconnect ou /desconectar - Desconectar conta
                 
-                Exemplos:
+                Exemplos com comandos:
                 /connect FIN-ABC123
                 /conectar FIN-ABC123
                 /setincome 3500
                 /definirrenda 3500
+                
+                Exemplos com linguagem natural:
+                - gastei 50 no mercado
+                - paguei 120 de gasolina ontem
+                - recebi 1500 de salário
+                - quanto gastei esse mês?
+                - quanto recebi esse mês?
+                - me dá a análise desse mês
                 """;
     }
 
@@ -144,13 +186,17 @@ public class TelegramCommandService {
                 Olá%s! 👋
                 
                 Eu sou seu assistente financeiro no Telegram.
-                Você pode usar:
                 
-                /start ou /iniciar - Iniciar o bot
+                Você pode usar comandos:
                 /help ou /ajuda - Ver ajuda
                 /connect ou /conectar CODIGO - Conectar sua conta
                 /me ou /perfil - Ver seu perfil
                 /analysis ou /analise - Ver análise financeira
+                
+                Ou escrever naturalmente:
+                - gastei 50 no mercado
+                - recebi 1200
+                - quanto gastei esse mês?
                 """.formatted(name != null ? ", " + name : "");
     }
 
@@ -218,6 +264,8 @@ public class TelegramCommandService {
     private String handleDisconnect(Long telegramId) {
         try {
             financeBotApiClient.disconnectTelegram(telegramId);
+            telegramPendingConfirmationService.clearPending(telegramId);
+
             return """
                     ✅ Sua conta do Telegram foi desconectada com sucesso.
                     
@@ -342,6 +390,167 @@ public class TelegramCommandService {
         }
     }
 
+    private String handleNaturalLanguageTransactionPreview(Long telegramId, ParsedTelegramMessage parsedMessage) {
+        if (parsedMessage.amount() == null) {
+            return """
+                Entendi a intenção, mas não consegui identificar o valor.
+                
+                Exemplos:
+                - gastei 50 no mercado
+                - paguei 120 de gasolina
+                - recebi 1500 de salário
+                """;
+        }
+
+        telegramPendingConfirmationService.savePending(telegramId, parsedMessage);
+
+        String type = parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE ? "despesa" : "receita";
+
+        String conta = parsedMessage.accountName() != null
+                ? parsedMessage.accountName()
+                : "conta padrão";
+
+        String categoria = parsedMessage.categoryName() != null
+                ? parsedMessage.categoryName()
+                : "automática";
+
+        return """
+            Entendi esta %s:
+            
+            Valor: %s
+            Descrição: %s
+            Data: %s
+            Conta: %s
+            Categoria: %s
+            
+            Deseja confirmar e salvar?
+            """.formatted(
+                type,
+                formatCurrency(parsedMessage.amount()),
+                parsedMessage.description() != null ? parsedMessage.description() : "Não informada",
+                formatDate(parsedMessage.date()),
+                conta,
+                categoria
+        );
+    }
+
+    private String handleNaturalLanguageQuery(ParsedTelegramMessage parsedMessage, Long telegramId) {
+        try {
+            return switch (parsedMessage.intentType()) {
+                case QUERY_MONTH_EXPENSE_TOTAL -> {
+                    MonthlyAmountSummaryResponse response = financeBotApiClient.getCurrentMonthExpenseSummary(telegramId);
+
+                    yield """
+                        💸 Total gasto no mês
+                        
+                        Você gastou %s neste mês.
+                        """.formatted(formatCurrency(response.totalAmount()));
+                }
+                case QUERY_MONTH_INCOME_TOTAL -> {
+                    MonthlyAmountSummaryResponse response = financeBotApiClient.getCurrentMonthIncomeSummary(telegramId);
+
+                    yield """
+                        💰 Total recebido no mês
+                        
+                        Você recebeu %s neste mês.
+                        """.formatted(formatCurrency(response.totalAmount()));
+                }
+                case QUERY_MONTH_ANALYSIS -> handleAnalysis(telegramId);
+
+                case QUERY_TRANSACTION_TOTAL -> {
+                    String type = parsedMessage.originalMessage().toLowerCase().contains("recebi")
+                            || parsedMessage.originalMessage().toLowerCase().contains("entrou")
+                            ? "INCOME"
+                            : "EXPENSE";
+
+                    TelegramTransactionSummaryResponse response = financeBotApiClient.getTransactionSummary(
+                            new TelegramTransactionSummaryRequest(
+                                    telegramId,
+                                    type,
+                                    parsedMessage.categoryName(),
+                                    parsedMessage.accountName(),
+                                    parsedMessage.startDate(),
+                                    parsedMessage.endDate()
+                            )
+                    );
+
+                    String label = "EXPENSE".equals(type) ? "gasto" : "recebido";
+
+                    String complemento = response.categoryName() != null
+                            ? " em " + response.categoryName()
+                            : response.accountName() != null
+                            ? " na conta " + response.accountName()
+                            : "";
+
+                    yield """
+                        📊 Total %s%s
+                        
+                        O total foi %s.
+                        """.formatted(
+                            label,
+                            complemento,
+                            formatCurrency(response.totalAmount())
+                    );
+                }
+
+                default -> "Não consegui interpretar sua consulta.";
+            };
+        } catch (RestClientResponseException e) {
+            return mapDefaultBotErrors(e);
+        } catch (Exception e) {
+            return "Não foi possível consultar essas informações agora.";
+        }
+    }
+
+    private String handleConfirmation(Long telegramId) {
+        ParsedTelegramMessage pending = telegramPendingConfirmationService.getPending(telegramId);
+
+        if (pending == null) {
+            return "Não há nenhuma operação pendente para confirmar.";
+        }
+
+        try {
+            CreateTransactionFromTelegramRequest request =
+                    new CreateTransactionFromTelegramRequest(
+                            telegramId,
+                            mapIntentToTransactionType(pending.intentType()),
+                            pending.amount(),
+                            pending.description(),
+                            pending.date()
+                    );
+
+            financeBotApiClient.createTransaction(request);
+            telegramPendingConfirmationService.clearPending(telegramId);
+
+            String transactionLabel = pending.intentType() == TelegramIntentType.CREATE_EXPENSE
+                    ? "despesa"
+                    : "receita";
+
+            return """
+                ✅ Transação registrada com sucesso!
+                
+                Sua %s foi salva no sistema.
+                """.formatted(transactionLabel);
+        } catch (RestClientResponseException e) {
+            return mapDefaultBotErrors(e);
+        } catch (Exception e) {
+            return """
+                Não foi possível salvar sua transação agora.
+                Você pode tentar confirmar novamente em instantes.
+                """;
+        }
+    }
+
+    private String handleCancellation(Long telegramId) {
+        if (!telegramPendingConfirmationService.hasPending(telegramId)) {
+            return "Não há nenhuma operação pendente para cancelar.";
+        }
+
+        telegramPendingConfirmationService.clearPending(telegramId);
+
+        return "❌ Operação cancelada com sucesso.";
+    }
+
     private String mapDefaultBotErrors(RestClientResponseException e) {
         return switch (e.getStatusCode().value()) {
             case 400 -> "A solicitação está inválida.";
@@ -397,6 +606,26 @@ public class TelegramCommandService {
                 || lower.contains("telegram");
     }
 
+    private boolean isConfirmationMessage(String messageText) {
+        String lower = messageText.toLowerCase();
+
+        return lower.equals("sim")
+                || lower.equals("confirmar")
+                || lower.equals("confirmado")
+                || lower.equals("ok");
+    }
+
+    private boolean isCancellationMessage(String messageText) {
+        String lower = messageText.toLowerCase();
+
+        return lower.equals("cancelar")
+                || lower.equals("cancelado")
+                || lower.equals("cancelar operação")
+                || lower.equals("cancelar operacao")
+                || lower.equals("não")
+                || lower.equals("nao");
+    }
+
     private boolean startsWithCommand(String messageText, String... commands) {
         for (String command : commands) {
             if (messageText.startsWith(command)) {
@@ -418,6 +647,14 @@ public class TelegramCommandService {
         return NumberFormat.getCurrencyInstance(Locale.forLanguageTag("pt-BR")).format(value);
     }
 
+    private String formatDate(LocalDate date) {
+        if (date == null) {
+            return "Hoje";
+        }
+
+        return date.format(DATE_FORMATTER);
+    }
+
     private BigDecimal parseBrazilianNumber(String value) {
         String normalized = value.trim()
                 .replace("R$", "")
@@ -430,5 +667,13 @@ public class TelegramCommandService {
         }
 
         return new BigDecimal(normalized);
+    }
+
+    private String mapIntentToTransactionType(TelegramIntentType intentType) {
+        return switch (intentType) {
+            case CREATE_EXPENSE -> "EXPENSE";
+            case CREATE_INCOME -> "INCOME";
+            default -> throw new IllegalArgumentException("Intento inválido para criação de transação.");
+        };
     }
 }

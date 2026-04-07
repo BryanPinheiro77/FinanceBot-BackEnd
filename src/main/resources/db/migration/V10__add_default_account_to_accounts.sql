@@ -1,0 +1,2 @@
+ALTER TABLE accounts
+ADD COLUMN default_account BOOLEAN NOT NULL DEFAULT FALSE;

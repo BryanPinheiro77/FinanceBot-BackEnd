@@ -5,6 +5,7 @@ import com.financebot.security.jwt.JwtAuthenticationFilter;
 import com.financebot.security.userdetails.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -53,9 +54,13 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/telegram/**"
+                                "/users/telegram/confirm-link"
                         ).permitAll()
-                        .requestMatchers("/users/telegram/confirm-link").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/telegram/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/telegram/transactions").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/telegram/transactions/summary").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/telegram/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/telegram/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
