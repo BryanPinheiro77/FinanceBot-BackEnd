@@ -156,10 +156,10 @@ Se quiser acompanhar a evolução, sugerir melhorias ou contribuir, fique à von
 
 ## Licença
 
-Este projeto está licenciado sob a licença **MIT**.
+Este projeto está licenciado sob a licença [MIT](.license).
 
-Consulte o arquivo `LICENSE` para mais detalhes.
+## Autores
 
-## Autor
+- **Bryan Pinheiro** — [@BryanPinheiro77](https://github.com/BryanPinheiro77)
+- **Luiz Fernando** — [@LuizFernandoReisFranca](https://github.com/luizfernandoreisfranca)
 
-Desenvolvido por Bryan.
