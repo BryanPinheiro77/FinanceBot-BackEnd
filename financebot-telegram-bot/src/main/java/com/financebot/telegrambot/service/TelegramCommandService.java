@@ -2,6 +2,7 @@ package com.financebot.telegrambot.service;
 
 import com.financebot.telegrambot.client.FinanceBotApiClient;
 import com.financebot.telegrambot.dto.*;
+import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ public class TelegramCommandService {
     private final FinanceBotApiClient financeBotApiClient;
     private final TelegramIntentService telegramIntentService;
     private final TelegramPendingConfirmationService telegramPendingConfirmationService;
+    private final TelegramMessageFormatter telegramMessageFormatter;
 
     public String handleMessage(
             String messageText,
@@ -404,43 +406,20 @@ public class TelegramCommandService {
     private String handleNaturalLanguageTransactionPreview(Long telegramId, ParsedTelegramMessage parsedMessage) {
         if (parsedMessage.amount() == null) {
             return """
-                Entendi a intenção, mas não consegui identificar o valor.
-                
-                Exemplos:
-                - gastei 50 no mercado
-                - paguei 120 de gasolina
-                - recebi 1500 de salário
-                """;
+            Entendi a intenção, mas não consegui identificar o valor.
+            
+            Exemplos:
+            - gastei 50 no mercado
+            - paguei 120 de gasolina
+            - recebi 1500 de salário
+            """;
         }
 
         telegramPendingConfirmationService.savePending(telegramId, parsedMessage);
 
-        String type = parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE ? "despesa" : "receita";
-
         String conta = resolvePreviewAccountName(parsedMessage, telegramId);
 
-        String categoria = parsedMessage.categoryName() != null
-                ? parsedMessage.categoryName()
-                : "automática";
-
-        return """
-            Entendi esta %s:
-            
-            Valor: %s
-            Descrição: %s
-            Data: %s
-            Conta: %s
-            Categoria: %s
-            
-            Deseja confirmar e salvar?
-            """.formatted(
-                type,
-                formatCurrency(parsedMessage.amount()),
-                parsedMessage.description() != null ? parsedMessage.description() : "Não informada",
-                formatDate(parsedMessage.date()),
-                conta,
-                categoria
-        );
+        return telegramMessageFormatter.formatTransactionPreview(parsedMessage, conta);
     }
 
     private String handleNaturalLanguageQuery(ParsedTelegramMessage parsedMessage, Long telegramId) {
@@ -537,11 +516,7 @@ public class TelegramCommandService {
                     ? "despesa"
                     : "receita";
 
-            return """
-                ✅ Transação registrada com sucesso!
-                
-                Sua %s foi salva no sistema.
-                """.formatted(transactionLabel);
+            return telegramMessageFormatter.formatTransactionSuccess(pending.intentType());
         } catch (RestClientResponseException e) {
             return mapDefaultBotErrors(e);
         } catch (Exception e) {
@@ -646,34 +621,8 @@ public class TelegramCommandService {
     }
 
     private String buildUpdatedPendingMessage(Long telegramId, ParsedTelegramMessage parsedMessage) {
-        String type = parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE ? "despesa" : "receita";
-
         String conta = resolvePreviewAccountName(parsedMessage, telegramId);
-
-        String categoria = parsedMessage.categoryName() != null
-                ? parsedMessage.categoryName()
-                : "automática";
-
-        return """
-                ✅ Operação atualizada.
-                
-                Entendi esta %s:
-                
-                Valor: %s
-                Descrição: %s
-                Data: %s
-                Conta: %s
-                Categoria: %s
-                
-                Deseja confirmar e salvar?
-                """.formatted(
-                type,
-                formatCurrency(parsedMessage.amount()),
-                parsedMessage.description() != null ? parsedMessage.description() : "Não informada",
-                formatDate(parsedMessage.date()),
-                conta,
-                categoria
-        );
+        return telegramMessageFormatter.formatUpdatedPendingMessage(parsedMessage, conta);
     }
 
     private String mapDefaultBotErrors(RestClientResponseException e) {
