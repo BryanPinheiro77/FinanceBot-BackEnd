@@ -341,6 +341,70 @@ public class TelegramMessageFormatter {
         return "⚠️ <b>Não foi possível desconectar sua conta agora.</b>";
     }
 
+    public String formatProfileMessage(
+            String name,
+            String email,
+            BigDecimal monthlyBaseIncome,
+            boolean telegramLinked
+    ) {
+        return """
+            👤 <b>Seu perfil</b>
+            
+            <b>Nome:</b> %s
+            <b>Email:</b> %s
+            <b>Renda mensal base:</b> %s
+            <b>Telegram vinculado:</b> %s
+            """.formatted(
+                escapeHtml(defaultText(name)),
+                escapeHtml(defaultText(email)),
+                formatCurrency(monthlyBaseIncome),
+                telegramLinked ? "Sim" : "Não"
+        );
+    }
+
+    public String formatSetIncomeValueRequiredMessage() {
+        return """
+            💰 <b>Você precisa informar um valor.</b>
+            
+            <b>Exemplo:</b>
+            <code>/setincome 3500</code>
+            ou
+            <code>/definirrenda 3500</code>
+            """;
+    }
+
+    public String formatSetIncomeInvalidValueMessage() {
+        return """
+            ⚠️ <b>Valor inválido.</b>
+            
+            <b>Exemplos válidos:</b>
+            <code>/setincome 3500</code>
+            <code>/setincome 3500,50</code>
+            <code>/definirrenda 3500</code>
+            <code>/definirrenda 3500,50</code>
+            """;
+    }
+
+    public String formatSetIncomeNonPositiveMessage() {
+        return "⚠️ <b>A renda mensal base deve ser maior que zero.</b>";
+    }
+
+    public String formatSetIncomeSuccessMessage(BigDecimal monthlyBaseIncome) {
+        return """
+            ✅ <b>Renda mensal base atualizada com sucesso!</b>
+            
+            <b>Novo valor:</b> %s
+            """.formatted(formatCurrency(monthlyBaseIncome));
+    }
+
+    public String formatGenericProfileFailureMessage() {
+        return "⚠️ <b>Não foi possível buscar seu perfil agora.</b>";
+    }
+
+    public String formatGenericSetIncomeFailureMessage() {
+        return "⚠️ <b>Não foi possível atualizar sua renda mensal base agora.</b>";
+    }
+
     private String formatCurrency(BigDecimal value) {
         if (value == null) {
             return "Não informado";

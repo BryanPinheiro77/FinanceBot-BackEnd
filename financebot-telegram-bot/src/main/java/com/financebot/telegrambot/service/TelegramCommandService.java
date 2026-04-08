@@ -10,22 +10,18 @@ import org.springframework.web.client.RestClientResponseException;
 
 import java.math.BigDecimal;
 import java.text.Normalizer;
-import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoField;
-import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 public class TelegramCommandService {
-
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final FinanceBotApiClient financeBotApiClient;
     private final TelegramIntentService telegramIntentService;
@@ -181,23 +177,16 @@ public class TelegramCommandService {
         try {
             UserProfileResponse response = financeBotApiClient.getMe(telegramId);
 
-            return """
-                    👤 Seu perfil
-                    
-                    Nome: %s
-                    Email: %s
-                    Renda mensal base: %s
-                    Telegram vinculado: %s
-                    """.formatted(
-                    defaultText(response.name()),
-                    defaultText(response.email()),
-                    formatCurrency(response.monthlyBaseIncome()),
-                    response.telegramId() != null ? "Sim" : "Não"
+            return telegramMessageFormatter.formatProfileMessage(
+                    response.name(),
+                    response.email(),
+                    response.monthlyBaseIncome(),
+                    response.telegramId() != null
             );
         } catch (RestClientResponseException e) {
             return mapDefaultBotErrors(e);
         } catch (Exception e) {
-            return "Não foi possível buscar seu perfil agora.";
+            return telegramMessageFormatter.formatGenericProfileFailureMessage();
         }
     }
 
@@ -205,21 +194,14 @@ public class TelegramCommandService {
         String[] parts = messageText.split("\\s+", 2);
 
         if (parts.length < 2 || parts[1].isBlank()) {
-            return """
-                    Você precisa informar um valor.
-                    
-                    Exemplo:
-                    /setincome 3500
-                    ou
-                    /definirrenda 3500
-                    """;
+            return telegramMessageFormatter.formatSetIncomeValueRequiredMessage();
         }
 
         try {
             BigDecimal income = parseBrazilianNumber(parts[1]);
 
             if (income.compareTo(BigDecimal.ZERO) <= 0) {
-                return "A renda mensal base deve ser maior que zero.";
+                return telegramMessageFormatter.formatSetIncomeNonPositiveMessage();
             }
 
             UserProfileResponse response = financeBotApiClient.updateMonthlyBaseIncome(
@@ -227,21 +209,13 @@ public class TelegramCommandService {
                     new UpdateMonthlyBaseIncomeRequest(income)
             );
 
-            return "✅ Renda mensal base atualizada para " + formatCurrency(response.monthlyBaseIncome());
+            return telegramMessageFormatter.formatSetIncomeSuccessMessage(response.monthlyBaseIncome());
         } catch (NumberFormatException e) {
-            return """
-                    Valor inválido.
-                    
-                    Exemplos válidos:
-                    /setincome 3500
-                    /setincome 3500,50
-                    /definirrenda 3500
-                    /definirrenda 3500,50
-                    """;
+            return telegramMessageFormatter.formatSetIncomeInvalidValueMessage();
         } catch (RestClientResponseException e) {
             return mapDefaultBotErrors(e);
         } catch (Exception e) {
-            return "Não foi possível atualizar sua renda mensal base agora.";
+            return telegramMessageFormatter.formatGenericSetIncomeFailureMessage();
         }
     }
 
@@ -629,26 +603,6 @@ public class TelegramCommandService {
             }
         }
         return false;
-    }
-
-    private String defaultText(String value) {
-        return value != null && !value.isBlank() ? value : "Não informado";
-    }
-
-    private String formatCurrency(BigDecimal value) {
-        if (value == null) {
-            return "Não informado";
-        }
-
-        return NumberFormat.getCurrencyInstance(Locale.forLanguageTag("pt-BR")).format(value);
-    }
-
-    private String formatDate(LocalDate date) {
-        if (date == null) {
-            return "Hoje";
-        }
-
-        return date.format(DATE_FORMATTER);
     }
 
     private BigDecimal parseBrazilianNumber(String value) {
