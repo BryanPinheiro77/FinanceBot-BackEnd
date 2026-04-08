@@ -139,78 +139,16 @@ public class TelegramCommandService {
 
     private String handleStart(String telegramFirstName, String telegramUsername) {
         String name = resolveDisplayName(telegramFirstName, telegramUsername);
-
-        return """
-                Bem-vindo%s ao Your Finance Assistant!
-                
-                Eu posso ajudar você a conectar sua conta e acompanhar suas finanças direto pelo Telegram.
-                
-                Você pode usar comandos:
-                /start ou /iniciar - Iniciar o bot
-                /help ou /ajuda - Ver ajuda
-                /connect ou /conectar CODIGO - Conectar sua conta
-                /me ou /perfil - Ver seu perfil
-                /status ou /resumo - Ver resumo da conta
-                /analysis ou /analise - Ver análise financeira
-                /setincome ou /definirrenda VALOR - Definir renda mensal base
-                /disconnect ou /desconectar - Desconectar conta
-                
-                Ou pode escrever naturalmente, por exemplo:
-                - gastei 50 no mercado
-                - recebi 1200 de salário
-                - quanto gastei esse mês?
-                - me dá a análise desse mês
-                """.formatted(name != null ? ", " + name : "");
+        return telegramMessageFormatter.formatStartMessage(name);
     }
 
     private String handleHelp() {
-        return """
-                Comandos disponíveis:
-                
-                /start ou /iniciar - Iniciar o bot
-                /help ou /ajuda - Ver ajuda
-                /connect ou /conectar CODIGO - Conectar sua conta
-                /me ou /perfil - Ver seu perfil
-                /status ou /resumo - Ver resumo da conta
-                /analysis ou /analise - Ver análise financeira
-                /setincome ou /definirrenda VALOR - Definir renda mensal base
-                /disconnect ou /desconectar - Desconectar conta
-                
-                Exemplos com comandos:
-                /connect FIN-ABC123
-                /conectar FIN-ABC123
-                /setincome 3500
-                /definirrenda 3500
-                
-                Exemplos com linguagem natural:
-                - gastei 50 no mercado
-                - paguei 120 de gasolina ontem
-                - recebi 1500 de salário
-                - quanto gastei esse mês?
-                - quanto recebi esse mês?
-                - me dá a análise desse mês
-                """;
+        return telegramMessageFormatter.formatHelpMessage();
     }
 
     private String handleGreeting(String telegramFirstName, String telegramUsername) {
         String name = resolveDisplayName(telegramFirstName, telegramUsername);
-
-        return """
-                Olá%s! 👋
-                
-                Eu sou seu assistente financeiro no Telegram.
-                
-                Você pode usar comandos:
-                /help ou /ajuda - Ver ajuda
-                /connect ou /conectar CODIGO - Conectar sua conta
-                /me ou /perfil - Ver seu perfil
-                /analysis ou /analise - Ver análise financeira
-                
-                Ou escrever naturalmente:
-                - gastei 50 no mercado
-                - recebi 1200
-                - quanto gastei esse mês?
-                """.formatted(name != null ? ", " + name : "");
+        return telegramMessageFormatter.formatGreetingMessage(name);
     }
 
     private String handleConnect(String messageText, Long telegramId, String telegramUsername) {
@@ -511,10 +449,6 @@ public class TelegramCommandService {
 
             financeBotApiClient.createTransaction(request);
             telegramPendingConfirmationService.clearPending(telegramId);
-
-            String transactionLabel = pending.intentType() == TelegramIntentType.CREATE_EXPENSE
-                    ? "despesa"
-                    : "receita";
 
             return telegramMessageFormatter.formatTransactionSuccess(pending.intentType());
         } catch (RestClientResponseException e) {
