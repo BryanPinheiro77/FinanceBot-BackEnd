@@ -19,6 +19,29 @@ public class TelegramAccountResolverService {
     private final AccountRepository accountRepository;
 
     @Transactional
+    public Account resolve(User user, String explicitAccountName) {
+        if (explicitAccountName != null && !explicitAccountName.isBlank()) {
+            Optional<Account> explicitAccount = accountRepository
+                    .findByUserIdAndNameIgnoreCase(user.getId(), explicitAccountName.trim());
+
+            if (explicitAccount.isPresent()) {
+                return explicitAccount.get();
+            }
+
+            Account newAccount = new Account();
+            newAccount.setName(capitalizeWords(explicitAccountName.trim()));
+            newAccount.setType(AccountType.CHECKING_ACCOUNT);
+            newAccount.setInitialBalance(BigDecimal.ZERO);
+            newAccount.setDefaultAccount(false);
+            newAccount.setUser(user);
+
+            return accountRepository.save(newAccount);
+        }
+
+        return resolveDefaultAccount(user);
+    }
+
+    @Transactional
     public Account resolveDefaultAccount(User user) {
         Optional<Account> defaultAccount = accountRepository.findByUserIdAndDefaultAccountTrue(user.getId());
 
@@ -48,5 +71,25 @@ public class TelegramAccountResolverService {
         Account firstAccount = accounts.get(0);
         firstAccount.setDefaultAccount(true);
         return accountRepository.save(firstAccount);
+    }
+
+    private String capitalizeWords(String text) {
+        String[] parts = text.split("\\s+");
+        StringBuilder result = new StringBuilder();
+
+        for (String part : parts) {
+            if (part.isBlank()) {
+                continue;
+            }
+
+            if (!result.isEmpty()) {
+                result.append(" ");
+            }
+
+            result.append(part.substring(0, 1).toUpperCase())
+                    .append(part.substring(1).toLowerCase());
+        }
+
+        return result.toString();
     }
 }

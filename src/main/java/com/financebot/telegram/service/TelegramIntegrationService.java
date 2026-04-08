@@ -136,7 +136,7 @@ public class TelegramIntegrationService {
         User user = findUserByTelegramId(request.telegramId());
         TransactionType transactionType = TransactionType.valueOf(request.type());
 
-        Account account = telegramAccountResolverService.resolveDefaultAccount(user);
+        Account account = telegramAccountResolverService.resolve(user, request.accountName());
 
         Category category = resolveCategoryFromRequest(
                 user,

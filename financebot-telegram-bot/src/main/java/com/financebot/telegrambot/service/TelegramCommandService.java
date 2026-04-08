@@ -646,7 +646,26 @@ public class TelegramCommandService {
                     pending.startDate(),
                     pending.endDate()
             );
-        } else {
+        }
+        else if (lower.contains("conta")) {
+            String newAccount = extractAccountFromEdit(messageText);
+
+            if (newAccount == null || newAccount.isBlank()) {
+                return "Não consegui identificar a nova conta.";
+            }
+
+            updated = new ParsedTelegramMessage(
+                    pending.intentType(),
+                    pending.amount(),
+                    pending.description(),
+                    pending.date(),
+                    pending.originalMessage(),
+                    pending.categoryName(),
+                    newAccount,
+                    pending.startDate(),
+                    pending.endDate()
+            );
+        }else {
             return "Entendi que você quer editar a operação, mas ainda não reconheci qual campo deseja alterar.";
         }
 
@@ -799,6 +818,15 @@ public class TelegramCommandService {
                 || lower.contains("troca a data")
                 || lower.contains("altera data")
                 || lower.contains("altera a data")
+                || lower.contains("muda conta")
+                || lower.contains("muda a conta")
+                || lower.contains("troca conta")
+                || lower.contains("troca a conta")
+                || lower.contains("altera conta")
+                || lower.contains("altera a conta")
+                || lower.contains("usa a conta")
+                || lower.contains("coloca na conta")
+                || lower.contains("coloca a conta")
                 || lower.startsWith("data de ")
                 || lower.startsWith("data para ")
                 || lower.startsWith("data pra ")
@@ -985,4 +1013,27 @@ public class TelegramCommandService {
             .appendLiteral('-')
             .appendValue(ChronoField.YEAR, 4)
             .toFormatter();
+
+    private String extractAccountFromEdit(String text) {
+        String cleaned = normalizeText(text)
+                .replaceFirst(".*?conta\\s+para\\s+", "")
+                .replaceFirst(".*?conta\\s+pra\\s+", "")
+                .replaceFirst(".*?usa\\s+a\\s+conta\\s+", "")
+                .replaceFirst(".*?coloca\\s+na\\s+conta\\s+", "")
+                .replaceFirst(".*?coloca\\s+a\\s+conta\\s+", "")
+                .replaceFirst(".*?troca\\s+a\\s+conta\\s+para\\s+", "")
+                .replaceFirst(".*?troca\\s+conta\\s+para\\s+", "")
+                .replaceFirst(".*?muda\\s+a\\s+conta\\s+para\\s+", "")
+                .replaceFirst(".*?muda\\s+conta\\s+para\\s+", "")
+                .replaceFirst(".*?altera\\s+a\\s+conta\\s+para\\s+", "")
+                .replaceFirst(".*?altera\\s+conta\\s+para\\s+", "")
+                .replaceFirst(".*?conta\\s+", "")
+                .trim();
+
+        if (cleaned.isBlank()) {
+            return null;
+        }
+
+        return capitalizeWords(cleaned);
+    }
 }

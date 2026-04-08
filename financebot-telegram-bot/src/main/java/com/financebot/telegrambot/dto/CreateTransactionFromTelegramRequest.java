@@ -10,5 +10,5 @@ public record CreateTransactionFromTelegramRequest(
         String description,
         LocalDate date,
         String categoryName,
-        String AccountName
+        String accountName
 ) {}
