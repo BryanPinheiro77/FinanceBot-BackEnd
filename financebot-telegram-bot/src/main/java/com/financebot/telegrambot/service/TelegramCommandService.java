@@ -570,102 +570,75 @@ public class TelegramCommandService {
         }
 
         String lower = normalizeText(messageText);
-        ParsedTelegramMessage updated = pending;
 
-        if (lower.contains("valor")) {
+        BigDecimal amount = pending.amount();
+        String description = pending.description();
+        LocalDate date = pending.date();
+        String categoryName = pending.categoryName();
+        String accountName = pending.accountName();
+
+        boolean changed = false;
+
+        if (containsAmountEditHint(lower)) {
             BigDecimal newAmount = extractAmountFromEdit(messageText);
 
-            if (newAmount == null || newAmount.compareTo(BigDecimal.ZERO) <= 0) {
-                return "Não consegui identificar um novo valor válido para a operação.";
+            if (newAmount != null && newAmount.compareTo(BigDecimal.ZERO) > 0) {
+                amount = newAmount;
+                changed = true;
             }
+        }
 
-            updated = new ParsedTelegramMessage(
-                    pending.intentType(),
-                    newAmount,
-                    pending.description(),
-                    pending.date(),
-                    pending.originalMessage(),
-                    pending.categoryName(),
-                    pending.accountName(),
-                    pending.startDate(),
-                    pending.endDate()
-            );
-        } else if (lower.contains("descricao")) {
+        if (containsDescriptionEditHint(lower)) {
             String newDescription = extractDescriptionFromEdit(messageText);
 
-            if (newDescription == null || newDescription.isBlank()) {
-                return "Não consegui identificar a nova descrição.";
+            if (newDescription != null && !newDescription.isBlank()) {
+                description = newDescription;
+                changed = true;
             }
+        }
 
-            updated = new ParsedTelegramMessage(
-                    pending.intentType(),
-                    pending.amount(),
-                    newDescription,
-                    pending.date(),
-                    pending.originalMessage(),
-                    pending.categoryName(),
-                    pending.accountName(),
-                    pending.startDate(),
-                    pending.endDate()
-            );
-        } else if (lower.contains("categoria")) {
+        if (containsCategoryEditHint(lower)) {
             String newCategory = extractCategoryFromEdit(messageText);
 
-            if (newCategory == null || newCategory.isBlank()) {
-                return "Não consegui identificar a nova categoria.";
+            if (newCategory != null && !newCategory.isBlank()) {
+                categoryName = newCategory;
+                changed = true;
             }
+        }
 
-            updated = new ParsedTelegramMessage(
-                    pending.intentType(),
-                    pending.amount(),
-                    pending.description(),
-                    pending.date(),
-                    pending.originalMessage(),
-                    newCategory,
-                    pending.accountName(),
-                    pending.startDate(),
-                    pending.endDate()
-            );
-        } else if (lower.contains("data")) {
+        if (containsDateEditHint(lower)) {
             LocalDate newDate = extractDateFromEdit(messageText);
 
-            if (newDate == null) {
-                return "Não consegui identificar a nova data.";
+            if (newDate != null) {
+                date = newDate;
+                changed = true;
             }
-
-            updated = new ParsedTelegramMessage(
-                    pending.intentType(),
-                    pending.amount(),
-                    pending.description(),
-                    newDate,
-                    pending.originalMessage(),
-                    pending.categoryName(),
-                    pending.accountName(),
-                    pending.startDate(),
-                    pending.endDate()
-            );
         }
-        else if (lower.contains("conta")) {
+
+        if (containsAccountEditHint(lower)) {
             String newAccount = extractAccountFromEdit(messageText);
 
-            if (newAccount == null || newAccount.isBlank()) {
-                return "Não consegui identificar a nova conta.";
+            if (newAccount != null && !newAccount.isBlank()) {
+                accountName = newAccount;
+                changed = true;
             }
-
-            updated = new ParsedTelegramMessage(
-                    pending.intentType(),
-                    pending.amount(),
-                    pending.description(),
-                    pending.date(),
-                    pending.originalMessage(),
-                    pending.categoryName(),
-                    newAccount,
-                    pending.startDate(),
-                    pending.endDate()
-            );
-        }else {
-            return "Entendi que você quer editar a operação, mas ainda não reconheci qual campo deseja alterar.";
         }
+
+        if (!changed) {
+            return "Entendi que você quer editar a operação, mas não consegui identificar alterações válidas.";
+        }
+
+        ParsedTelegramMessage updated = new ParsedTelegramMessage(
+                pending.intentType(),
+                amount,
+                description,
+                date,
+                pending.originalMessage(),
+                categoryName,
+                accountName,
+                pending.startDate(),
+                pending.endDate()
+        );
 
         telegramPendingConfirmationService.savePending(telegramId, updated);
 
@@ -1051,5 +1024,31 @@ public class TelegramCommandService {
         }
 
         return "conta padrão";
+    }
+
+    private boolean containsAmountEditHint(String lower) {
+        return lower.contains("valor");
+    }
+
+    private boolean containsDescriptionEditHint(String lower) {
+        return lower.contains("descricao");
+    }
+
+    private boolean containsCategoryEditHint(String lower) {
+        return lower.contains("categoria");
+    }
+
+    private boolean containsDateEditHint(String lower) {
+        return lower.contains("data")
+                || lower.contains("hoje")
+                || lower.contains("ontem")
+                || lower.contains("amanha")
+                || EDIT_DATE_SLASH_PATTERN.matcher(lower).find()
+                || EDIT_DATE_DASH_PATTERN.matcher(lower).find()
+                || EDIT_DAY_ONLY_PATTERN.matcher(lower).find();
+    }
+
+    private boolean containsAccountEditHint(String lower) {
+        return lower.contains("conta");
     }
 }
