@@ -14,8 +14,10 @@ import java.util.regex.Pattern;
 public class TelegramIntentService {
 
     private static final Pattern AMOUNT_PATTERN = Pattern.compile("(\\d+[\\.,]?\\d{0,2})");
-    private static final Pattern ACCOUNT_PATTERN = Pattern.compile("(?:conta|cartao|cartão)\\s+(?:da|do|de)?\\s*([a-zA-Z0-9\\s]+)");
-    private static final Pattern CATEGORY_PATTERN = Pattern.compile("\\b(mercado|supermercado|gasolina|combustivel|combustível|farmacia|farmácia|uber|ifood|salario|salário|freela|alimentacao|alimentação)\\b");
+    private static final Pattern ACCOUNT_PATTERN = Pattern.compile("(?:conta|cartao)\\s+(?:da|do|de)?\\s*([a-zA-Z0-9\\s]+)");
+    private static final Pattern CATEGORY_PATTERN = Pattern.compile(
+            "\\b(mercado|supermercado|gasolina|combustivel|farmacia|uber|ifood|salario|freela|alimentacao|outros|moradia|transporte|saude)\\b"
+    );
 
     public ParsedTelegramMessage parse(String messageText) {
         if (messageText == null || messageText.isBlank()) {
@@ -98,12 +100,14 @@ public class TelegramIntentService {
     }
 
     private boolean isTransactionTotalQuery(String text) {
-        return (text.contains("quanto gastei")
+        return text.contains("quanto gastei")
                 || text.contains("quanto recebi")
                 || text.contains("quanto entrou")
                 || text.contains("total gasto")
-                || text.contains("total recebido"))
-                && (text.contains("mes") || text.contains("hoje") || text.contains("ontem"));
+                || text.contains("total recebido")
+                || text.contains("gastei quanto")
+                || text.contains("recebi quanto")
+                || text.contains("entrou quanto");
     }
 
     private boolean isMonthAnalysisQuery(String text) {
@@ -146,9 +150,9 @@ public class TelegramIntentService {
     private String extractDescriptionForTransaction(String text) {
         String cleaned = text
                 .replaceAll("\\b(gastei|paguei|comprei|despesa|recebi|ganhei|entrou|entrada|reais|real)\\b", "")
-                .replaceAll("\\b(hoje|ontem|amanha|amanhã)\\b", "")
+                .replaceAll("\\b(hoje|ontem|amanha|mes|esse mes|este mes)\\b", "")
                 .replaceAll("(\\d+[\\.,]?\\d{0,2})", "")
-                .replaceAll("\\b(da conta|do cartao|do cartão|na conta|no cartao|no cartão)\\b.*", "")
+                .replaceAll("\\b(da conta|do cartao|na conta|no cartao)\\b.*", "")
                 .trim();
 
         cleaned = cleaned.replaceAll("\\s+", " ");
@@ -171,12 +175,14 @@ public class TelegramIntentService {
 
         return switch (value) {
             case "mercado", "supermercado" -> "Mercado";
-            case "gasolina", "combustivel", "combustível" -> "Combustível";
-            case "farmacia", "farmácia" -> "Saúde";
-            case "uber" -> "Transporte";
-            case "ifood", "alimentacao", "alimentação" -> "Alimentação";
-            case "salario", "salário" -> "Salário";
+            case "gasolina", "combustivel" -> "Combustível";
+            case "farmacia", "saude" -> "Saúde";
+            case "uber", "transporte" -> "Transporte";
+            case "ifood", "alimentacao" -> "Alimentação";
+            case "salario" -> "Salário";
             case "freela" -> "Freelance";
+            case "moradia" -> "Moradia";
+            case "outros" -> "Outros";
             default -> null;
         };
     }
@@ -206,7 +212,7 @@ public class TelegramIntentService {
             return today.minusDays(1);
         }
 
-        if (text.contains("amanha") || text.contains("amanhã")) {
+        if (text.contains("amanha")) {
             return today.plusDays(1);
         }
 
@@ -254,6 +260,7 @@ public class TelegramIntentService {
                 .replace("ô", "o")
                 .replace("õ", "o")
                 .replace("ú", "u")
+                .replace("ç", "c")
                 .replaceAll("\\s+", " ")
                 .trim();
     }

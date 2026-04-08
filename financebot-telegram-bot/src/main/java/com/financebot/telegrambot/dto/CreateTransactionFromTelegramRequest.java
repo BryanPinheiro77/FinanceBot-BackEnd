@@ -8,5 +8,7 @@ public record CreateTransactionFromTelegramRequest(
         String type,
         BigDecimal amount,
         String description,
-        LocalDate date
+        LocalDate date,
+        String categoryName,
+        String AccountName
 ) {}

@@ -137,9 +137,11 @@ public class TelegramIntegrationService {
         TransactionType transactionType = TransactionType.valueOf(request.type());
 
         Account account = telegramAccountResolverService.resolveDefaultAccount(user);
-        Category category = telegramCategoryResolverService.resolveCategory(
+
+        Category category = resolveCategoryFromRequest(
                 user,
                 transactionType,
+                request.categoryName(),
                 request.description()
         );
 
@@ -215,5 +217,26 @@ public class TelegramIntegrationService {
             return null;
         }
         return value.trim();
+    }
+
+    private Category resolveCategoryFromRequest(
+            User user,
+            TransactionType transactionType,
+            String categoryName,
+            String description
+    ) {
+        if (categoryName != null && !categoryName.isBlank()) {
+            return telegramCategoryResolverService.resolveExplicitCategory(
+                    user,
+                    transactionType,
+                    categoryName
+            );
+        }
+
+        return telegramCategoryResolverService.resolveCategory(
+                user,
+                transactionType,
+                description
+        );
     }
 }

@@ -8,10 +8,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.math.BigDecimal;
+import java.text.Normalizer;
 import java.text.NumberFormat;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoField;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -90,6 +97,10 @@ public class TelegramCommandService {
 
         if (isCancellationMessage(normalizedMessage)) {
             return handleCancellation(telegramId);
+        }
+
+        if (telegramPendingConfirmationService.hasPending(telegramId) && looksLikeEditMessage(normalizedMessage)) {
+            return handlePendingEdit(telegramId, normalizedMessage);
         }
 
         ParsedTelegramMessage parsedMessage = telegramIntentService.parse(normalizedMessage);
@@ -516,7 +527,9 @@ public class TelegramCommandService {
                             mapIntentToTransactionType(pending.intentType()),
                             pending.amount(),
                             pending.description(),
-                            pending.date()
+                            pending.date(),
+                            pending.categoryName(),
+                            pending.accountName()
                     );
 
             financeBotApiClient.createTransaction(request);
@@ -551,11 +564,136 @@ public class TelegramCommandService {
         return "❌ Operação cancelada com sucesso.";
     }
 
+    private String handlePendingEdit(Long telegramId, String messageText) {
+        ParsedTelegramMessage pending = telegramPendingConfirmationService.getPending(telegramId);
+
+        if (pending == null) {
+            return "Não há nenhuma operação pendente para editar.";
+        }
+
+        String lower = normalizeText(messageText);
+        ParsedTelegramMessage updated = pending;
+
+        if (lower.contains("valor")) {
+            BigDecimal newAmount = extractAmountFromEdit(messageText);
+
+            if (newAmount == null || newAmount.compareTo(BigDecimal.ZERO) <= 0) {
+                return "Não consegui identificar um novo valor válido para a operação.";
+            }
+
+            updated = new ParsedTelegramMessage(
+                    pending.intentType(),
+                    newAmount,
+                    pending.description(),
+                    pending.date(),
+                    pending.originalMessage(),
+                    pending.categoryName(),
+                    pending.accountName(),
+                    pending.startDate(),
+                    pending.endDate()
+            );
+        } else if (lower.contains("descricao")) {
+            String newDescription = extractDescriptionFromEdit(messageText);
+
+            if (newDescription == null || newDescription.isBlank()) {
+                return "Não consegui identificar a nova descrição.";
+            }
+
+            updated = new ParsedTelegramMessage(
+                    pending.intentType(),
+                    pending.amount(),
+                    newDescription,
+                    pending.date(),
+                    pending.originalMessage(),
+                    pending.categoryName(),
+                    pending.accountName(),
+                    pending.startDate(),
+                    pending.endDate()
+            );
+        } else if (lower.contains("categoria")) {
+            String newCategory = extractCategoryFromEdit(messageText);
+
+            if (newCategory == null || newCategory.isBlank()) {
+                return "Não consegui identificar a nova categoria.";
+            }
+
+            updated = new ParsedTelegramMessage(
+                    pending.intentType(),
+                    pending.amount(),
+                    pending.description(),
+                    pending.date(),
+                    pending.originalMessage(),
+                    newCategory,
+                    pending.accountName(),
+                    pending.startDate(),
+                    pending.endDate()
+            );
+        } else if (lower.contains("data")) {
+            LocalDate newDate = extractDateFromEdit(messageText);
+
+            if (newDate == null) {
+                return "Não consegui identificar a nova data.";
+            }
+
+            updated = new ParsedTelegramMessage(
+                    pending.intentType(),
+                    pending.amount(),
+                    pending.description(),
+                    newDate,
+                    pending.originalMessage(),
+                    pending.categoryName(),
+                    pending.accountName(),
+                    pending.startDate(),
+                    pending.endDate()
+            );
+        } else {
+            return "Entendi que você quer editar a operação, mas ainda não reconheci qual campo deseja alterar.";
+        }
+
+        telegramPendingConfirmationService.savePending(telegramId, updated);
+
+        return buildUpdatedPendingMessage(updated);
+    }
+
+    private String buildUpdatedPendingMessage(ParsedTelegramMessage parsedMessage) {
+        String type = parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE ? "despesa" : "receita";
+
+        String conta = parsedMessage.accountName() != null
+                ? parsedMessage.accountName()
+                : "conta padrão";
+
+        String categoria = parsedMessage.categoryName() != null
+                ? parsedMessage.categoryName()
+                : "automática";
+
+        return """
+                ✅ Operação atualizada.
+                
+                Entendi esta %s:
+                
+                Valor: %s
+                Descrição: %s
+                Data: %s
+                Conta: %s
+                Categoria: %s
+                
+                Deseja confirmar e salvar?
+                """.formatted(
+                type,
+                formatCurrency(parsedMessage.amount()),
+                parsedMessage.description() != null ? parsedMessage.description() : "Não informada",
+                formatDate(parsedMessage.date()),
+                conta,
+                categoria
+        );
+    }
+
     private String mapDefaultBotErrors(RestClientResponseException e) {
         return switch (e.getStatusCode().value()) {
             case 400 -> "A solicitação está inválida.";
             case 404 -> "Não encontrei uma conta vinculada a este Telegram. Use /connect ou /conectar CODIGO.";
             case 401, 403 -> "O bot não tem permissão para acessar esse recurso agora.";
+            case 500 -> "Ocorreu um erro interno ao processar sua solicitação.";
             default -> "Ocorreu um erro ao processar sua solicitação.";
         };
     }
@@ -626,6 +764,58 @@ public class TelegramCommandService {
                 || lower.equals("nao");
     }
 
+    private boolean looksLikeEditMessage(String messageText) {
+        String lower = normalizeText(messageText);
+
+        return lower.contains("muda valor")
+                || lower.contains("muda o valor")
+                || lower.contains("mude valor")
+                || lower.contains("mude o valor")
+                || lower.contains("altera valor")
+                || lower.contains("altera o valor")
+                || lower.contains("altere valor")
+                || lower.contains("altere o valor")
+                || lower.contains("corrige valor")
+                || lower.contains("corrige o valor")
+                || lower.contains("corrija valor")
+                || lower.contains("corrija o valor")
+                || lower.contains("troca valor")
+                || lower.contains("troque valor")
+                || lower.contains("muda descricao")
+                || lower.contains("muda a descricao")
+                || lower.contains("altera descricao")
+                || lower.contains("altera a descricao")
+                || lower.contains("corrige descricao")
+                || lower.contains("corrige a descricao")
+                || lower.contains("muda categoria")
+                || lower.contains("muda a categoria")
+                || lower.contains("troca categoria")
+                || lower.contains("troca a categoria")
+                || lower.contains("altera categoria")
+                || lower.contains("altera a categoria")
+                || lower.contains("muda data")
+                || lower.contains("muda a data")
+                || lower.contains("troca data")
+                || lower.contains("troca a data")
+                || lower.contains("altera data")
+                || lower.contains("altera a data")
+                || lower.startsWith("data de ")
+                || lower.startsWith("data para ")
+                || lower.startsWith("data pra ")
+                || lower.contains("pra ")
+                || lower.contains("para ");
+    }
+
+    private String normalizeText(String text) {
+        if(text == null){
+            return "";
+        }
+        return Normalizer.normalize(text, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase()
+                .trim();
+    }
+
     private boolean startsWithCommand(String messageText, String... commands) {
         for (String command : commands) {
             if (messageText.startsWith(command)) {
@@ -676,4 +866,123 @@ public class TelegramCommandService {
             default -> throw new IllegalArgumentException("Intento inválido para criação de transação.");
         };
     }
+
+    private BigDecimal extractAmountFromEdit(String text) {
+        try {
+            String normalized = text.replace("R$", "").trim();
+            String extracted = normalized.replaceAll(".*?(\\d+[\\.,]?\\d{0,2}).*", "$1");
+            return parseBrazilianNumber(extracted);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String extractDescriptionFromEdit(String text) {
+        String cleaned = normalizeText(text)
+                .replaceFirst(".*?descricao\\s+para\\s+", "")
+                .replaceFirst(".*?descricao\\s+", "")
+                .trim();
+
+        return cleaned.isBlank() ? null : cleaned;
+    }
+
+    private String extractCategoryFromEdit(String text) {
+        String cleaned = normalizeText(text)
+                .replaceFirst(".*?categoria\\s+para\\s+", "")
+                .replaceFirst(".*?categoria\\s+", "")
+                .trim();
+
+        if (cleaned.isBlank()) {
+            return null;
+        }
+
+        return capitalizeWords(cleaned);
+    }
+
+    private LocalDate extractDateFromEdit(String text) {
+        String lower = normalizeText(text);
+
+        if (lower.contains("hoje")) {
+            return LocalDate.now();
+        }
+
+        if (lower.contains("ontem")) {
+            return LocalDate.now().minusDays(1);
+        }
+
+        if (lower.contains("amanha")) {
+            return LocalDate.now().plusDays(1);
+        }
+
+        Matcher slashMatcher = EDIT_DATE_SLASH_PATTERN.matcher(lower);
+        if (slashMatcher.find()) {
+            try {
+                return LocalDate.parse(slashMatcher.group(1), FLEXIBLE_SLASH_DATE_FORMATTER);
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+
+        Matcher dashMatcher = EDIT_DATE_DASH_PATTERN.matcher(lower);
+        if (dashMatcher.find()) {
+            try {
+                return LocalDate.parse(dashMatcher.group(1), FLEXIBLE_DASH_DATE_FORMATTER);
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+
+        Matcher dayOnlyMatcher = EDIT_DAY_ONLY_PATTERN.matcher(lower);
+        if (dayOnlyMatcher.find()) {
+            try {
+                int day = Integer.parseInt(dayOnlyMatcher.group(1));
+                YearMonth currentMonth = YearMonth.now();
+
+                if (day >= 1 && day <= currentMonth.lengthOfMonth()) {
+                    return currentMonth.atDay(day);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        return null;
+    }
+
+    private String capitalizeWords(String text) {
+        String[] parts = text.split("\\s+");
+        StringBuilder result = new StringBuilder();
+
+        for (String part : parts) {
+            if (part.isBlank()) {
+                continue;
+            }
+
+            if (!result.isEmpty()) {
+                result.append(" ");
+            }
+
+            result.append(part.substring(0, 1).toUpperCase())
+                    .append(part.substring(1).toLowerCase());
+        }
+
+        return result.toString();
+    }
+
+    private static final Pattern EDIT_DATE_SLASH_PATTERN = Pattern.compile("(\\d{1,2}/\\d{1,2}/\\d{4})");
+    private static final Pattern EDIT_DATE_DASH_PATTERN = Pattern.compile("(\\d{1,2}-\\d{1,2}-\\d{4})");
+    private static final Pattern EDIT_DAY_ONLY_PATTERN = Pattern.compile("\\bdia\\s+(\\d{1,2})\\b");
+
+    private static final DateTimeFormatter FLEXIBLE_SLASH_DATE_FORMATTER = new DateTimeFormatterBuilder()
+            .appendValue(ChronoField.DAY_OF_MONTH)
+            .appendLiteral('/')
+            .appendValue(ChronoField.MONTH_OF_YEAR)
+            .appendLiteral('/')
+            .appendValue(ChronoField.YEAR, 4)
+            .toFormatter();
+
+    private static final DateTimeFormatter FLEXIBLE_DASH_DATE_FORMATTER = new DateTimeFormatterBuilder()
+            .appendValue(ChronoField.DAY_OF_MONTH)
+            .appendLiteral('-')
+            .appendValue(ChronoField.MONTH_OF_YEAR)
+            .appendLiteral('-')
+            .appendValue(ChronoField.YEAR, 4)
+            .toFormatter();
 }
