@@ -877,8 +877,11 @@ public class TelegramCommandService {
     private String extractDescriptionFromEdit(String text) {
         String cleaned = normalizeText(text)
                 .replaceFirst(".*?descricao\\s+para\\s+", "")
+                .replaceFirst(".*?descricao\\s+pra\\s+", "")
                 .replaceFirst(".*?descricao\\s+", "")
                 .trim();
+
+        cleaned = trimAtNextEditHint(cleaned);
 
         return cleaned.isBlank() ? null : cleaned;
     }
@@ -886,8 +889,11 @@ public class TelegramCommandService {
     private String extractCategoryFromEdit(String text) {
         String cleaned = normalizeText(text)
                 .replaceFirst(".*?categoria\\s+para\\s+", "")
+                .replaceFirst(".*?categoria\\s+pra\\s+", "")
                 .replaceFirst(".*?categoria\\s+", "")
                 .trim();
+
+        cleaned = trimAtNextEditHint(cleaned);
 
         if (cleaned.isBlank()) {
             return null;
@@ -999,6 +1005,12 @@ public class TelegramCommandService {
                 .replaceFirst(".*?conta\\s+", "")
                 .trim();
 
+        cleaned = trimAtNextEditHint(cleaned);
+
+        cleaned = cleaned.replaceFirst("^o\\s+", "")
+                .replaceFirst("^a\\s+", "")
+                .trim();
+
         if (cleaned.isBlank()) {
             return null;
         }
@@ -1050,5 +1062,47 @@ public class TelegramCommandService {
 
     private boolean containsAccountEditHint(String lower) {
         return lower.contains("conta");
+    }
+
+    private String trimAtNextEditHint(String text) {
+        if (text == null || text.isBlank()) {
+            return text;
+        }
+
+        String normalized = normalizeText(text);
+
+        String[] markers = {
+                " e o valor",
+                " e a valor",
+                " e valor",
+                " e a descricao",
+                " e o descricao",
+                " e descricao",
+                " e a categoria",
+                " e o categoria",
+                " e categoria",
+                " e a data",
+                " e o data",
+                " e data",
+                " e a conta",
+                " e o conta",
+                " e conta",
+                ", valor",
+                ", descricao",
+                ", categoria",
+                ", data",
+                ", conta"
+        };
+
+        int cutIndex = normalized.length();
+
+        for (String marker : markers) {
+            int index = normalized.indexOf(marker);
+            if (index >= 0 && index < cutIndex) {
+                cutIndex = index;
+            }
+        }
+
+        return text.substring(0, cutIndex).trim();
     }
 }
