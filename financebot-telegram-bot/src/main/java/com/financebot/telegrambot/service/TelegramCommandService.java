@@ -280,33 +280,18 @@ public class TelegramCommandService {
         try {
             FinancialCommitmentResponse response = financeBotApiClient.getFinancialAnalysis(telegramId);
 
-            return """
-                    📊 Análise financeira
-                    
-                    Renda mensal base: %s
-                    Renda de referência: %s
-                    Receita recorrente prevista: %s
-                    Despesa recorrente prevista: %s
-                    Receita projetada no próximo mês: %s
-                    Despesa projetada no próximo mês: %s
-                    Saldo projetado no próximo mês: %s
-                    Comprometimento: %s%%
-                    Grupos de parcelamento ativos: %s
-                    Nível de risco: %s
-                    
-                    %s
-                    """.formatted(
-                    formatCurrency(response.monthlyBaseIncome()),
-                    formatCurrency(response.monthlyIncomeReference()),
-                    formatCurrency(response.projectedRecurringIncomeNextMonth()),
-                    formatCurrency(response.projectedRecurringExpenseNextMonth()),
-                    formatCurrency(response.nextMonthProjectedIncome()),
-                    formatCurrency(response.nextMonthProjectedExpense()),
-                    formatCurrency(response.projectedNetNextMonth()),
-                    response.commitmentPercentage() != null ? response.commitmentPercentage() : BigDecimal.ZERO,
-                    response.activeInstallmentCount() != null ? response.activeInstallmentCount() : 0L,
+            return telegramMessageFormatter.formatAnalysisMessage(
+                    response.monthlyBaseIncome(),
+                    response.monthlyIncomeReference(),
+                    response.projectedRecurringIncomeNextMonth(),
+                    response.projectedRecurringExpenseNextMonth(),
+                    response.nextMonthProjectedIncome(),
+                    response.nextMonthProjectedExpense(),
+                    response.projectedNetNextMonth(),
+                    response.commitmentPercentage(),
+                    response.activeInstallmentCount(),
                     translateRiskLevel(response.riskLevel()),
-                    defaultText(response.message())
+                    response.message()
             );
         } catch (RestClientResponseException e) {
             return mapDefaultBotErrors(e);
@@ -320,18 +305,10 @@ public class TelegramCommandService {
             UserProfileResponse profile = financeBotApiClient.getMe(telegramId);
             FinancialCommitmentResponse analysis = financeBotApiClient.getFinancialAnalysis(telegramId);
 
-            return """
-                    ✅ Status da conta
-                    
-                    Conta conectada: Sim
-                    Email: %s
-                    Renda mensal base: %s
-                    Saldo projetado próximo mês: %s
-                    Nível de risco: %s
-                    """.formatted(
-                    defaultText(profile.email()),
-                    formatCurrency(profile.monthlyBaseIncome()),
-                    formatCurrency(analysis.projectedNetNextMonth()),
+            return telegramMessageFormatter.formatStatusMessage(
+                    profile.email(),
+                    profile.monthlyBaseIncome(),
+                    analysis.projectedNetNextMonth(),
                     translateRiskLevel(analysis.riskLevel())
             );
         } catch (RestClientResponseException e) {
@@ -365,21 +342,11 @@ public class TelegramCommandService {
             return switch (parsedMessage.intentType()) {
                 case QUERY_MONTH_EXPENSE_TOTAL -> {
                     MonthlyAmountSummaryResponse response = financeBotApiClient.getCurrentMonthExpenseSummary(telegramId);
-
-                    yield """
-                        💸 Total gasto no mês
-                        
-                        Você gastou %s neste mês.
-                        """.formatted(formatCurrency(response.totalAmount()));
+                    yield telegramMessageFormatter.formatMonthExpenseSummary(response.totalAmount());
                 }
                 case QUERY_MONTH_INCOME_TOTAL -> {
                     MonthlyAmountSummaryResponse response = financeBotApiClient.getCurrentMonthIncomeSummary(telegramId);
-
-                    yield """
-                        💰 Total recebido no mês
-                        
-                        Você recebeu %s neste mês.
-                        """.formatted(formatCurrency(response.totalAmount()));
+                    yield telegramMessageFormatter.formatMonthIncomeSummary(response.totalAmount());
                 }
                 case QUERY_MONTH_ANALYSIS -> handleAnalysis(telegramId);
 
@@ -408,14 +375,10 @@ public class TelegramCommandService {
                             ? " na conta " + response.accountName()
                             : "";
 
-                    yield """
-                        📊 Total %s%s
-                        
-                        O total foi %s.
-                        """.formatted(
+                    yield telegramMessageFormatter.formatTransactionSummary(
                             label,
                             complemento,
-                            formatCurrency(response.totalAmount())
+                            response.totalAmount()
                     );
                 }
 

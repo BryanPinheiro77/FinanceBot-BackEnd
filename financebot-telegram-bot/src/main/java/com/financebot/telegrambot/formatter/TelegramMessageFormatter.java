@@ -161,6 +161,107 @@ public class TelegramMessageFormatter {
         );
     }
 
+    public String formatStatusMessage(
+            String email,
+            BigDecimal monthlyBaseIncome,
+            BigDecimal projectedNetNextMonth,
+            String riskLevel
+    ) {
+        return """
+            ✅ <b>Status da conta</b>
+            
+            <b>Conta conectada:</b> Sim
+            <b>Email:</b> %s
+            <b>Renda mensal base:</b> %s
+            <b>Saldo projetado próximo mês:</b> %s
+            <b>Nível de risco:</b> %s
+            """.formatted(
+                escapeHtml(defaultText(email)),
+                formatCurrency(monthlyBaseIncome),
+                formatCurrency(projectedNetNextMonth),
+                escapeHtml(defaultText(riskLevel))
+        );
+    }
+
+    public String formatAnalysisMessage(
+            BigDecimal monthlyBaseIncome,
+            BigDecimal monthlyIncomeReference,
+            BigDecimal projectedRecurringIncomeNextMonth,
+            BigDecimal projectedRecurringExpenseNextMonth,
+            BigDecimal nextMonthProjectedIncome,
+            BigDecimal nextMonthProjectedExpense,
+            BigDecimal projectedNetNextMonth,
+            BigDecimal commitmentPercentage,
+            Long activeInstallmentCount,
+            String riskLevel,
+            String message
+    ) {
+        return """
+            📊 <b>Análise financeira</b>
+            
+            <b>Renda mensal base:</b> %s
+            <b>Renda de referência:</b> %s
+            <b>Receita recorrente prevista:</b> %s
+            <b>Despesa recorrente prevista:</b> %s
+            <b>Receita projetada no próximo mês:</b> %s
+            <b>Despesa projetada no próximo mês:</b> %s
+            <b>Saldo projetado no próximo mês:</b> %s
+            <b>Comprometimento:</b> %s%%
+            <b>Grupos de parcelamento ativos:</b> %s
+            <b>Nível de risco:</b> %s
+            
+            %s
+            """.formatted(
+                formatCurrency(monthlyBaseIncome),
+                formatCurrency(monthlyIncomeReference),
+                formatCurrency(projectedRecurringIncomeNextMonth),
+                formatCurrency(projectedRecurringExpenseNextMonth),
+                formatCurrency(nextMonthProjectedIncome),
+                formatCurrency(nextMonthProjectedExpense),
+                formatCurrency(projectedNetNextMonth),
+                commitmentPercentage != null ? commitmentPercentage : BigDecimal.ZERO,
+                activeInstallmentCount != null ? activeInstallmentCount : 0L,
+                escapeHtml(defaultText(riskLevel)),
+                escapeHtml(defaultText(message))
+        );
+    }
+
+    public String formatMonthExpenseSummary(BigDecimal totalAmount) {
+        return """
+            💸 <b>Total gasto no mês</b>
+            
+            Você gastou <b>%s</b> neste mês.
+            """.formatted(formatCurrency(totalAmount));
+    }
+
+    public String formatMonthIncomeSummary(BigDecimal totalAmount) {
+        return """
+            💰 <b>Total recebido no mês</b>
+            
+            Você recebeu <b>%s</b> neste mês.
+            """.formatted(formatCurrency(totalAmount));
+    }
+
+    public String formatTransactionSummary(
+            String label,
+            String complemento,
+            BigDecimal totalAmount
+    ) {
+        return """
+            📊 <b>Total %s%s</b>
+            
+            O total foi <b>%s</b>.
+            """.formatted(
+                escapeHtml(label),
+                escapeHtml(complemento != null ? complemento : ""),
+                formatCurrency(totalAmount)
+        );
+    }
+
+    private String defaultText(String value) {
+        return value != null && !value.isBlank() ? value : "Não informado";
+    }
+
     public String formatTransactionSuccess(TelegramIntentType intentType) {
         String label = intentType == TelegramIntentType.CREATE_EXPENSE ? "despesa" : "receita";
 
