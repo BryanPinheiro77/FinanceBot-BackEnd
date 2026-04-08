@@ -1,5 +1,6 @@
 package com.financebot.telegrambot.service;
 
+import com.financebot.telegrambot.dto.ParsedDateRange;
 import com.financebot.telegrambot.dto.ParsedTelegramMessage;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,12 @@ import java.util.regex.Pattern;
 
 @Service
 public class TelegramIntentService {
+
+    private final TelegramDateRangeResolver telegramDateRangeResolver;
+
+    public TelegramIntentService(TelegramDateRangeResolver telegramDateRangeResolver) {
+        this.telegramDateRangeResolver = telegramDateRangeResolver;
+    }
 
     private static final Pattern AMOUNT_PATTERN = Pattern.compile("(\\d+[\\.,]?\\d{0,2})");
     private static final Pattern ACCOUNT_PATTERN = Pattern.compile("(?:conta|cartao)\\s+(?:da|do|de)?\\s*([a-zA-Z0-9\\s]+)");
@@ -27,6 +34,8 @@ public class TelegramIntentService {
         String normalized = normalize(messageText);
 
         if (isMonthAnalysisQuery(normalized)) {
+            ParsedDateRange dateRange = telegramDateRangeResolver.resolve(normalized);
+
             return new ParsedTelegramMessage(
                     TelegramIntentType.QUERY_MONTH_ANALYSIS,
                     null,
@@ -35,12 +44,14 @@ public class TelegramIntentService {
                     messageText,
                     null,
                     null,
-                    YearMonth.now().atDay(1),
-                    YearMonth.now().atEndOfMonth()
+                    dateRange.startDate(),
+                    dateRange.endDate()
             );
         }
 
         if (isTransactionTotalQuery(normalized)) {
+            ParsedDateRange dateRange = telegramDateRangeResolver.resolve(normalized);
+
             return new ParsedTelegramMessage(
                     TelegramIntentType.QUERY_TRANSACTION_TOTAL,
                     null,
@@ -49,8 +60,8 @@ public class TelegramIntentService {
                     messageText,
                     extractCategoryName(normalized),
                     extractAccountName(normalized),
-                    extractStartDate(normalized),
-                    extractEndDate(normalized)
+                    dateRange.startDate(),
+                    dateRange.endDate()
             );
         }
 
@@ -111,8 +122,9 @@ public class TelegramIntentService {
     }
 
     private boolean isMonthAnalysisQuery(String text) {
-        return (text.contains("analise") || text.contains("resumo financeiro"))
-                && text.contains("mes");
+        return text.contains("analise")
+                || text.contains("análise")
+                || text.contains("resumo financeiro");
     }
 
     private boolean looksLikeExpense(String text) {
@@ -150,7 +162,7 @@ public class TelegramIntentService {
     private String extractDescriptionForTransaction(String text) {
         String cleaned = text
                 .replaceAll("\\b(gastei|paguei|comprei|despesa|recebi|ganhei|entrou|entrada|reais|real)\\b", "")
-                .replaceAll("\\b(hoje|ontem|amanha|mes|esse mes|este mes)\\b", "")
+                .replaceAll("\\b(hoje|ontem|amanha|mes|esse mes|este mes|mes passado|semana passada|ultimos 7 dias)\\b", "")
                 .replaceAll("(\\d+[\\.,]?\\d{0,2})", "")
                 .replaceAll("\\b(da conta|do cartao|na conta|no cartao)\\b.*", "")
                 .trim();
@@ -217,34 +229,6 @@ public class TelegramIntentService {
         }
 
         return today;
-    }
-
-    private LocalDate extractStartDate(String text) {
-        LocalDate today = LocalDate.now();
-
-        if (text.contains("ontem")) {
-            return today.minusDays(1);
-        }
-
-        if (text.contains("hoje")) {
-            return today;
-        }
-
-        return YearMonth.now().atDay(1);
-    }
-
-    private LocalDate extractEndDate(String text) {
-        LocalDate today = LocalDate.now();
-
-        if (text.contains("ontem")) {
-            return today.minusDays(1);
-        }
-
-        if (text.contains("hoje")) {
-            return today;
-        }
-
-        return YearMonth.now().atEndOfMonth();
     }
 
     private String normalize(String text) {
