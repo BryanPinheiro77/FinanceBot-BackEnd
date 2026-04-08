@@ -14,6 +14,7 @@ import com.financebot.user.domain.User;
 import com.financebot.user.dto.request.UpdateMonthlyBaseIncomeRequest;
 import com.financebot.user.dto.response.TelegramUserProfileResponse;
 import com.financebot.user.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -247,5 +248,43 @@ public class TelegramIntegrationService {
                 account.getId(),
                 account.getName()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public TelegramInstallmentCountResponse getInstallmentCount(TelegramInstallmentCountRequest request) {
+        User user = userRepository.findByTelegramId(request.telegramId())
+                .orElseThrow(() -> new EntityNotFoundException("User not found for telegramId"));
+
+        LocalDate startDate = request.startDate();
+        LocalDate endDate = request.endDate();
+
+        if (startDate == null || endDate == null) {
+            throw new IllegalArgumentException("Start date and end date are required");
+        }
+
+        Long count = transactionRepository.countInstallmentsByUserBetweenDates(
+                user.getId(),
+                startDate,
+                endDate
+        );
+
+        return new TelegramInstallmentCountResponse(
+                count != null ? count : 0L,
+                startDate,
+                endDate
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public TelegramActiveInstallmentsResponse getActiveInstallments(Long telegramId) {
+        User user = userRepository.findByTelegramId(telegramId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found for telegramId"));
+
+        Long count = transactionRepository.countDistinctActiveInstallmentGroupsByUser(
+                user.getId(),
+                LocalDate.now()
+        );
+
+        return new TelegramActiveInstallmentsResponse(count != null ? count : 0L);
     }
 }

@@ -55,6 +55,36 @@ public class TelegramIntentService {
             );
         }
 
+        if (isInstallmentCountQuery(normalized)) {
+            ParsedDateRange dateRange = telegramDateRangeResolver.resolve(normalized);
+
+            return new ParsedTelegramMessage(
+                    TelegramIntentType.QUERY_INSTALLMENT_COUNT,
+                    null,
+                    null,
+                    LocalDate.now(),
+                    messageText,
+                    null,
+                    null,
+                    dateRange.startDate(),
+                    dateRange.endDate()
+            );
+        }
+
+        if (isActiveInstallmentsQuery(normalized)) {
+            return new ParsedTelegramMessage(
+                    TelegramIntentType.QUERY_ACTIVE_INSTALLMENTS,
+                    null,
+                    null,
+                    LocalDate.now(),
+                    messageText,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+        }
+
         if (isTransactionTotalQuery(normalized)) {
             ParsedDateRange dateRange = telegramDateRangeResolver.resolve(normalized);
 
@@ -321,5 +351,25 @@ public class TelegramIntentService {
                 || normalized.contains("santander")
                 || normalized.contains("banco do brasil")
                 || normalized.contains("bb");
+    }
+
+    private boolean isInstallmentCountQuery(String text) {
+        return (text.contains("quantas parcelas") || text.contains("quantos parcelamentos"))
+                && (text.contains("tenho")
+                || text.contains("nesse mes")
+                || text.contains("neste mes")
+                || text.contains("esse mes")
+                || text.contains("este mes")
+                || text.contains("mes passado")
+                || text.contains("hoje")
+                || text.contains("ontem"));
+    }
+
+    private boolean isActiveInstallmentsQuery(String text) {
+        return text.contains("parcelamentos ativos")
+                || text.contains("parcelamento ativo")
+                || text.contains("parcelas ativas")
+                || text.contains("parcela ativa")
+                || text.contains("tenho parcelamentos ativos");
     }
 }

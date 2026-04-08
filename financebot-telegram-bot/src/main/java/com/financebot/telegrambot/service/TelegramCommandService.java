@@ -325,6 +325,30 @@ public class TelegramCommandService {
                     );
                 }
 
+                case QUERY_INSTALLMENT_COUNT -> {
+                    TelegramInstallmentCountResponse response = financeBotApiClient.getInstallmentCount(
+                            new TelegramInstallmentCountRequest(
+                                    telegramId,
+                                    parsedMessage.startDate(),
+                                    parsedMessage.endDate()
+                            )
+                    );
+
+                    yield telegramMessageFormatter.formatInstallmentCountMessage(
+                            response.installmentCount(),
+                            response.startDate(),
+                            response.endDate()
+                    );
+                }
+
+                case QUERY_ACTIVE_INSTALLMENTS -> {
+                    TelegramActiveInstallmentsResponse response = financeBotApiClient.getActiveInstallments(telegramId);
+
+                    yield telegramMessageFormatter.formatActiveInstallmentsMessage(
+                            response.activeInstallmentGroupCount()
+                    );
+                }
+
                 default -> "Não consegui interpretar sua consulta.";
             };
         } catch (RestClientResponseException e) {

@@ -385,6 +385,30 @@ public class TelegramMessageFormatter {
             """;
     }
 
+    public String formatInstallmentCountMessage(
+            Long installmentCount,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        return """
+            💳 <b>Parcelas no período</b>
+            
+            Você tem <b>%s</b> parcela(s) entre <b>%s</b> e <b>%s</b>.
+            """.formatted(
+                installmentCount != null ? installmentCount : 0L,
+                formatDate(startDate),
+                formatDate(endDate)
+        );
+    }
+
+    public String formatActiveInstallmentsMessage(Long activeInstallmentGroupCount) {
+        return """
+            💳 <b>Parcelamentos ativos</b>
+            
+            Você tem <b>%s</b> parcelamento(s) ativo(s).
+            """.formatted(activeInstallmentGroupCount != null ? activeInstallmentGroupCount : 0L);
+    }
+
     public String formatSetIncomeNonPositiveMessage() {
         return "⚠️ <b>A renda mensal base deve ser maior que zero.</b>";
     }

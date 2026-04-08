@@ -65,4 +65,18 @@ public class TelegramIntegrationController {
     public TelegramDefaultAccountResponse getDefaultAccount(@RequestParam Long telegramId) {
         return telegramIntegrationService.getDefaultAccount(telegramId);
     }
+
+    @PostMapping("/installments/count")
+    public TelegramInstallmentCountResponse getInstallmentCount(
+            @RequestBody TelegramInstallmentCountRequest request
+    ) {
+        return telegramIntegrationService.getInstallmentCount(request);
+    }
+
+    @GetMapping("/installments/active")
+    public TelegramActiveInstallmentsResponse getActiveInstallments(
+            @RequestParam Long telegramId
+    ) {
+        return telegramIntegrationService.getActiveInstallments(telegramId);
+    }
 }

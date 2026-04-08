@@ -158,4 +158,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
             @Param("categoryName") String categoryName,
             @Param("accountName") String accountName
     );
+
+    @Query("""
+       select count(t)
+       from Transaction t
+       where t.user.id = :userId
+         and t.type = com.financebot.transaction.domain.TransactionType.EXPENSE
+         and t.installment = true
+         and t.date between :startDate and :endDate
+       """)
+    Long countInstallmentsByUserBetweenDates(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
 }

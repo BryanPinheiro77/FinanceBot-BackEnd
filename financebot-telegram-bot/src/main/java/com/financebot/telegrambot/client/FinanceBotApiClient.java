@@ -114,4 +114,23 @@ public class FinanceBotApiClient {
                 .retrieve()
                 .body(TelegramDefaultAccountResponse.class);
     }
+
+    public TelegramInstallmentCountResponse getInstallmentCount(TelegramInstallmentCountRequest request) {
+        return restClient.post()
+                .uri("/telegram/installments/count")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .body(TelegramInstallmentCountResponse.class);
+    }
+
+    public TelegramActiveInstallmentsResponse getActiveInstallments(Long telegramId) {
+        return restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/telegram/installments/active")
+                        .queryParam("telegramId", telegramId)
+                        .build())
+                .retrieve()
+                .body(TelegramActiveInstallmentsResponse.class);
+    }
 }
