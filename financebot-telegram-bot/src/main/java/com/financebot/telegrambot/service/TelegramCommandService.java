@@ -81,16 +81,7 @@ public class TelegramCommandService {
         }
 
         if (looksLikeConnectionIntent(normalizedMessage)) {
-            return """
-                    Para conectar sua conta, gere um código no sistema e envie assim:
-                    
-                    /connect SEU_CODIGO
-                    ou
-                    /conectar SEU_CODIGO
-                    
-                    Exemplo:
-                    /connect FIN-ABC123
-                    """;
+            return telegramMessageFormatter.formatConnectInstructionsMessage();
         }
 
         if (isConfirmationMessage(normalizedMessage)) {
@@ -155,14 +146,7 @@ public class TelegramCommandService {
         String[] parts = messageText.split("\\s+", 2);
 
         if (parts.length < 2 || parts[1].isBlank()) {
-            return """
-                    Você precisa enviar o código junto do comando.
-                    
-                    Exemplo:
-                    /connect FIN-ABC123
-                    ou
-                    /conectar FIN-ABC123
-                    """;
+            return telegramMessageFormatter.formatConnectCodeRequiredMessage();
         }
 
         String linkCode = parts[1].trim();
@@ -172,19 +156,24 @@ public class TelegramCommandService {
                     new TelegramLinkConfirmRequest(linkCode, telegramId, telegramUsername)
             );
 
-            return response.message();
+            return telegramMessageFormatter.formatConnectSuccessMessage(response.message());
         } catch (RestClientResponseException e) {
-            return switch (e.getStatusCode().value()) {
-                case 400 -> "O código é inválido, expirou ou este Telegram já está vinculado a outra conta.";
-                case 401, 403 -> "O bot não tem permissão para concluir a conexão agora. Verifique a configuração da API.";
-                case 404 -> "Não encontrei uma conta para esse código. Gere um novo código no sistema.";
-                default -> "Não foi possível conectar sua conta agora. Tente novamente em instantes.";
-            };
+            return telegramMessageFormatter.formatConnectErrorMessage(e.getStatusCode().value());
         } catch (Exception e) {
-            return """
-                    Não foi possível conectar sua conta agora.
-                    Verifique se o código está correto ou gere um novo no sistema.
-                    """;
+            return telegramMessageFormatter.formatGenericConnectFailureMessage();
+        }
+    }
+
+    private String handleDisconnect(Long telegramId) {
+        try {
+            financeBotApiClient.disconnectTelegram(telegramId);
+            telegramPendingConfirmationService.clearPending(telegramId);
+
+            return telegramMessageFormatter.formatDisconnectSuccessMessage();
+        } catch (RestClientResponseException e) {
+            return mapDefaultBotErrors(e);
+        } catch (Exception e) {
+            return telegramMessageFormatter.formatGenericDisconnectFailureMessage();
         }
     }
 
@@ -209,26 +198,6 @@ public class TelegramCommandService {
             return mapDefaultBotErrors(e);
         } catch (Exception e) {
             return "Não foi possível buscar seu perfil agora.";
-        }
-    }
-
-    private String handleDisconnect(Long telegramId) {
-        try {
-            financeBotApiClient.disconnectTelegram(telegramId);
-            telegramPendingConfirmationService.clearPending(telegramId);
-
-            return """
-                    ✅ Sua conta do Telegram foi desconectada com sucesso.
-                    
-                    Se quiser conectar novamente, gere um novo código no sistema e use:
-                    /connect SEU_CODIGO
-                    ou
-                    /conectar SEU_CODIGO
-                    """;
-        } catch (RestClientResponseException e) {
-            return mapDefaultBotErrors(e);
-        } catch (Exception e) {
-            return "Não foi possível desconectar sua conta agora.";
         }
     }
 
@@ -523,13 +492,7 @@ public class TelegramCommandService {
     }
 
     private String mapDefaultBotErrors(RestClientResponseException e) {
-        return switch (e.getStatusCode().value()) {
-            case 400 -> "A solicitação está inválida.";
-            case 404 -> "Não encontrei uma conta vinculada a este Telegram. Use /connect ou /conectar CODIGO.";
-            case 401, 403 -> "O bot não tem permissão para acessar esse recurso agora.";
-            case 500 -> "Ocorreu um erro interno ao processar sua solicitação.";
-            default -> "Ocorreu um erro ao processar sua solicitação.";
-        };
+        return telegramMessageFormatter.formatDefaultBotErrorMessage(e.getStatusCode().value());
     }
 
     private String translateRiskLevel(String riskLevel) {

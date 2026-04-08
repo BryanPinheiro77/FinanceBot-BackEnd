@@ -272,6 +272,75 @@ public class TelegramMessageFormatter {
                 """.formatted(label);
     }
 
+    public String formatConnectCodeRequiredMessage() {
+        return """
+            🔗 <b>Você precisa enviar o código junto do comando.</b>
+            
+            <b>Exemplo:</b>
+            <code>/connect FIN-ABC123</code>
+            ou
+            <code>/conectar FIN-ABC123</code>
+            """;
+    }
+
+    public String formatConnectInstructionsMessage() {
+        return """
+            🔗 <b>Para conectar sua conta, gere um código no sistema e envie assim:</b>
+            
+            <code>/connect SEU_CODIGO</code>
+            ou
+            <code>/conectar SEU_CODIGO</code>
+            
+            <b>Exemplo:</b>
+            <code>/connect FIN-ABC123</code>
+            """;
+    }
+
+    public String formatConnectSuccessMessage(String message) {
+        return escapeHtml(defaultText(message));
+    }
+
+    public String formatDisconnectSuccessMessage() {
+        return """
+            ✅ <b>Sua conta do Telegram foi desconectada com sucesso.</b>
+            
+            Se quiser conectar novamente, gere um novo código no sistema e use:
+            <code>/connect SEU_CODIGO</code>
+            ou
+            <code>/conectar SEU_CODIGO</code>
+            """;
+    }
+
+    public String formatDefaultBotErrorMessage(int statusCode) {
+        return switch (statusCode) {
+            case 400 -> "⚠️ <b>A solicitação está inválida.</b>";
+            case 404 -> "⚠️ <b>Não encontrei uma conta vinculada a este Telegram.</b>\nUse <code>/connect</code> ou <code>/conectar CODIGO</code>.";
+            case 401, 403 -> "⚠️ <b>O bot não tem permissão para acessar esse recurso agora.</b>";
+            case 500 -> "⚠️ <b>Ocorreu um erro interno ao processar sua solicitação.</b>";
+            default -> "⚠️ <b>Ocorreu um erro ao processar sua solicitação.</b>";
+        };
+    }
+
+    public String formatConnectErrorMessage(int statusCode) {
+        return switch (statusCode) {
+            case 400 -> "⚠️ <b>O código é inválido, expirou ou este Telegram já está vinculado a outra conta.</b>";
+            case 401, 403 -> "⚠️ <b>O bot não tem permissão para concluir a conexão agora.</b>\nVerifique a configuração da API.";
+            case 404 -> "⚠️ <b>Não encontrei uma conta para esse código.</b>\nGere um novo código no sistema.";
+            default -> "⚠️ <b>Não foi possível conectar sua conta agora.</b>\nTente novamente em instantes.";
+        };
+    }
+
+    public String formatGenericConnectFailureMessage() {
+        return """
+            ⚠️ <b>Não foi possível conectar sua conta agora.</b>
+            Verifique se o código está correto ou gere um novo no sistema.
+            """;
+    }
+
+    public String formatGenericDisconnectFailureMessage() {
+        return "⚠️ <b>Não foi possível desconectar sua conta agora.</b>";
+    }
+
     private String formatCurrency(BigDecimal value) {
         if (value == null) {
             return "Não informado";
