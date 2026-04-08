@@ -417,9 +417,7 @@ public class TelegramCommandService {
 
         String type = parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE ? "despesa" : "receita";
 
-        String conta = parsedMessage.accountName() != null
-                ? parsedMessage.accountName()
-                : "conta padrão";
+        String conta = resolvePreviewAccountName(parsedMessage, telegramId);
 
         String categoria = parsedMessage.categoryName() != null
                 ? parsedMessage.categoryName()
@@ -671,15 +669,13 @@ public class TelegramCommandService {
 
         telegramPendingConfirmationService.savePending(telegramId, updated);
 
-        return buildUpdatedPendingMessage(updated);
+        return buildUpdatedPendingMessage(telegramId, updated);
     }
 
-    private String buildUpdatedPendingMessage(ParsedTelegramMessage parsedMessage) {
+    private String buildUpdatedPendingMessage(Long telegramId, ParsedTelegramMessage parsedMessage) {
         String type = parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE ? "despesa" : "receita";
 
-        String conta = parsedMessage.accountName() != null
-                ? parsedMessage.accountName()
-                : "conta padrão";
+        String conta = resolvePreviewAccountName(parsedMessage, telegramId);
 
         String categoria = parsedMessage.categoryName() != null
                 ? parsedMessage.categoryName()
@@ -1035,5 +1031,25 @@ public class TelegramCommandService {
         }
 
         return capitalizeWords(cleaned);
+    }
+
+    private String resolvePreviewAccountName(ParsedTelegramMessage parsedMessage, Long telegramId) {
+        if (parsedMessage.accountName() != null && !parsedMessage.accountName().isBlank()) {
+            return parsedMessage.accountName();
+        }
+
+        try {
+            TelegramDefaultAccountResponse response = financeBotApiClient.getDefaultAccount(telegramId);
+
+            if (response != null && response.accountName() != null && !response.accountName().isBlank()) {
+                return response.accountName();
+            }
+        } catch (RestClientResponseException e) {
+            return "conta padrão";
+        } catch (Exception e) {
+            return "conta padrão";
+        }
+
+        return "conta padrão";
     }
 }

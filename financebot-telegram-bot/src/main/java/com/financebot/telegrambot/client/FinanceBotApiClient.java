@@ -104,4 +104,14 @@ public class FinanceBotApiClient {
                 .retrieve()
                 .body(TelegramTransactionSummaryResponse.class);
     }
+
+    public TelegramDefaultAccountResponse getDefaultAccount(Long telegramId) {
+        return restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/telegram/accounts/default")
+                        .queryParam("telegramId", telegramId)
+                        .build())
+                .retrieve()
+                .body(TelegramDefaultAccountResponse.class);
+    }
 }

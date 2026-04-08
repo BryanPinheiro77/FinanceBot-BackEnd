@@ -4,10 +4,7 @@ import com.financebot.account.domain.Account;
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
 import com.financebot.category.domain.Category;
-import com.financebot.telegram.dto.CreateTransactionFromTelegramRequest;
-import com.financebot.telegram.dto.MonthlyAmountSummaryResponse;
-import com.financebot.telegram.dto.TelegramTransactionSummaryRequest;
-import com.financebot.telegram.dto.TelegramTransactionSummaryResponse;
+import com.financebot.telegram.dto.*;
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.Transaction;
@@ -237,6 +234,18 @@ public class TelegramIntegrationService {
                 user,
                 transactionType,
                 description
+        );
+    }
+
+    public TelegramDefaultAccountResponse getDefaultAccount(Long telegramId) {
+        User user = userRepository.findByTelegramId(telegramId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado para este Telegram."));
+
+        Account account = telegramAccountResolverService.resolveDefaultAccount(user);
+
+        return new TelegramDefaultAccountResponse(
+                account.getId(),
+                account.getName()
         );
     }
 }
