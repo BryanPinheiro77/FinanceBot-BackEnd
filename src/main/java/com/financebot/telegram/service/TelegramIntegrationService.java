@@ -9,7 +9,9 @@ import com.financebot.telegram.exception.TelegramUserNotFoundException;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
+import com.financebot.transaction.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.repository.TransactionRepository;
+import com.financebot.transaction.service.TransactionService;
 import com.financebot.user.domain.User;
 import com.financebot.user.dto.request.UpdateMonthlyBaseIncomeRequest;
 import com.financebot.user.dto.response.TelegramUserProfileResponse;
@@ -35,6 +37,7 @@ public class TelegramIntegrationService {
     private final UserRepository userRepository;
     private final FinancialAnalysisService financialAnalysisService;
     private final TransactionRepository transactionRepository;
+    private final TransactionService transactionService;
     private final TelegramAccountResolverService telegramAccountResolverService;
     private final TelegramCategoryResolverService telegramCategoryResolverService;
 
@@ -159,6 +162,32 @@ public class TelegramIntegrationService {
         transaction.setSourceType(SourceType.BOT_TEXT);
 
         transactionRepository.save(transaction);
+    }
+
+    @Transactional
+    public void createInstallmentTransactionFromTelegram(CreateInstallmentTransactionFromTelegramRequest request) {
+        User user = findUserByTelegramId(request.telegramId());
+
+        Account account = telegramAccountResolverService.resolve(user, request.accountName());
+        Category category = resolveCategoryFromRequest(
+                user,
+                TransactionType.EXPENSE,
+                request.categoryName(),
+                request.description()
+        );
+
+        CreateInstallmentTransactionRequest installmentRequest = new CreateInstallmentTransactionRequest(
+                request.totalAmount(),
+                request.description(),
+                request.firstInstallmentDate(),
+                TransactionType.EXPENSE,
+                SourceType.BOT_TEXT,
+                account.getId(),
+                category.getId(),
+                request.totalInstallments()
+        );
+
+        transactionService.createInstallmentForUser(installmentRequest, user);
     }
 
     @Transactional(readOnly = true)
@@ -308,6 +337,7 @@ public class TelegramIntegrationService {
                     null,
                     null,
                     null,
+                    null,
                     0,
                     null
             );
@@ -338,11 +368,20 @@ public class TelegramIntegrationService {
         return new TelegramActiveInstallmentSummaryResponse(
                 true,
                 firstUpcoming.getInstallmentGroupId(),
-                firstUpcoming.getDescription(),
+                stripInstallmentSuffix(firstUpcoming.getDescription()),
+                firstUpcoming.getDate(),
                 nextInstallmentNumber,
                 totalInstallments,
                 remainingInstallments,
                 endDate
         );
+    }
+
+    private String stripInstallmentSuffix(String description) {
+        if (description == null || description.isBlank()) {
+            return description;
+        }
+
+        return description.replaceFirst("\\s*-\\s*\\d+/\\d+\\s*$", "").trim();
     }
 }

@@ -6,6 +6,7 @@ public record TelegramActiveInstallmentSummaryResponse(
         boolean hasActiveInstallment,
         String installmentGroupId,
         String description,
+        LocalDate nextDueDate,
         Integer nextInstallmentNumber,
         Integer totalInstallments,
         Integer remainingInstallments,

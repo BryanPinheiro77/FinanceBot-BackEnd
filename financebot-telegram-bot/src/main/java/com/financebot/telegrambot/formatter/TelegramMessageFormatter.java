@@ -127,10 +127,67 @@ public class TelegramMessageFormatter {
         );
     }
 
+    public String formatInstallmentTransactionPreview(
+            ParsedTelegramMessage parsedMessage,
+            String accountName
+    ) {
+        String category = parsedMessage.categoryName() != null
+                ? parsedMessage.categoryName()
+                : "Automática";
+
+        return """
+                💳 <b>Entendi este parcelamento:</b>
+                
+                <b>Valor total:</b> %s
+                <b>Parcelas:</b> %s
+                <b>Descrição:</b> %s
+                <b>Primeira parcela:</b> %s
+                <b>Conta:</b> %s
+                <b>Categoria:</b> %s
+                
+                Deseja confirmar e salvar?
+                """.formatted(
+                formatCurrency(parsedMessage.amount()),
+                parsedMessage.totalInstallments() != null ? parsedMessage.totalInstallments() + "x" : "Não informada",
+                parsedMessage.description() != null ? escapeHtml(parsedMessage.description()) : "Não informada",
+                formatDate(parsedMessage.date()),
+                escapeHtml(accountName),
+                escapeHtml(category)
+        );
+    }
+
     public String formatUpdatedPendingMessage(
             ParsedTelegramMessage parsedMessage,
             String accountName
     ) {
+        if (parsedMessage.intentType() == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE) {
+            String category = parsedMessage.categoryName() != null
+                    ? parsedMessage.categoryName()
+                    : "Automática";
+
+            return """
+                    ✅ <b>Operação atualizada.</b>
+                    
+                    <b>Entendi este parcelamento:</b>
+                    
+                    <b>Valor total:</b> %s
+                    <b>Parcelas:</b> %s
+                    <b>Descrição:</b> %s
+                    <b>Primeira parcela:</b> %s
+                    <b>Conta:</b> %s
+                    <b>Categoria:</b> %s
+                    
+                    Deseja confirmar e salvar?
+                    """.formatted(
+                    formatCurrency(parsedMessage.amount()),
+                    parsedMessage.totalInstallments() != null ? parsedMessage.totalInstallments() + "x" : "Não informada",
+                    parsedMessage.description() != null ? escapeHtml(parsedMessage.description()) : "Não informada",
+                    formatDate(parsedMessage.date()),
+                    escapeHtml(accountName),
+                    escapeHtml(category)
+            );
+        }
+
         String type = parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE
                 ? "despesa"
                 : "receita";
@@ -263,7 +320,18 @@ public class TelegramMessageFormatter {
     }
 
     public String formatTransactionSuccess(TelegramIntentType intentType) {
-        String label = intentType == TelegramIntentType.CREATE_EXPENSE ? "despesa" : "receita";
+        if (intentType == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE) {
+            return """
+                    ✅ <b>Parcelamento registrado com sucesso!</b>
+                    
+                    Seu <b>parcelamento</b> foi salvo no sistema.
+                    """;
+        }
+
+        String label = switch (intentType) {
+            case CREATE_EXPENSE -> "despesa";
+            default -> "receita";
+        };
 
         return """
                 ✅ <b>Transação registrada com sucesso!</b>
@@ -428,6 +496,7 @@ public class TelegramMessageFormatter {
 
     public String formatRemainingInstallmentsMessage(
             String description,
+            LocalDate nextDueDate,
             Integer remainingInstallments,
             Integer nextInstallmentNumber,
             Integer totalInstallments
@@ -436,10 +505,12 @@ public class TelegramMessageFormatter {
             💳 <b>Parcelas restantes</b>
             
             <b>Descrição:</b> %s
+            <b>Próximo vencimento:</b> %s
             <b>Próxima parcela:</b> %s/%s
             <b>Faltam:</b> %s parcela(s)
             """.formatted(
                 escapeHtml(defaultText(description)),
+                formatDate(nextDueDate),
                 nextInstallmentNumber != null ? nextInstallmentNumber : 0,
                 totalInstallments != null ? totalInstallments : 0,
                 remainingInstallments != null ? remainingInstallments : 0

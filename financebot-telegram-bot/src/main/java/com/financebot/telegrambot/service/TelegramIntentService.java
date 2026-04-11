@@ -28,6 +28,7 @@ public class TelegramIntentService {
     private static final Pattern NATURAL_ACCOUNT_PATTERN = Pattern.compile(
             "\\b(?:na|no)\\s+([a-zA-Z][a-zA-Z0-9\\s]{1,30}?)(?=\\b(?:hoje|ontem|amanha|esse mes|este mes|mes passado|semana passada|ultimos 7 dias|e|,|\\?|$))"
     );
+    private static final Pattern INSTALLMENT_PATTERN = Pattern.compile("\\b(?:parcelad[oa]\\s+em\\s+|em\\s+)(\\d{1,3})x\\b");
     private static final Pattern CATEGORY_PATTERN = Pattern.compile(
             "\\b(mercado|supermercado|gasolina|combustivel|farmacia|uber|ifood|salario|freela|alimentacao|outros|moradia|transporte|saude)\\b"
     );
@@ -51,7 +52,8 @@ public class TelegramIntentService {
                     null,
                     null,
                     dateRange.startDate(),
-                    dateRange.endDate()
+                    dateRange.endDate(),
+                    null
             );
         }
 
@@ -67,7 +69,8 @@ public class TelegramIntentService {
                     null,
                     null,
                     dateRange.startDate(),
-                    dateRange.endDate()
+                    dateRange.endDate(),
+                    null
             );
         }
 
@@ -78,6 +81,7 @@ public class TelegramIntentService {
                     null,
                     LocalDate.now(),
                     messageText,
+                    null,
                     null,
                     null,
                     null,
@@ -95,6 +99,7 @@ public class TelegramIntentService {
                     null,
                     null,
                     null,
+                    null,
                     null
             );
         }
@@ -106,6 +111,7 @@ public class TelegramIntentService {
                     null,
                     LocalDate.now(),
                     messageText,
+                    null,
                     null,
                     null,
                     null,
@@ -125,7 +131,23 @@ public class TelegramIntentService {
                     extractCategoryName(normalized),
                     extractAccountName(normalized),
                     dateRange.startDate(),
-                    dateRange.endDate()
+                    dateRange.endDate(),
+                    null
+            );
+        }
+
+        if (looksLikeInstallmentExpense(normalized)) {
+            return new ParsedTelegramMessage(
+                    TelegramIntentType.CREATE_INSTALLMENT_EXPENSE,
+                    extractAmount(normalized),
+                    extractInstallmentDescription(normalized),
+                    extractDate(normalized),
+                    messageText,
+                    extractCategoryName(normalized),
+                    extractAccountName(normalized),
+                    null,
+                    null,
+                    extractInstallmentCount(normalized)
             );
         }
 
@@ -138,6 +160,7 @@ public class TelegramIntentService {
                     messageText,
                     extractCategoryName(normalized),
                     extractAccountName(normalized),
+                    null,
                     null,
                     null
             );
@@ -153,6 +176,7 @@ public class TelegramIntentService {
                     extractCategoryName(normalized),
                     extractAccountName(normalized),
                     null,
+                    null,
                     null
             );
         }
@@ -167,6 +191,7 @@ public class TelegramIntentService {
                 null,
                 null,
                 messageText,
+                null,
                 null,
                 null,
                 null,
@@ -198,6 +223,14 @@ public class TelegramIntentService {
                 || text.contains("despesa");
     }
 
+    private boolean looksLikeInstallmentExpense(String text) {
+        Integer installmentCount = extractInstallmentCount(text);
+
+        return looksLikeExpense(text)
+                && installmentCount != null
+                && installmentCount >= 2;
+    }
+
     private boolean looksLikeIncome(String text) {
         return text.contains("recebi")
                 || text.contains("ganhei")
@@ -226,7 +259,10 @@ public class TelegramIntentService {
     private String extractDescriptionForTransaction(String text) {
         String cleaned = text
                 .replaceAll("\\b(gastei|paguei|comprei|despesa|recebi|ganhei|entrou|entrada|reais|real)\\b", "")
+                .replaceAll("\\bpor\\b", "")
                 .replaceAll("\\b(hoje|ontem|amanha|mes|esse mes|este mes|mes passado|semana passada|ultimos 7 dias)\\b", "")
+                .replaceAll("\\bparcelad[oa]\\s+em\\s+\\d{1,3}x\\b", "")
+                .replaceAll("\\bem\\s+\\d{1,3}x\\b", "")
                 .replaceAll("(\\d+[\\.,]?\\d{0,2})", "")
                 .replaceAll("\\b(?:da conta|do cartao|na conta|no cartao)\\b.*", "")
                 .trim();
@@ -247,6 +283,30 @@ public class TelegramIntentService {
         }
 
         return cleaned;
+    }
+
+    private String extractInstallmentDescription(String text) {
+        String description = extractDescriptionForTransaction(text);
+
+        if (description == null || description.isBlank()) {
+            return "Despesa parcelada";
+        }
+
+        return description;
+    }
+
+    private Integer extractInstallmentCount(String text) {
+        Matcher matcher = INSTALLMENT_PATTERN.matcher(text);
+
+        if (!matcher.find()) {
+            return null;
+        }
+
+        try {
+            return Integer.valueOf(matcher.group(1));
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private String extractCategoryName(String text) {

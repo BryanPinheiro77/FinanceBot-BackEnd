@@ -99,6 +99,7 @@ public class TelegramCommandService {
         }
 
         if (parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE
+                || parsedMessage.intentType() == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE
                 || parsedMessage.intentType() == TelegramIntentType.CREATE_INCOME) {
             return handleNaturalLanguageTransactionPreview(telegramId, parsedMessage);
         }
@@ -273,10 +274,25 @@ public class TelegramCommandService {
             """;
         }
 
-        telegramPendingConfirmationService.savePending(telegramId, parsedMessage);
-
         String conta = resolvePreviewAccountName(parsedMessage, telegramId);
 
+        if (parsedMessage.intentType() == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE) {
+            if (parsedMessage.totalInstallments() == null || parsedMessage.totalInstallments() < 2) {
+                return """
+                Entendi a intenção de parcelamento, mas não consegui identificar uma quantidade válida de parcelas.
+                
+                Exemplos:
+                - gastei 1200 parcelado em 10x
+                - comprei um celular por 2400 em 12x
+                - gastei 300 no inter parcelado em 3x
+                """;
+            }
+
+            telegramPendingConfirmationService.savePending(telegramId, parsedMessage);
+            return telegramMessageFormatter.formatInstallmentTransactionPreview(parsedMessage, conta);
+        }
+
+        telegramPendingConfirmationService.savePending(telegramId, parsedMessage);
         return telegramMessageFormatter.formatTransactionPreview(parsedMessage, conta);
     }
 
@@ -360,12 +376,13 @@ public class TelegramCommandService {
 
                         yield telegramMessageFormatter.formatRemainingInstallmentsMessage(
                                 response.description(),
+                                response.nextDueDate(),
                                 response.remainingInstallments(),
                                 response.nextInstallmentNumber(),
                                 response.totalInstallments()
                         );
                     } catch (RestClientResponseException e) {
-                        if (e.getStatusCode().value() == 409) {
+                        if (e.getStatusCode().value() == 409 || e.getStatusCode().value() == 403) {
                             yield telegramMessageFormatter.formatMultipleActiveInstallmentsMessage();
                         }
                         throw e;
@@ -386,7 +403,7 @@ public class TelegramCommandService {
                                 response.endDate()
                         );
                     } catch (RestClientResponseException e) {
-                        if (e.getStatusCode().value() == 409) {
+                        if (e.getStatusCode().value() == 409 || e.getStatusCode().value() == 403) {
                             yield telegramMessageFormatter.formatMultipleActiveInstallmentsMessage();
                         }
                         throw e;
@@ -410,18 +427,34 @@ public class TelegramCommandService {
         }
 
         try {
-            CreateTransactionFromTelegramRequest request =
-                    new CreateTransactionFromTelegramRequest(
-                            telegramId,
-                            mapIntentToTransactionType(pending.intentType()),
-                            pending.amount(),
-                            pending.description(),
-                            pending.date(),
-                            pending.categoryName(),
-                            pending.accountName()
-                    );
+            if (pending.intentType() == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE) {
+                CreateInstallmentTransactionFromTelegramRequest request =
+                        new CreateInstallmentTransactionFromTelegramRequest(
+                                telegramId,
+                                pending.amount(),
+                                pending.description(),
+                                pending.date(),
+                                pending.accountName(),
+                                pending.categoryName(),
+                                pending.totalInstallments()
+                        );
 
-            financeBotApiClient.createTransaction(request);
+                financeBotApiClient.createInstallmentTransaction(request);
+            } else {
+                CreateTransactionFromTelegramRequest request =
+                        new CreateTransactionFromTelegramRequest(
+                                telegramId,
+                                mapIntentToTransactionType(pending.intentType()),
+                                pending.amount(),
+                                pending.description(),
+                                pending.date(),
+                                pending.categoryName(),
+                                pending.accountName()
+                        );
+
+                financeBotApiClient.createTransaction(request);
+            }
+
             telegramPendingConfirmationService.clearPending(telegramId);
 
             return telegramMessageFormatter.formatTransactionSuccess(pending.intentType());
@@ -520,7 +553,8 @@ public class TelegramCommandService {
                 categoryName,
                 accountName,
                 pending.startDate(),
-                pending.endDate()
+                pending.endDate(),
+                pending.totalInstallments()
         );
 
         telegramPendingConfirmationService.savePending(telegramId, updated);
@@ -689,7 +723,7 @@ public class TelegramCommandService {
 
     private String mapIntentToTransactionType(TelegramIntentType intentType) {
         return switch (intentType) {
-            case CREATE_EXPENSE -> "EXPENSE";
+            case CREATE_EXPENSE, CREATE_INSTALLMENT_EXPENSE -> "EXPENSE";
             case CREATE_INCOME -> "INCOME";
             default -> throw new IllegalArgumentException("Intento inválido para criação de transação.");
         };
