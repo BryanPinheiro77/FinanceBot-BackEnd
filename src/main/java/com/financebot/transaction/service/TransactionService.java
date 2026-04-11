@@ -72,6 +72,15 @@ public class TransactionService {
     ) {
         User user = getAuthenticatedUser(authentication);
 
+        return createInstallmentForUser(request, user);
+    }
+
+    @Transactional
+    public InstallmentTransactionResponse createInstallmentForUser(
+            CreateInstallmentTransactionRequest request,
+            User user
+    ) {
+
         if (request.type() != TransactionType.EXPENSE) {
             throw new IllegalArgumentException("Installment transactions are allowed only for expenses");
         }

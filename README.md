@@ -35,10 +35,13 @@ O usuário pode escrever mensagens como:
 - consulta de perfil
 - consulta de resumo/status
 - consulta de análise financeira
+- atualização de renda base mensal
 - desvinculação da conta
 
 ### Registro de transações
 - criação de despesas e receitas por linguagem natural
+- criação de transações parceladas
+- suporte a transações recorrentes
 - preview da operação antes de salvar
 - confirmação ou cancelamento da operação
 - persistência real da transação no backend
@@ -49,21 +52,31 @@ O usuário pode escrever mensagens como:
 - total gasto no mês
 - total recebido no mês
 - consultas com filtro por categoria
-- estrutura inicial para consultas com filtro por conta
+- consulta de conta padrão
+- consulta de parcelas ativas e resumo de parcelamentos
+
+### Recursos da API
+- autenticação com login e registro
+- CRUD de contas, categorias, transações e recorrências
+- análise financeira e pré-checagens
+- endpoints dedicados para consumo do bot
+- estrutura de dashboard no backend
 
 ## Arquitetura
 
-O projeto está dividido em dois módulos principais:
+O repositório está organizado em duas aplicações Spring Boot que trabalham em conjunto:
 
-- **financebot-api**: backend com regras de negócio, autenticação, persistência e endpoints REST
-- **financebot-telegram-bot**: bot do Telegram responsável pela interação conversacional e integração com a API
+- **financebot-api**: aplicação backend na raiz do repositório, com regras de negócio, autenticação, persistência e endpoints REST
+- **financebot-telegram-bot**: aplicação separada dentro da pasta `financebot-telegram-bot`, responsável pela interação conversacional e integração com a API
 
 ### Responsabilidades da API
 - autenticação e segurança
 - vinculação de usuário com Telegram
 - persistência de contas, categorias e transações
+- persistência de transações recorrentes e parceladas
 - regras de negócio financeiras
 - análise financeira
+- endpoints para dashboard
 - resolução automática de conta padrão e categoria
 
 ### Responsabilidades do bot
@@ -76,24 +89,30 @@ O projeto está dividido em dois módulos principais:
 ## Tecnologias utilizadas
 
 ### Backend / API
-- Java
-- Spring Boot
+- Java 26
+- Spring Boot 4
 - Spring Security
 - JWT
 - Spring Data JPA
 - PostgreSQL
 - Flyway
+- Spring Actuator
+- Redis
+- RabbitMQ
 - Lombok
 
 ### Bot
-- Java
-- Spring Boot
+- Java 26
+- Spring Boot 4
 - Telegram Bot API
 - RestClient
 
 ### Infraestrutura / ambiente
 - Docker
 - Docker Compose
+- PostgreSQL 17
+- Redis
+- RabbitMQ
 
 ## Funcionalidades em evolução
 
@@ -102,13 +121,13 @@ O projeto continua evoluindo com foco em experiência conversacional e arquitetu
 - edição da operação pendente antes da confirmação
 - respostas mais naturais e contextuais
 - consultas mais inteligentes com filtros adicionais
-- dashboard para visão mais ampla e visual da vida financeira
-- uso de Redis e RabbitMQ em evoluções futuras
-- integração com IA para enriquecer a interpretação das mensagens
+- expansão da camada de dashboard
+- evolução do uso de mensageria e cache na arquitetura
+- integração com IA para enriquecer a interpretação das mensagens e consultas
 
 ## Objetivo futuro com IA
 
-Uma das evoluções planejadas é integrar IA ao fluxo de interpretação para tornar o bot ainda mais natural e preciso ao entender:
+Uma das evoluções planejadas é aprofundar o uso de IA no fluxo de interpretação para tornar o bot ainda mais natural e preciso ao entender:
 
 - intenções
 - contexto
@@ -129,24 +148,83 @@ A ideia não é substituir as regras de negócio do backend, mas enriquecer a ca
 
 ## Como executar localmente
 
-> Ajuste esta seção conforme a estrutura exata do seu repositório.
-
 ### Pré-requisitos
-- Java 21+ (ou a versão usada no projeto)
-- Maven
-- PostgreSQL
+- Java 26
+- Maven 3.9+
 - Docker / Docker Compose
-- Bot do Telegram configurado
-- variáveis de ambiente ou `application.yml` configurados
+- token de bot do Telegram
 
-### Passos gerais
-1. Clonar o repositório
-2. Configurar banco e variáveis de ambiente
-3. Rodar as migrations com Flyway
-4. Subir a API
-5. Subir o bot do Telegram
-6. Gerar código de vínculo no sistema
-7. Conectar a conta no Telegram
+### Serviços de infraestrutura
+Suba os serviços locais com:
+
+```bash
+docker compose up -d
+```
+
+O `compose.yaml` disponibiliza:
+
+- PostgreSQL em `localhost:5432`
+- RabbitMQ em `localhost:5672` e painel em `localhost:15672`
+- Redis em `localhost:6379`
+
+### Configuração da API
+A API principal roda na porta `8080` e lê, por padrão:
+
+- banco PostgreSQL em `jdbc:postgresql://localhost:5432/financebot`
+- Redis em `localhost:6379`
+- RabbitMQ em `localhost:5672`
+
+Se precisar sobrescrever segredos locais, crie o arquivo:
+
+```properties
+src/main/resources/application-secret.properties
+```
+
+### Subindo a API
+Na raiz do projeto:
+
+```bash
+./mvnw spring-boot:run
+```
+
+As migrations do Flyway são executadas automaticamente na inicialização.
+
+### Configuração do bot do Telegram
+O bot roda na porta `8081` e depende da API em `http://localhost:8080`.
+
+Defina a variável de ambiente:
+
+```bash
+export TELEGRAM_BOT_TOKEN=seu_token_aqui
+```
+
+Se necessário, ajuste também o arquivo:
+
+```properties
+financebot-telegram-bot/src/main/resources/application.properties
+```
+
+Principalmente a propriedade:
+
+```properties
+financebot.api.base-url=http://localhost:8080
+```
+
+### Subindo o bot
+Dentro da pasta do bot:
+
+```bash
+cd financebot-telegram-bot
+../mvnw spring-boot:run
+```
+
+### Fluxo básico de uso
+1. Suba a infraestrutura com Docker Compose.
+2. Inicie a API.
+3. Inicie o bot do Telegram.
+4. Gere o código de vínculo pela API/autenticação da aplicação.
+5. Confirme o vínculo no Telegram.
+6. Envie mensagens naturais para registrar ou consultar informações financeiras.
 
 ## Open source
 
@@ -156,7 +234,7 @@ Se quiser acompanhar a evolução, sugerir melhorias ou contribuir, fique à von
 
 ## Licença
 
-Este projeto está licenciado sob a licença [MIT](.license).
+Este projeto está licenciado sob a licença [MIT](LICENSE).
 
 ## Autores
 

@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long>, JpaSpecificationExecutor<Transaction> {
@@ -79,6 +80,35 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
     Long countDistinctActiveInstallmentGroupsByUser(
             @Param("userId") Long userId,
             @Param("today") LocalDate today
+    );
+
+    @Query("""
+           select t
+           from Transaction t
+           where t.user.id = :userId
+             and t.type = com.financebot.transaction.domain.TransactionType.EXPENSE
+             and t.installment = true
+             and t.installmentGroupId is not null
+             and t.date >= :today
+           order by t.installmentGroupId asc, t.date asc
+           """)
+    List<Transaction> findActiveInstallmentTransactionsByUser(
+            @Param("userId") Long userId,
+            @Param("today") LocalDate today
+    );
+
+    @Query("""
+           select t
+           from Transaction t
+           where t.user.id = :userId
+             and t.type = com.financebot.transaction.domain.TransactionType.EXPENSE
+             and t.installment = true
+             and t.installmentGroupId = :installmentGroupId
+           order by t.date asc
+           """)
+    List<Transaction> findInstallmentTransactionsByGroupIdAndUser(
+            @Param("userId") Long userId,
+            @Param("installmentGroupId") String installmentGroupId
     );
 
     @Query("""
@@ -157,5 +187,19 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
             @Param("endDate") LocalDate endDate,
             @Param("categoryName") String categoryName,
             @Param("accountName") String accountName
+    );
+
+    @Query("""
+       select count(t)
+       from Transaction t
+       where t.user.id = :userId
+         and t.type = com.financebot.transaction.domain.TransactionType.EXPENSE
+         and t.installment = true
+         and t.date between :startDate and :endDate
+       """)
+    Long countInstallmentsByUserBetweenDates(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
     );
 }

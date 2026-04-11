@@ -1,10 +1,7 @@
 package com.financebot.telegram.controller;
 
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
-import com.financebot.telegram.dto.CreateTransactionFromTelegramRequest;
-import com.financebot.telegram.dto.MonthlyAmountSummaryResponse;
-import com.financebot.telegram.dto.TelegramTransactionSummaryRequest;
-import com.financebot.telegram.dto.TelegramTransactionSummaryResponse;
+import com.financebot.telegram.dto.*;
 import com.financebot.telegram.service.TelegramIntegrationService;
 import com.financebot.user.dto.response.TelegramUserProfileResponse;
 import com.financebot.user.dto.request.UpdateMonthlyBaseIncomeRequest;
@@ -57,10 +54,44 @@ public class TelegramIntegrationController {
         telegramIntegrationService.createTransactionFromTelegram(request);
     }
 
+    @PostMapping("/transactions/installments")
+    public void createInstallmentTransaction(
+            @RequestBody CreateInstallmentTransactionFromTelegramRequest request
+    ) {
+        telegramIntegrationService.createInstallmentTransactionFromTelegram(request);
+    }
+
     @PostMapping("/transactions/summary")
     public TelegramTransactionSummaryResponse getTransactionSummary(
             @RequestBody TelegramTransactionSummaryRequest request
     ) {
         return telegramIntegrationService.getTransactionSummary(request);
+    }
+
+    @GetMapping("/accounts/default")
+    public TelegramDefaultAccountResponse getDefaultAccount(@RequestParam Long telegramId) {
+        return telegramIntegrationService.getDefaultAccount(telegramId);
+    }
+
+    @PostMapping("/installments/count")
+    public TelegramInstallmentCountResponse getInstallmentCount(
+            @RequestBody TelegramInstallmentCountRequest request
+    ) {
+        return telegramIntegrationService.getInstallmentCount(request);
+    }
+
+    @GetMapping("/installments/active")
+    public TelegramActiveInstallmentsResponse getActiveInstallments(
+            @RequestParam Long telegramId
+    ) {
+        return telegramIntegrationService.getActiveInstallments(telegramId);
+    }
+
+    @GetMapping("/installments/summary")
+    public TelegramActiveInstallmentSummaryResponse getActiveInstallmentSummary(
+            @RequestParam Long telegramId,
+            @RequestParam(required = false) String query
+    ) {
+        return telegramIntegrationService.getActiveInstallmentSummary(telegramId, query);
     }
 }

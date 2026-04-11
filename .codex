@@ -1,0 +1,58 @@
+Projeto: Finance Bot
+
+Stack:
+- Backend em Spring Boot
+- Bot do Telegram separado
+- PostgreSQL
+- Redis
+- RabbitMQ
+- Docker Compose para ambiente local
+- Integração entre bot e backend via endpoints /telegram/*
+
+Objetivo do produto:
+- Registrar receitas e despesas por linguagem natural
+- Consultar totais, análises e parcelamentos
+- Evoluir o parser por etapas
+- Integrar IA no futuro, mantendo fallback determinístico
+
+Arquitetura importante:
+- TelegramCommandService: orquestra o fluxo do bot
+- TelegramIntentService: interpreta intenção e extrai campos
+- TelegramMessageFormatter: monta respostas
+- TelegramIntegrationService: ponte com backend
+- FinanceBotApiClient: client HTTP do bot para a API
+
+Regras:
+- Fazer mudanças pequenas e localizadas
+- Preservar a arquitetura atual
+- Reaproveitar DTOs, services, formatter e padrões já existentes
+- Não fazer refatorações grandes sem pedir
+- Ao final, listar arquivos alterados e resumir decisões
+- Se houver ambiguidade, escolher a solução mais simples e consistente com o código atual
+
+Versionamento:
+- Usar semver: MAJOR.MINOR.PATCH
+- MINOR para cada sprint/bloco grande
+- PATCH para correções e refinamentos
+- Não alterar versão a cada commit
+- Ao fechar um bloco importante, sugerir versão alvo e atualizar changelog se solicitado
+
+Roadmap atual:
+- v1.0.0: base apresentável atual do bot
+- v1.1.0: análise de compra parcelada
+- v1.2.0: refatoração DTOs Telegram
+- v1.3.0: front MVP com onboarding guiado
+- v1.4.0: segurança Telegram
+- v1.5.0: consistência preview/persistência
+- v1.6.0: Redis para estado conversacional
+- v1.7.0: recorrências reais
+- v1.8.0: assistente conversacional mais rico
+- v1.9.0: alertas automáticos e resumos + RabbitMQ
+- v1.10.0: planos de conta
+- v1.11.0: dashboard web inicial
+- v2.0.0: IA relevante no produto
+
+Observações:
+- Redis deve ser usado principalmente para pending e contexto conversacional
+- RabbitMQ deve entrar principalmente para alertas, notificações e processamento assíncrono
+- IA deve vir depois da base rule-based estar sólida
