@@ -55,6 +55,7 @@ public class TelegramIntentService {
                     dateRange.startDate(),
                     dateRange.endDate(),
                     null,
+                    null,
                     null
             );
         }
@@ -73,6 +74,7 @@ public class TelegramIntentService {
                     dateRange.startDate(),
                     dateRange.endDate(),
                     null,
+                    null,
                     null
             );
         }
@@ -84,6 +86,7 @@ public class TelegramIntentService {
                     null,
                     LocalDate.now(),
                     messageText,
+                    null,
                     null,
                     null,
                     null,
@@ -105,7 +108,8 @@ public class TelegramIntentService {
                     null,
                     null,
                     null,
-                    extractInstallmentQueryTarget(normalized)
+                    extractInstallmentQueryTarget(normalized),
+                    null
             );
         }
 
@@ -121,8 +125,31 @@ public class TelegramIntentService {
                     null,
                     null,
                     null,
-                    extractInstallmentQueryTarget(normalized)
+                    extractInstallmentQueryTarget(normalized),
+                    null
             );
+        }
+
+        if (isInstallmentPurchaseCapacityQuery(normalized)) {
+            BigDecimal totalAmount = extractAmount(normalized);
+            Integer totalInstallments = extractInstallmentCount(normalized);
+
+            if (totalAmount != null && totalInstallments != null && totalInstallments >= 2) {
+                return new ParsedTelegramMessage(
+                        TelegramIntentType.QUERY_INSTALLMENT_PURCHASE_CAPACITY,
+                        null,
+                        null,
+                        LocalDate.now(),
+                        messageText,
+                        null,
+                        null,
+                        null,
+                        null,
+                        totalInstallments,
+                        null,
+                        totalAmount
+                );
+            }
         }
 
         if (isTransactionTotalQuery(normalized)) {
@@ -138,6 +165,7 @@ public class TelegramIntentService {
                     extractAccountName(normalized),
                     dateRange.startDate(),
                     dateRange.endDate(),
+                    null,
                     null,
                     null
             );
@@ -155,6 +183,7 @@ public class TelegramIntentService {
                     null,
                     null,
                     extractInstallmentCount(normalized),
+                    null,
                     null
             );
         }
@@ -171,6 +200,7 @@ public class TelegramIntentService {
                     null,
                     null,
                     null,
+                    null,
                     null
             );
         }
@@ -184,6 +214,7 @@ public class TelegramIntentService {
                     messageText,
                     extractCategoryName(normalized),
                     extractAccountName(normalized),
+                    null,
                     null,
                     null,
                     null,
@@ -206,8 +237,21 @@ public class TelegramIntentService {
                 null,
                 null,
                 null,
+                null,
                 null
         );
+    }
+
+    private boolean isInstallmentPurchaseCapacityQuery(String text) {
+        boolean asksCapacity = text.contains("consigo")
+                || text.contains("cabe no meu orcamento")
+                || text.contains("cabe no orcamento")
+                || text.contains("se eu parcelar");
+
+        return asksCapacity
+                && (text.contains("compra") || text.contains("parcel"))
+                && extractInstallmentCount(text) != null
+                && extractAmount(text) != null;
     }
 
     private boolean isTransactionTotalQuery(String text) {

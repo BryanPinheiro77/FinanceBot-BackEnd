@@ -132,6 +132,17 @@ public class FinanceBotApiClient {
                 .body(TelegramInstallmentCountResponse.class);
     }
 
+    public InstallmentPurchaseCapacityResponse getInstallmentPurchaseCapacity(
+            InstallmentPurchaseCapacityRequest request
+    ) {
+        return restClient.post()
+                .uri("/telegram/installments/purchase-capacity")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .body(InstallmentPurchaseCapacityResponse.class);
+    }
+
     public TelegramActiveInstallmentsResponse getActiveInstallments(Long telegramId) {
         return restClient.get()
                 .uri(uriBuilder -> uriBuilder

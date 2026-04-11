@@ -1,6 +1,7 @@
 package com.financebot.telegram.controller;
 
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
+import com.financebot.analysis.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.telegram.dto.*;
 import com.financebot.telegram.service.TelegramIntegrationService;
 import com.financebot.user.dto.response.TelegramUserProfileResponse;
@@ -78,6 +79,13 @@ public class TelegramIntegrationController {
             @RequestBody TelegramInstallmentCountRequest request
     ) {
         return telegramIntegrationService.getInstallmentCount(request);
+    }
+
+    @PostMapping("/installments/purchase-capacity")
+    public InstallmentPurchaseCapacityResponse analyzeInstallmentPurchaseCapacity(
+            @RequestBody InstallmentPurchaseCapacityRequest request
+    ) {
+        return telegramIntegrationService.analyzeInstallmentPurchaseCapacity(request);
     }
 
     @GetMapping("/installments/active")

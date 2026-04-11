@@ -2,6 +2,7 @@ package com.financebot.telegram.service;
 
 import com.financebot.account.domain.Account;
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
+import com.financebot.analysis.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
 import com.financebot.category.domain.Category;
 import com.financebot.telegram.dto.*;
@@ -306,6 +307,27 @@ public class TelegramIntegrationService {
                 count != null ? count : 0L,
                 startDate,
                 endDate
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public InstallmentPurchaseCapacityResponse analyzeInstallmentPurchaseCapacity(
+            InstallmentPurchaseCapacityRequest request
+    ) {
+        if (request.totalAmount() == null || request.totalAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Total amount must be greater than zero");
+        }
+
+        if (request.totalInstallments() == null || request.totalInstallments() < 2) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Total installments must be at least 2");
+        }
+
+        User user = findUserByTelegramId(request.telegramId());
+
+        return financialAnalysisService.analyzeInstallmentPurchaseCapacity(
+                user,
+                request.totalAmount(),
+                request.totalInstallments()
         );
     }
 
