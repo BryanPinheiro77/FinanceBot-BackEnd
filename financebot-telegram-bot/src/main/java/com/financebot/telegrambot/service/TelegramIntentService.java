@@ -53,6 +53,7 @@ public class TelegramIntentService {
                     null,
                     dateRange.startDate(),
                     dateRange.endDate(),
+                    null,
                     null
             );
         }
@@ -70,6 +71,7 @@ public class TelegramIntentService {
                     null,
                     dateRange.startDate(),
                     dateRange.endDate(),
+                    null,
                     null
             );
         }
@@ -81,6 +83,7 @@ public class TelegramIntentService {
                     null,
                     LocalDate.now(),
                     messageText,
+                    null,
                     null,
                     null,
                     null,
@@ -100,7 +103,8 @@ public class TelegramIntentService {
                     null,
                     null,
                     null,
-                    null
+                    null,
+                    extractInstallmentQueryTarget(normalized)
             );
         }
 
@@ -115,7 +119,8 @@ public class TelegramIntentService {
                     null,
                     null,
                     null,
-                    null
+                    null,
+                    extractInstallmentQueryTarget(normalized)
             );
         }
 
@@ -132,6 +137,7 @@ public class TelegramIntentService {
                     extractAccountName(normalized),
                     dateRange.startDate(),
                     dateRange.endDate(),
+                    null,
                     null
             );
         }
@@ -147,7 +153,8 @@ public class TelegramIntentService {
                     extractAccountName(normalized),
                     null,
                     null,
-                    extractInstallmentCount(normalized)
+                    extractInstallmentCount(normalized),
+                    null
             );
         }
 
@@ -160,6 +167,7 @@ public class TelegramIntentService {
                     messageText,
                     extractCategoryName(normalized),
                     extractAccountName(normalized),
+                    null,
                     null,
                     null,
                     null
@@ -177,6 +185,7 @@ public class TelegramIntentService {
                     extractAccountName(normalized),
                     null,
                     null,
+                    null,
                     null
             );
         }
@@ -191,6 +200,7 @@ public class TelegramIntentService {
                 null,
                 null,
                 messageText,
+                null,
                 null,
                 null,
                 null,
@@ -307,6 +317,28 @@ public class TelegramIntentService {
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    private String extractInstallmentQueryTarget(String text) {
+        String cleaned = text
+                .replaceAll("\\bquando acaba o parcelamento\\b", "")
+                .replaceAll("\\bquando termina o parcelamento\\b", "")
+                .replaceAll("\\bquando acaba minha parcela\\b", "")
+                .replaceAll("\\bquando acaba meu parcelamento\\b", "")
+                .replaceAll("\\bquando termina minha parcela\\b", "")
+                .replaceAll("\\bquando termina meu parcelamento\\b", "")
+                .replaceAll("\\bquantas parcelas faltam\\b", "")
+                .replaceAll("\\bquantas faltam\\b", "")
+                .replaceAll("\\bfaltam quantas parcelas\\b", "")
+                .replaceAll("\\bquantas parcelas restam\\b", "")
+                .replaceAll("\\brestam quantas parcelas\\b", "")
+                .replaceAll("\\b(parcelamento|parcela|parcelas)\\b", "")
+                .replaceAll("\\b(do|da|de|meu|minha|o|a)\\b", "")
+                .replaceAll("[\\?]", "")
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        return cleaned.isBlank() ? null : cleaned;
     }
 
     private String extractCategoryName(String text) {

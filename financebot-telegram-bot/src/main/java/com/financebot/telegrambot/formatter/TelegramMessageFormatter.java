@@ -494,26 +494,51 @@ public class TelegramMessageFormatter {
             """;
     }
 
+    public String formatInstallmentNotFoundMessage(String target) {
+        return """
+            💳 <b>Parcelamentos</b>
+            
+            Não encontrei um parcelamento ativo para <b>%s</b>.
+            """.formatted(escapeHtml(defaultText(target)));
+    }
+
     public String formatRemainingInstallmentsMessage(
             String description,
+            LocalDate currentDueDate,
+            Integer currentInstallmentNumber,
             LocalDate nextDueDate,
             Integer remainingInstallments,
             Integer nextInstallmentNumber,
             Integer totalInstallments
     ) {
+        String currentInstallmentText = currentInstallmentNumber != null && totalInstallments != null
+                ? currentInstallmentNumber + "/" + totalInstallments
+                : "Não iniciada";
+        boolean hasFutureInstallments = remainingInstallments != null && remainingInstallments > 0;
+        String nextDueDateText = nextDueDate != null
+                ? formatDate(nextDueDate)
+                : "Parcelamento encerrado";
+        String nextInstallmentText = nextInstallmentNumber != null && totalInstallments != null
+                ? nextInstallmentNumber + "/" + totalInstallments
+                : "Encerrada";
+        String remainingInstallmentsText = hasFutureInstallments
+                ? remainingInstallments + " parcela(s)"
+                : "Nenhuma parcela restante";
+
         return """
             💳 <b>Parcelas restantes</b>
             
             <b>Descrição:</b> %s
+            <b>Parcela atual:</b> %s
             <b>Próximo vencimento:</b> %s
-            <b>Próxima parcela:</b> %s/%s
-            <b>Faltam:</b> %s parcela(s)
+            <b>Próxima parcela:</b> %s
+            <b>Faltam:</b> %s
             """.formatted(
                 escapeHtml(defaultText(description)),
-                formatDate(nextDueDate),
-                nextInstallmentNumber != null ? nextInstallmentNumber : 0,
-                totalInstallments != null ? totalInstallments : 0,
-                remainingInstallments != null ? remainingInstallments : 0
+                currentInstallmentText,
+                nextDueDateText,
+                nextInstallmentText,
+                remainingInstallmentsText
         );
     }
 

@@ -89,8 +89,9 @@ public class TelegramIntegrationController {
 
     @GetMapping("/installments/summary")
     public TelegramActiveInstallmentSummaryResponse getActiveInstallmentSummary(
-            @RequestParam Long telegramId
+            @RequestParam Long telegramId,
+            @RequestParam(required = false) String query
     ) {
-        return telegramIntegrationService.getActiveInstallmentSummary(telegramId);
+        return telegramIntegrationService.getActiveInstallmentSummary(telegramId, query);
     }
 }

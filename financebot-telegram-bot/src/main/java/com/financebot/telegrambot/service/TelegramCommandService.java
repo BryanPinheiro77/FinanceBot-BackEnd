@@ -92,6 +92,14 @@ public class TelegramCommandService {
             return handlePendingEdit(telegramId, normalizedMessage);
         }
 
+        ParsedTelegramMessage pending = telegramPendingConfirmationService.getPending(telegramId);
+        if (pending != null
+                && pending.intentType() != null
+                && pending.intentType().name().startsWith("QUERY_INSTALLMENT_")
+                && !normalizedMessage.startsWith("/")) {
+            return handlePendingInstallmentQuerySelection(telegramId, normalizedMessage, pending);
+        }
+
         ParsedTelegramMessage parsedMessage = telegramIntentService.parse(normalizedMessage);
 
         if (parsedMessage.intentType() != null && parsedMessage.intentType().name().startsWith("QUERY_")) {
@@ -368,14 +376,25 @@ public class TelegramCommandService {
                 case QUERY_INSTALLMENT_REMAINING -> {
                     try {
                         TelegramActiveInstallmentSummaryResponse response =
-                                financeBotApiClient.getActiveInstallmentSummary(telegramId);
+                                financeBotApiClient.getActiveInstallmentSummary(
+                                        telegramId,
+                                        parsedMessage.installmentQueryTarget()
+                                );
 
                         if (response == null || !response.hasActiveInstallment()) {
+                            if (parsedMessage.installmentQueryTarget() != null
+                                    && !parsedMessage.installmentQueryTarget().isBlank()) {
+                                yield telegramMessageFormatter.formatInstallmentNotFoundMessage(
+                                        parsedMessage.installmentQueryTarget()
+                                );
+                            }
                             yield telegramMessageFormatter.formatNoActiveInstallmentsMessage();
                         }
 
                         yield telegramMessageFormatter.formatRemainingInstallmentsMessage(
                                 response.description(),
+                                response.currentDueDate(),
+                                response.currentInstallmentNumber(),
                                 response.nextDueDate(),
                                 response.remainingInstallments(),
                                 response.nextInstallmentNumber(),
@@ -383,6 +402,7 @@ public class TelegramCommandService {
                         );
                     } catch (RestClientResponseException e) {
                         if (e.getStatusCode().value() == 409 || e.getStatusCode().value() == 403) {
+                            telegramPendingConfirmationService.savePending(telegramId, parsedMessage);
                             yield telegramMessageFormatter.formatMultipleActiveInstallmentsMessage();
                         }
                         throw e;
@@ -392,9 +412,18 @@ public class TelegramCommandService {
                 case QUERY_INSTALLMENT_END_DATE -> {
                     try {
                         TelegramActiveInstallmentSummaryResponse response =
-                                financeBotApiClient.getActiveInstallmentSummary(telegramId);
+                                financeBotApiClient.getActiveInstallmentSummary(
+                                        telegramId,
+                                        parsedMessage.installmentQueryTarget()
+                                );
 
                         if (response == null || !response.hasActiveInstallment()) {
+                            if (parsedMessage.installmentQueryTarget() != null
+                                    && !parsedMessage.installmentQueryTarget().isBlank()) {
+                                yield telegramMessageFormatter.formatInstallmentNotFoundMessage(
+                                        parsedMessage.installmentQueryTarget()
+                                );
+                            }
                             yield telegramMessageFormatter.formatNoActiveInstallmentsMessage();
                         }
 
@@ -404,6 +433,7 @@ public class TelegramCommandService {
                         );
                     } catch (RestClientResponseException e) {
                         if (e.getStatusCode().value() == 409 || e.getStatusCode().value() == 403) {
+                            telegramPendingConfirmationService.savePending(telegramId, parsedMessage);
                             yield telegramMessageFormatter.formatMultipleActiveInstallmentsMessage();
                         }
                         throw e;
@@ -424,6 +454,10 @@ public class TelegramCommandService {
 
         if (pending == null) {
             return "Não há nenhuma operação pendente para confirmar.";
+        }
+
+        if (pending.intentType() != null && pending.intentType().name().startsWith("QUERY_INSTALLMENT_")) {
+            return "Me diga qual parcelamento deseja consultar, por exemplo: tv ou computador.";
         }
 
         try {
@@ -476,6 +510,34 @@ public class TelegramCommandService {
         telegramPendingConfirmationService.clearPending(telegramId);
 
         return "❌ Operação cancelada com sucesso.";
+    }
+
+    private String handlePendingInstallmentQuerySelection(
+            Long telegramId,
+            String messageText,
+            ParsedTelegramMessage pending
+    ) {
+        ParsedTelegramMessage reparsed = telegramIntentService.parse(messageText);
+        String selectedTarget = reparsed.installmentQueryTarget() != null
+                ? reparsed.installmentQueryTarget()
+                : messageText.trim();
+
+        ParsedTelegramMessage updated = new ParsedTelegramMessage(
+                pending.intentType(),
+                pending.amount(),
+                pending.description(),
+                pending.date(),
+                pending.originalMessage(),
+                pending.categoryName(),
+                pending.accountName(),
+                pending.startDate(),
+                pending.endDate(),
+                pending.totalInstallments(),
+                selectedTarget
+        );
+
+        telegramPendingConfirmationService.clearPending(telegramId);
+        return handleNaturalLanguageQuery(updated, telegramId);
     }
 
     private String handlePendingEdit(Long telegramId, String messageText) {
@@ -554,7 +616,8 @@ public class TelegramCommandService {
                 accountName,
                 pending.startDate(),
                 pending.endDate(),
-                pending.totalInstallments()
+                pending.totalInstallments(),
+                pending.installmentQueryTarget()
         );
 
         telegramPendingConfirmationService.savePending(telegramId, updated);

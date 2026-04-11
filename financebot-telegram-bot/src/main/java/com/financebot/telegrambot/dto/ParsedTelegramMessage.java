@@ -15,6 +15,7 @@ public record ParsedTelegramMessage(
         String accountName,
         LocalDate startDate,
         LocalDate endDate,
-        Integer totalInstallments
+        Integer totalInstallments,
+        String installmentQueryTarget
 ) {
 }

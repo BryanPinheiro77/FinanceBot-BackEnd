@@ -322,7 +322,7 @@ public class TelegramIntegrationService {
     }
 
     @Transactional(readOnly = true)
-    public TelegramActiveInstallmentSummaryResponse getActiveInstallmentSummary(Long telegramId) {
+    public TelegramActiveInstallmentSummaryResponse getActiveInstallmentSummary(Long telegramId, String query) {
         User user = findUserByTelegramId(telegramId);
 
         List<Transaction> activeInstallments = transactionRepository.findActiveInstallmentTransactionsByUser(
@@ -338,6 +338,8 @@ public class TelegramIntegrationService {
                     null,
                     null,
                     null,
+                    null,
+                    null,
                     0,
                     null
             );
@@ -346,30 +348,74 @@ public class TelegramIntegrationService {
         Map<String, List<Transaction>> grouped = activeInstallments.stream()
                 .collect(Collectors.groupingBy(Transaction::getInstallmentGroupId));
 
+        if (query != null && !query.isBlank()) {
+            String normalizedQuery = normalizeInstallmentSearchText(query);
+            grouped = grouped.entrySet().stream()
+                    .filter(entry -> {
+                        Transaction first = entry.getValue().get(0);
+                        String normalizedDescription = normalizeInstallmentSearchText(
+                                stripInstallmentSuffix(first.getDescription())
+                        );
+                        return normalizedDescription.contains(normalizedQuery);
+                    })
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        }
+
+        if (grouped.isEmpty()) {
+            return new TelegramActiveInstallmentSummaryResponse(
+                    false,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    0,
+                    null
+            );
+        }
+
         if (grouped.size() > 1) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Multiple active installments found");
         }
 
-        List<Transaction> transactions = grouped.values().iterator().next();
-        Transaction firstUpcoming = transactions.get(0);
+        String selectedInstallmentGroupId = grouped.keySet().iterator().next();
+        List<Transaction> transactions = transactionRepository.findInstallmentTransactionsByGroupIdAndUser(
+                user.getId(),
+                selectedInstallmentGroupId
+        );
+        Transaction referenceTransaction = transactions.get(0);
+        Transaction currentTransaction = transactions.stream()
+                .filter(transaction -> transaction.getDate() != null && !transaction.getDate().isAfter(LocalDate.now()))
+                .max((left, right) -> left.getDate().compareTo(right.getDate()))
+                .orElse(null);
 
-        int remainingInstallments = transactions.size();
-        int nextInstallmentNumber = firstUpcoming.getInstallmentNumber() != null
+        List<Transaction> futureTransactions = transactions.stream()
+                .filter(transaction -> transaction.getDate() != null && transaction.getDate().isAfter(LocalDate.now()))
+                .toList();
+
+        Transaction firstUpcoming = futureTransactions.isEmpty() ? null : futureTransactions.get(0);
+
+        int remainingInstallments = futureTransactions.size();
+        Integer nextInstallmentNumber = firstUpcoming != null
                 ? firstUpcoming.getInstallmentNumber()
-                : 1;
-        int totalInstallments = firstUpcoming.getTotalInstallments() != null
-                ? firstUpcoming.getTotalInstallments()
-                : remainingInstallments;
+                : null;
+        int totalInstallments = referenceTransaction.getTotalInstallments() != null
+                ? referenceTransaction.getTotalInstallments()
+                : transactions.size();
         LocalDate endDate = transactions.stream()
                 .map(Transaction::getDate)
                 .max(LocalDate::compareTo)
-                .orElse(firstUpcoming.getDate());
+                .orElse(referenceTransaction.getDate());
 
         return new TelegramActiveInstallmentSummaryResponse(
                 true,
-                firstUpcoming.getInstallmentGroupId(),
-                stripInstallmentSuffix(firstUpcoming.getDescription()),
-                firstUpcoming.getDate(),
+                referenceTransaction.getInstallmentGroupId(),
+                stripInstallmentSuffix(referenceTransaction.getDescription()),
+                currentTransaction != null ? currentTransaction.getDate() : null,
+                currentTransaction != null ? currentTransaction.getInstallmentNumber() : null,
+                firstUpcoming != null ? firstUpcoming.getDate() : null,
                 nextInstallmentNumber,
                 totalInstallments,
                 remainingInstallments,
@@ -383,5 +429,27 @@ public class TelegramIntegrationService {
         }
 
         return description.replaceFirst("\\s*-\\s*\\d+/\\d+\\s*$", "").trim();
+    }
+
+    private String normalizeInstallmentSearchText(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        return value.toLowerCase()
+                .replace("á", "a")
+                .replace("à", "a")
+                .replace("ã", "a")
+                .replace("â", "a")
+                .replace("é", "e")
+                .replace("ê", "e")
+                .replace("í", "i")
+                .replace("ó", "o")
+                .replace("ô", "o")
+                .replace("õ", "o")
+                .replace("ú", "u")
+                .replace("ç", "c")
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 }

@@ -98,6 +98,20 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
     );
 
     @Query("""
+           select t
+           from Transaction t
+           where t.user.id = :userId
+             and t.type = com.financebot.transaction.domain.TransactionType.EXPENSE
+             and t.installment = true
+             and t.installmentGroupId = :installmentGroupId
+           order by t.date asc
+           """)
+    List<Transaction> findInstallmentTransactionsByGroupIdAndUser(
+            @Param("userId") Long userId,
+            @Param("installmentGroupId") String installmentGroupId
+    );
+
+    @Query("""
        select coalesce(sum(t.amount), 0)
        from Transaction t
        where t.user.id = :userId

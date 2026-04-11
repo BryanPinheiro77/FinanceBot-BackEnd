@@ -142,12 +142,19 @@ public class FinanceBotApiClient {
                 .body(TelegramActiveInstallmentsResponse.class);
     }
 
-    public TelegramActiveInstallmentSummaryResponse getActiveInstallmentSummary(Long telegramId) {
+    public TelegramActiveInstallmentSummaryResponse getActiveInstallmentSummary(Long telegramId, String query) {
         return restClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/telegram/installments/summary")
-                        .queryParam("telegramId", telegramId)
-                        .build())
+                .uri(uriBuilder -> {
+                    var builder = uriBuilder
+                            .path("/telegram/installments/summary")
+                            .queryParam("telegramId", telegramId);
+
+                    if (query != null && !query.isBlank()) {
+                        builder.queryParam("query", query);
+                    }
+
+                    return builder.build();
+                })
                 .retrieve()
                 .body(TelegramActiveInstallmentSummaryResponse.class);
     }
