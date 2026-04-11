@@ -75,6 +75,7 @@ public class FinanceTelegramBot implements LongPollingUpdateConsumer {
             SendMessage sendMessage = SendMessage.builder()
                     .chatId(chatId)
                     .text(text)
+                    .parseMode("HTML")
                     .build();
 
             telegramClient.execute(sendMessage);

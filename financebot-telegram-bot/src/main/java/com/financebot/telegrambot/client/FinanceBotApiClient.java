@@ -25,6 +25,14 @@ public class FinanceBotApiClient {
                 .toBodilessEntity();
     }
 
+    public void createInstallmentTransaction(CreateInstallmentTransactionFromTelegramRequest request) {
+        restClient.post()
+                .uri("/telegram/transactions/installments")
+                .body(request)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
     public TelegramLinkConfirmResponse confirmTelegramLink(TelegramLinkConfirmRequest request) {
         return restClient.post()
                 .uri("/users/telegram/confirm-link")
@@ -103,5 +111,51 @@ public class FinanceBotApiClient {
                 .body(request)
                 .retrieve()
                 .body(TelegramTransactionSummaryResponse.class);
+    }
+
+    public TelegramDefaultAccountResponse getDefaultAccount(Long telegramId) {
+        return restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/telegram/accounts/default")
+                        .queryParam("telegramId", telegramId)
+                        .build())
+                .retrieve()
+                .body(TelegramDefaultAccountResponse.class);
+    }
+
+    public TelegramInstallmentCountResponse getInstallmentCount(TelegramInstallmentCountRequest request) {
+        return restClient.post()
+                .uri("/telegram/installments/count")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .body(TelegramInstallmentCountResponse.class);
+    }
+
+    public TelegramActiveInstallmentsResponse getActiveInstallments(Long telegramId) {
+        return restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/telegram/installments/active")
+                        .queryParam("telegramId", telegramId)
+                        .build())
+                .retrieve()
+                .body(TelegramActiveInstallmentsResponse.class);
+    }
+
+    public TelegramActiveInstallmentSummaryResponse getActiveInstallmentSummary(Long telegramId, String query) {
+        return restClient.get()
+                .uri(uriBuilder -> {
+                    var builder = uriBuilder
+                            .path("/telegram/installments/summary")
+                            .queryParam("telegramId", telegramId);
+
+                    if (query != null && !query.isBlank()) {
+                        builder.queryParam("query", query);
+                    }
+
+                    return builder.build();
+                })
+                .retrieve()
+                .body(TelegramActiveInstallmentSummaryResponse.class);
     }
 }

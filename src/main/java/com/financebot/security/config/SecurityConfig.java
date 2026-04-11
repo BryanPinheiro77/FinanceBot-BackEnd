@@ -15,8 +15,11 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.util.matcher.DispatcherTypeRequestMatcher;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import jakarta.servlet.DispatcherType;
 
 @Configuration
 public class SecurityConfig {
@@ -46,8 +49,10 @@ public class SecurityConfig {
                         exception.authenticationEntryPoint(jwtAuthenticationEntryPoint)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(new DispatcherTypeRequestMatcher(DispatcherType.ERROR)).permitAll()
                         .requestMatchers(
                                 "/auth/**",
+                                "/error",
                                 "/api/health",
                                 "/actuator/health",
                                 "/actuator/info",
@@ -57,8 +62,17 @@ public class SecurityConfig {
                                 "/users/telegram/confirm-link"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/telegram/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/telegram/installments/summary").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/telegram/installments/active").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/telegram/accounts/default").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/telegram/users/me").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/telegram/financial-analysis").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/telegram/expenses/current-month").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/telegram/income/current-month").permitAll()
                         .requestMatchers(HttpMethod.POST, "/telegram/transactions").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/telegram/transactions/installments").permitAll()
                         .requestMatchers(HttpMethod.POST, "/telegram/transactions/summary").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/telegram/installments/count").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/telegram/**").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/telegram/**").permitAll()
                         .anyRequest().authenticated()

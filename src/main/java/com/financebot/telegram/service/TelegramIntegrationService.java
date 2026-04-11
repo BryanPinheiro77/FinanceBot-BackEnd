@@ -4,26 +4,31 @@ import com.financebot.account.domain.Account;
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
 import com.financebot.category.domain.Category;
-import com.financebot.telegram.dto.CreateTransactionFromTelegramRequest;
-import com.financebot.telegram.dto.MonthlyAmountSummaryResponse;
-import com.financebot.telegram.dto.TelegramTransactionSummaryRequest;
-import com.financebot.telegram.dto.TelegramTransactionSummaryResponse;
+import com.financebot.telegram.dto.*;
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
+import com.financebot.transaction.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.repository.TransactionRepository;
+import com.financebot.transaction.service.TransactionService;
 import com.financebot.user.domain.User;
 import com.financebot.user.dto.request.UpdateMonthlyBaseIncomeRequest;
 import com.financebot.user.dto.response.TelegramUserProfileResponse;
 import com.financebot.user.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +37,7 @@ public class TelegramIntegrationService {
     private final UserRepository userRepository;
     private final FinancialAnalysisService financialAnalysisService;
     private final TransactionRepository transactionRepository;
+    private final TransactionService transactionService;
     private final TelegramAccountResolverService telegramAccountResolverService;
     private final TelegramCategoryResolverService telegramCategoryResolverService;
 
@@ -136,10 +142,12 @@ public class TelegramIntegrationService {
         User user = findUserByTelegramId(request.telegramId());
         TransactionType transactionType = TransactionType.valueOf(request.type());
 
-        Account account = telegramAccountResolverService.resolveDefaultAccount(user);
-        Category category = telegramCategoryResolverService.resolveCategory(
+        Account account = telegramAccountResolverService.resolve(user, request.accountName());
+
+        Category category = resolveCategoryFromRequest(
                 user,
                 transactionType,
+                request.categoryName(),
                 request.description()
         );
 
@@ -154,6 +162,32 @@ public class TelegramIntegrationService {
         transaction.setSourceType(SourceType.BOT_TEXT);
 
         transactionRepository.save(transaction);
+    }
+
+    @Transactional
+    public void createInstallmentTransactionFromTelegram(CreateInstallmentTransactionFromTelegramRequest request) {
+        User user = findUserByTelegramId(request.telegramId());
+
+        Account account = telegramAccountResolverService.resolve(user, request.accountName());
+        Category category = resolveCategoryFromRequest(
+                user,
+                TransactionType.EXPENSE,
+                request.categoryName(),
+                request.description()
+        );
+
+        CreateInstallmentTransactionRequest installmentRequest = new CreateInstallmentTransactionRequest(
+                request.totalAmount(),
+                request.description(),
+                request.firstInstallmentDate(),
+                TransactionType.EXPENSE,
+                SourceType.BOT_TEXT,
+                account.getId(),
+                category.getId(),
+                request.totalInstallments()
+        );
+
+        transactionService.createInstallmentForUser(installmentRequest, user);
     }
 
     @Transactional(readOnly = true)
@@ -215,5 +249,207 @@ public class TelegramIntegrationService {
             return null;
         }
         return value.trim();
+    }
+
+    private Category resolveCategoryFromRequest(
+            User user,
+            TransactionType transactionType,
+            String categoryName,
+            String description
+    ) {
+        if (categoryName != null && !categoryName.isBlank()) {
+            return telegramCategoryResolverService.resolveExplicitCategory(
+                    user,
+                    transactionType,
+                    categoryName
+            );
+        }
+
+        return telegramCategoryResolverService.resolveCategory(
+                user,
+                transactionType,
+                description
+        );
+    }
+
+    public TelegramDefaultAccountResponse getDefaultAccount(Long telegramId) {
+        User user = userRepository.findByTelegramId(telegramId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado para este Telegram."));
+
+        Account account = telegramAccountResolverService.resolveDefaultAccount(user);
+
+        return new TelegramDefaultAccountResponse(
+                account.getId(),
+                account.getName()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public TelegramInstallmentCountResponse getInstallmentCount(TelegramInstallmentCountRequest request) {
+        User user = userRepository.findByTelegramId(request.telegramId())
+                .orElseThrow(() -> new EntityNotFoundException("User not found for telegramId"));
+
+        LocalDate startDate = request.startDate();
+        LocalDate endDate = request.endDate();
+
+        if (startDate == null || endDate == null) {
+            throw new IllegalArgumentException("Start date and end date are required");
+        }
+
+        Long count = transactionRepository.countInstallmentsByUserBetweenDates(
+                user.getId(),
+                startDate,
+                endDate
+        );
+
+        return new TelegramInstallmentCountResponse(
+                count != null ? count : 0L,
+                startDate,
+                endDate
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public TelegramActiveInstallmentsResponse getActiveInstallments(Long telegramId) {
+        User user = findUserByTelegramId(telegramId);
+
+        Long count = transactionRepository.countDistinctActiveInstallmentGroupsByUser(
+                user.getId(),
+                LocalDate.now()
+        );
+
+        return new TelegramActiveInstallmentsResponse(count != null ? count : 0L);
+    }
+
+    @Transactional(readOnly = true)
+    public TelegramActiveInstallmentSummaryResponse getActiveInstallmentSummary(Long telegramId, String query) {
+        User user = findUserByTelegramId(telegramId);
+
+        List<Transaction> activeInstallments = transactionRepository.findActiveInstallmentTransactionsByUser(
+                user.getId(),
+                LocalDate.now()
+        );
+
+        if (activeInstallments.isEmpty()) {
+            return new TelegramActiveInstallmentSummaryResponse(
+                    false,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    0,
+                    null
+            );
+        }
+
+        Map<String, List<Transaction>> grouped = activeInstallments.stream()
+                .collect(Collectors.groupingBy(Transaction::getInstallmentGroupId));
+
+        if (query != null && !query.isBlank()) {
+            String normalizedQuery = normalizeInstallmentSearchText(query);
+            grouped = grouped.entrySet().stream()
+                    .filter(entry -> {
+                        Transaction first = entry.getValue().get(0);
+                        String normalizedDescription = normalizeInstallmentSearchText(
+                                stripInstallmentSuffix(first.getDescription())
+                        );
+                        return normalizedDescription.contains(normalizedQuery);
+                    })
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        }
+
+        if (grouped.isEmpty()) {
+            return new TelegramActiveInstallmentSummaryResponse(
+                    false,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    0,
+                    null
+            );
+        }
+
+        if (grouped.size() > 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Multiple active installments found");
+        }
+
+        String selectedInstallmentGroupId = grouped.keySet().iterator().next();
+        List<Transaction> transactions = transactionRepository.findInstallmentTransactionsByGroupIdAndUser(
+                user.getId(),
+                selectedInstallmentGroupId
+        );
+        Transaction referenceTransaction = transactions.get(0);
+        Transaction currentTransaction = transactions.stream()
+                .filter(transaction -> transaction.getDate() != null && !transaction.getDate().isAfter(LocalDate.now()))
+                .max((left, right) -> left.getDate().compareTo(right.getDate()))
+                .orElse(null);
+
+        List<Transaction> futureTransactions = transactions.stream()
+                .filter(transaction -> transaction.getDate() != null && transaction.getDate().isAfter(LocalDate.now()))
+                .toList();
+
+        Transaction firstUpcoming = futureTransactions.isEmpty() ? null : futureTransactions.get(0);
+
+        int remainingInstallments = futureTransactions.size();
+        Integer nextInstallmentNumber = firstUpcoming != null
+                ? firstUpcoming.getInstallmentNumber()
+                : null;
+        int totalInstallments = referenceTransaction.getTotalInstallments() != null
+                ? referenceTransaction.getTotalInstallments()
+                : transactions.size();
+        LocalDate endDate = transactions.stream()
+                .map(Transaction::getDate)
+                .max(LocalDate::compareTo)
+                .orElse(referenceTransaction.getDate());
+
+        return new TelegramActiveInstallmentSummaryResponse(
+                true,
+                referenceTransaction.getInstallmentGroupId(),
+                stripInstallmentSuffix(referenceTransaction.getDescription()),
+                currentTransaction != null ? currentTransaction.getDate() : null,
+                currentTransaction != null ? currentTransaction.getInstallmentNumber() : null,
+                firstUpcoming != null ? firstUpcoming.getDate() : null,
+                nextInstallmentNumber,
+                totalInstallments,
+                remainingInstallments,
+                endDate
+        );
+    }
+
+    private String stripInstallmentSuffix(String description) {
+        if (description == null || description.isBlank()) {
+            return description;
+        }
+
+        return description.replaceFirst("\\s*-\\s*\\d+/\\d+\\s*$", "").trim();
+    }
+
+    private String normalizeInstallmentSearchText(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        return value.toLowerCase()
+                .replace("á", "a")
+                .replace("à", "a")
+                .replace("ã", "a")
+                .replace("â", "a")
+                .replace("é", "e")
+                .replace("ê", "e")
+                .replace("í", "i")
+                .replace("ó", "o")
+                .replace("ô", "o")
+                .replace("õ", "o")
+                .replace("ú", "u")
+                .replace("ç", "c")
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 }
