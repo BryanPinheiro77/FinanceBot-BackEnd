@@ -409,6 +409,58 @@ public class TelegramMessageFormatter {
             """.formatted(activeInstallmentGroupCount != null ? activeInstallmentGroupCount : 0L);
     }
 
+    public String formatNoActiveInstallmentsMessage() {
+        return """
+            💳 <b>Parcelamentos</b>
+            
+            Você não tem parcelamentos ativos no momento.
+            """;
+    }
+
+    public String formatMultipleActiveInstallmentsMessage() {
+        return """
+            💳 <b>Parcelamentos</b>
+            
+            Você tem mais de um parcelamento ativo.
+            Me diga qual deles deseja consultar.
+            """;
+    }
+
+    public String formatRemainingInstallmentsMessage(
+            String description,
+            Integer remainingInstallments,
+            Integer nextInstallmentNumber,
+            Integer totalInstallments
+    ) {
+        return """
+            💳 <b>Parcelas restantes</b>
+            
+            <b>Descrição:</b> %s
+            <b>Próxima parcela:</b> %s/%s
+            <b>Faltam:</b> %s parcela(s)
+            """.formatted(
+                escapeHtml(defaultText(description)),
+                nextInstallmentNumber != null ? nextInstallmentNumber : 0,
+                totalInstallments != null ? totalInstallments : 0,
+                remainingInstallments != null ? remainingInstallments : 0
+        );
+    }
+
+    public String formatInstallmentEndDateMessage(
+            String description,
+            LocalDate endDate
+    ) {
+        return """
+            💳 <b>Fim do parcelamento</b>
+            
+            <b>Descrição:</b> %s
+            <b>Última parcela:</b> %s
+            """.formatted(
+                escapeHtml(defaultText(description)),
+                formatDate(endDate)
+        );
+    }
+
     public String formatSetIncomeNonPositiveMessage() {
         return "⚠️ <b>A renda mensal base deve ser maior que zero.</b>";
     }

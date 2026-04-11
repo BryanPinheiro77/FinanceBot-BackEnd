@@ -133,4 +133,14 @@ public class FinanceBotApiClient {
                 .retrieve()
                 .body(TelegramActiveInstallmentsResponse.class);
     }
+
+    public TelegramActiveInstallmentSummaryResponse getActiveInstallmentSummary(Long telegramId) {
+        return restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/telegram/installments/summary")
+                        .queryParam("telegramId", telegramId)
+                        .build())
+                .retrieve()
+                .body(TelegramActiveInstallmentSummaryResponse.class);
+    }
 }

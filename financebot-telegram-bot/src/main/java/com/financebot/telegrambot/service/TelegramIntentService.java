@@ -85,6 +85,34 @@ public class TelegramIntentService {
             );
         }
 
+        if (isInstallmentRemainingQuery(normalized)) {
+            return new ParsedTelegramMessage(
+                    TelegramIntentType.QUERY_INSTALLMENT_REMAINING,
+                    null,
+                    null,
+                    LocalDate.now(),
+                    messageText,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+        }
+
+        if (isInstallmentEndDateQuery(normalized)) {
+            return new ParsedTelegramMessage(
+                    TelegramIntentType.QUERY_INSTALLMENT_END_DATE,
+                    null,
+                    null,
+                    LocalDate.now(),
+                    messageText,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+        }
+
         if (isTransactionTotalQuery(normalized)) {
             ParsedDateRange dateRange = telegramDateRangeResolver.resolve(normalized);
 
@@ -371,5 +399,22 @@ public class TelegramIntentService {
                 || text.contains("parcelas ativas")
                 || text.contains("parcela ativa")
                 || text.contains("tenho parcelamentos ativos");
+    }
+
+    private boolean isInstallmentRemainingQuery(String text) {
+        return text.contains("quantas parcelas faltam")
+                || text.contains("quantas faltam")
+                || text.contains("faltam quantas parcelas")
+                || text.contains("quantas parcelas restam")
+                || text.contains("restam quantas parcelas");
+    }
+
+    private boolean isInstallmentEndDateQuery(String text) {
+        return text.contains("quando acaba o parcelamento")
+                || text.contains("quando termina o parcelamento")
+                || text.contains("quando acaba minha parcela")
+                || text.contains("quando acaba meu parcelamento")
+                || text.contains("quando termina minha parcela")
+                || text.contains("quando termina meu parcelamento");
     }
 }

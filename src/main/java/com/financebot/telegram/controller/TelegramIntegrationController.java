@@ -79,4 +79,11 @@ public class TelegramIntegrationController {
     ) {
         return telegramIntegrationService.getActiveInstallments(telegramId);
     }
+
+    @GetMapping("/installments/summary")
+    public TelegramActiveInstallmentSummaryResponse getActiveInstallmentSummary(
+            @RequestParam Long telegramId
+    ) {
+        return telegramIntegrationService.getActiveInstallmentSummary(telegramId);
+    }
 }

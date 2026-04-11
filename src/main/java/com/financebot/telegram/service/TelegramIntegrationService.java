@@ -16,12 +16,17 @@ import com.financebot.user.dto.response.TelegramUserProfileResponse;
 import com.financebot.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -277,8 +282,7 @@ public class TelegramIntegrationService {
 
     @Transactional(readOnly = true)
     public TelegramActiveInstallmentsResponse getActiveInstallments(Long telegramId) {
-        User user = userRepository.findByTelegramId(telegramId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found for telegramId"));
+        User user = findUserByTelegramId(telegramId);
 
         Long count = transactionRepository.countDistinctActiveInstallmentGroupsByUser(
                 user.getId(),
@@ -286,5 +290,59 @@ public class TelegramIntegrationService {
         );
 
         return new TelegramActiveInstallmentsResponse(count != null ? count : 0L);
+    }
+
+    @Transactional(readOnly = true)
+    public TelegramActiveInstallmentSummaryResponse getActiveInstallmentSummary(Long telegramId) {
+        User user = findUserByTelegramId(telegramId);
+
+        List<Transaction> activeInstallments = transactionRepository.findActiveInstallmentTransactionsByUser(
+                user.getId(),
+                LocalDate.now()
+        );
+
+        if (activeInstallments.isEmpty()) {
+            return new TelegramActiveInstallmentSummaryResponse(
+                    false,
+                    null,
+                    null,
+                    null,
+                    null,
+                    0,
+                    null
+            );
+        }
+
+        Map<String, List<Transaction>> grouped = activeInstallments.stream()
+                .collect(Collectors.groupingBy(Transaction::getInstallmentGroupId));
+
+        if (grouped.size() > 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Multiple active installments found");
+        }
+
+        List<Transaction> transactions = grouped.values().iterator().next();
+        Transaction firstUpcoming = transactions.get(0);
+
+        int remainingInstallments = transactions.size();
+        int nextInstallmentNumber = firstUpcoming.getInstallmentNumber() != null
+                ? firstUpcoming.getInstallmentNumber()
+                : 1;
+        int totalInstallments = firstUpcoming.getTotalInstallments() != null
+                ? firstUpcoming.getTotalInstallments()
+                : remainingInstallments;
+        LocalDate endDate = transactions.stream()
+                .map(Transaction::getDate)
+                .max(LocalDate::compareTo)
+                .orElse(firstUpcoming.getDate());
+
+        return new TelegramActiveInstallmentSummaryResponse(
+                true,
+                firstUpcoming.getInstallmentGroupId(),
+                firstUpcoming.getDescription(),
+                nextInstallmentNumber,
+                totalInstallments,
+                remainingInstallments,
+                endDate
+        );
     }
 }

@@ -349,6 +349,50 @@ public class TelegramCommandService {
                     );
                 }
 
+                case QUERY_INSTALLMENT_REMAINING -> {
+                    try {
+                        TelegramActiveInstallmentSummaryResponse response =
+                                financeBotApiClient.getActiveInstallmentSummary(telegramId);
+
+                        if (response == null || !response.hasActiveInstallment()) {
+                            yield telegramMessageFormatter.formatNoActiveInstallmentsMessage();
+                        }
+
+                        yield telegramMessageFormatter.formatRemainingInstallmentsMessage(
+                                response.description(),
+                                response.remainingInstallments(),
+                                response.nextInstallmentNumber(),
+                                response.totalInstallments()
+                        );
+                    } catch (RestClientResponseException e) {
+                        if (e.getStatusCode().value() == 409) {
+                            yield telegramMessageFormatter.formatMultipleActiveInstallmentsMessage();
+                        }
+                        throw e;
+                    }
+                }
+
+                case QUERY_INSTALLMENT_END_DATE -> {
+                    try {
+                        TelegramActiveInstallmentSummaryResponse response =
+                                financeBotApiClient.getActiveInstallmentSummary(telegramId);
+
+                        if (response == null || !response.hasActiveInstallment()) {
+                            yield telegramMessageFormatter.formatNoActiveInstallmentsMessage();
+                        }
+
+                        yield telegramMessageFormatter.formatInstallmentEndDateMessage(
+                                response.description(),
+                                response.endDate()
+                        );
+                    } catch (RestClientResponseException e) {
+                        if (e.getStatusCode().value() == 409) {
+                            yield telegramMessageFormatter.formatMultipleActiveInstallmentsMessage();
+                        }
+                        throw e;
+                    }
+                }
+
                 default -> "Não consegui interpretar sua consulta.";
             };
         } catch (RestClientResponseException e) {

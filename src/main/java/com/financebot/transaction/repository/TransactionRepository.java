@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long>, JpaSpecificationExecutor<Transaction> {
@@ -77,6 +78,21 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
              and t.date >= :today
            """)
     Long countDistinctActiveInstallmentGroupsByUser(
+            @Param("userId") Long userId,
+            @Param("today") LocalDate today
+    );
+
+    @Query("""
+           select t
+           from Transaction t
+           where t.user.id = :userId
+             and t.type = com.financebot.transaction.domain.TransactionType.EXPENSE
+             and t.installment = true
+             and t.installmentGroupId is not null
+             and t.date >= :today
+           order by t.installmentGroupId asc, t.date asc
+           """)
+    List<Transaction> findActiveInstallmentTransactionsByUser(
             @Param("userId") Long userId,
             @Param("today") LocalDate today
     );
