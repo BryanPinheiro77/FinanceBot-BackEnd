@@ -26,6 +26,7 @@ public class TelegramCommandService {
     private final FinanceBotApiClient financeBotApiClient;
     private final TelegramIntentService telegramIntentService;
     private final TelegramPendingConfirmationService telegramPendingConfirmationService;
+    private final TelegramQueryContextService telegramQueryContextService;
     private final TelegramMessageFormatter telegramMessageFormatter;
 
     public String handleMessage(
@@ -101,6 +102,7 @@ public class TelegramCommandService {
         }
 
         ParsedTelegramMessage parsedMessage = telegramIntentService.parse(normalizedMessage);
+        parsedMessage = telegramQueryContextService.applyQueryContext(telegramId, normalizedMessage, parsedMessage);
 
         if (parsedMessage.intentType() != null && parsedMessage.intentType().name().startsWith("QUERY_")) {
             return handleNaturalLanguageQuery(parsedMessage, telegramId);
@@ -306,7 +308,7 @@ public class TelegramCommandService {
 
     private String handleNaturalLanguageQuery(ParsedTelegramMessage parsedMessage, Long telegramId) {
         try {
-            return switch (parsedMessage.intentType()) {
+            String resultMessage = switch (parsedMessage.intentType()) {
                 case QUERY_MONTH_EXPENSE_TOTAL -> {
                     MonthlyAmountSummaryResponse response = financeBotApiClient.getCurrentMonthExpenseSummary(telegramId);
                     yield telegramMessageFormatter.formatMonthExpenseSummary(response.totalAmount());
@@ -336,15 +338,17 @@ public class TelegramCommandService {
 
                     String label = "EXPENSE".equals(type) ? "gasto" : "recebido";
 
-                    String complemento = response.categoryName() != null
-                            ? " em " + response.categoryName()
-                            : response.accountName() != null
-                            ? " na conta " + response.accountName()
-                            : "";
+                    StringBuilder complemento = new StringBuilder();
+                    if (response.categoryName() != null) {
+                        complemento.append(" em ").append(response.categoryName());
+                    }
+                    if (response.accountName() != null) {
+                        complemento.append(" na conta ").append(response.accountName());
+                    }
 
                     yield telegramMessageFormatter.formatTransactionSummary(
                             label,
-                            complemento,
+                            complemento.toString(),
                             response.totalAmount()
                     );
                 }
@@ -442,6 +446,9 @@ public class TelegramCommandService {
 
                 default -> "Não consegui interpretar sua consulta.";
             };
+
+            telegramQueryContextService.saveQueryContext(telegramId, parsedMessage);
+            return resultMessage;
         } catch (RestClientResponseException e) {
             return mapDefaultBotErrors(e);
         } catch (Exception e) {

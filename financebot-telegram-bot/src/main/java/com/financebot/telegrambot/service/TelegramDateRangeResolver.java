@@ -53,6 +53,15 @@ public class TelegramDateRangeResolver {
         return new ParsedDateRange(currentMonth.atDay(1), currentMonth.atEndOfMonth());
     }
 
+    public boolean hasExplicitRangeHint(String normalizedText) {
+        return containsLast7Days(normalizedText)
+                || containsYesterday(normalizedText)
+                || containsToday(normalizedText)
+                || containsLastWeek(normalizedText)
+                || containsLastMonth(normalizedText)
+                || containsCurrentMonth(normalizedText);
+    }
+
     private boolean containsToday(String text) {
         return text.contains("hoje");
     }

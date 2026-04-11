@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -15,9 +14,14 @@ import java.util.regex.Pattern;
 public class TelegramIntentService {
 
     private final TelegramDateRangeResolver telegramDateRangeResolver;
+    private final TelegramNaturalLanguageVocabulary telegramNaturalLanguageVocabulary;
 
-    public TelegramIntentService(TelegramDateRangeResolver telegramDateRangeResolver) {
+    public TelegramIntentService(
+            TelegramDateRangeResolver telegramDateRangeResolver,
+            TelegramNaturalLanguageVocabulary telegramNaturalLanguageVocabulary
+    ) {
         this.telegramDateRangeResolver = telegramDateRangeResolver;
+        this.telegramNaturalLanguageVocabulary = telegramNaturalLanguageVocabulary;
     }
 
     private static final Pattern AMOUNT_PATTERN = Pattern.compile("(\\d+[\\.,]?\\d{0,2})");
@@ -29,16 +33,13 @@ public class TelegramIntentService {
             "\\b(?:na|no)\\s+([a-zA-Z][a-zA-Z0-9\\s]{1,30}?)(?=\\b(?:hoje|ontem|amanha|esse mes|este mes|mes passado|semana passada|ultimos 7 dias|e|,|\\?|$))"
     );
     private static final Pattern INSTALLMENT_PATTERN = Pattern.compile("\\b(?:parcelad[oa]\\s+em\\s+|em\\s+)(\\d{1,3})x\\b");
-    private static final Pattern CATEGORY_PATTERN = Pattern.compile(
-            "\\b(mercado|supermercado|gasolina|combustivel|farmacia|uber|ifood|salario|freela|alimentacao|outros|moradia|transporte|saude)\\b"
-    );
 
     public ParsedTelegramMessage parse(String messageText) {
         if (messageText == null || messageText.isBlank()) {
             return unknown(messageText);
         }
 
-        String normalized = normalize(messageText);
+        String normalized = telegramNaturalLanguageVocabulary.normalize(messageText);
 
         if (isMonthAnalysisQuery(normalized)) {
             ParsedDateRange dateRange = telegramDateRangeResolver.resolve(normalized);
@@ -267,7 +268,9 @@ public class TelegramIntentService {
     }
 
     private String extractDescriptionForTransaction(String text) {
-        String cleaned = text
+        String normalized = telegramNaturalLanguageVocabulary.normalize(text);
+
+        String cleaned = normalized
                 .replaceAll("\\b(gastei|paguei|comprei|despesa|recebi|ganhei|entrou|entrada|reais|real)\\b", "")
                 .replaceAll("\\bpor\\b", "")
                 .replaceAll("\\b(hoje|ontem|amanha|mes|esse mes|este mes|mes passado|semana passada|ultimos 7 dias)\\b", "")
@@ -277,16 +280,18 @@ public class TelegramIntentService {
                 .replaceAll("\\b(?:da conta|do cartao|na conta|no cartao)\\b.*", "")
                 .trim();
 
-        String extractedAccount = extractAccountName(text);
+        String extractedAccount = extractAccountName(normalized);
         if (extractedAccount != null) {
-            String normalizedAccount = normalize(extractedAccount);
+            String normalizedAccount = telegramNaturalLanguageVocabulary.normalize(extractedAccount);
             cleaned = cleaned.replaceAll("\\bna\\s+" + Pattern.quote(normalizedAccount) + "\\b", "");
             cleaned = cleaned.replaceAll("\\bno\\s+" + Pattern.quote(normalizedAccount) + "\\b", "");
             cleaned = cleaned.replaceAll("\\bconta\\s+" + Pattern.quote(normalizedAccount) + "\\b", "");
             cleaned = cleaned.replaceAll("\\bcartao\\s+" + Pattern.quote(normalizedAccount) + "\\b", "");
         }
 
-        cleaned = cleaned.replaceAll("\\s+", " ").trim();
+        cleaned = telegramNaturalLanguageVocabulary.stripLeadingDescriptionNoise(
+                cleaned.replaceAll("\\s+", " ").trim()
+        );
 
         if (cleaned.isBlank()) {
             return null;
@@ -319,8 +324,10 @@ public class TelegramIntentService {
         }
     }
 
-    private String extractInstallmentQueryTarget(String text) {
-        String cleaned = text
+    public String extractInstallmentQueryTarget(String text) {
+        String normalized = telegramNaturalLanguageVocabulary.normalize(text);
+
+        String cleaned = normalized
                 .replaceAll("\\bquando acaba o parcelamento\\b", "")
                 .replaceAll("\\bquando termina o parcelamento\\b", "")
                 .replaceAll("\\bquando acaba minha parcela\\b", "")
@@ -338,33 +345,24 @@ public class TelegramIntentService {
                 .replaceAll("\\s+", " ")
                 .trim();
 
+        cleaned = telegramNaturalLanguageVocabulary.stripLeadingQueryTargetNoise(cleaned);
         return cleaned.isBlank() ? null : cleaned;
     }
 
-    private String extractCategoryName(String text) {
-        Matcher matcher = CATEGORY_PATTERN.matcher(text);
+    public String extractCategoryName(String text) {
+        String normalized = telegramNaturalLanguageVocabulary.normalize(text);
+        String accountName = extractAccountName(normalized);
 
-        if (!matcher.find()) {
-            return null;
+        if (accountName != null) {
+            String normalizedAccount = telegramNaturalLanguageVocabulary.normalize(accountName);
+            normalized = normalized.replaceAll("\\b(?:na|no|conta|cartao)\\s+" + Pattern.quote(normalizedAccount) + "\\b", " ");
+            normalized = normalized.replaceAll("\\b" + Pattern.quote(normalizedAccount) + "\\b", " ");
         }
 
-        String value = matcher.group(1);
-
-        return switch (value) {
-            case "mercado", "supermercado" -> "Mercado";
-            case "gasolina", "combustivel" -> "Combustível";
-            case "farmacia", "saude" -> "Saúde";
-            case "uber", "transporte" -> "Transporte";
-            case "ifood", "alimentacao" -> "Alimentação";
-            case "salario" -> "Salário";
-            case "freela" -> "Freelance";
-            case "moradia" -> "Moradia";
-            case "outros" -> "Outros";
-            default -> null;
-        };
+        return telegramNaturalLanguageVocabulary.findCategoryName(normalized);
     }
 
-    private String extractAccountName(String text) {
+    public String extractAccountName(String text) {
         String explicitAccount = extractAccountByPattern(EXPLICIT_ACCOUNT_PATTERN, text);
         if (explicitAccount != null) {
             return explicitAccount;
@@ -392,46 +390,9 @@ public class TelegramIntentService {
         return today;
     }
 
-    private String normalize(String text) {
-        return text.toLowerCase()
-                .replace("á", "a")
-                .replace("à", "a")
-                .replace("ã", "a")
-                .replace("â", "a")
-                .replace("é", "e")
-                .replace("ê", "e")
-                .replace("í", "i")
-                .replace("ó", "o")
-                .replace("ô", "o")
-                .replace("õ", "o")
-                .replace("ú", "u")
-                .replace("ç", "c")
-                .replaceAll("\\s+", " ")
-                .trim();
-    }
-
-    private String capitalizeWords(String text) {
-        String[] parts = text.split("\\s+");
-        StringBuilder result = new StringBuilder();
-
-        for (String part : parts) {
-            if (part.isBlank()) {
-                continue;
-            }
-
-            if (!result.isEmpty()) {
-                result.append(" ");
-            }
-
-            result.append(part.substring(0, 1).toUpperCase())
-                    .append(part.substring(1).toLowerCase());
-        }
-
-        return result.toString();
-    }
-
     private String extractAccountByPattern(Pattern pattern, String text) {
-        Matcher matcher = pattern.matcher(text);
+        String normalized = telegramNaturalLanguageVocabulary.normalize(text);
+        Matcher matcher = pattern.matcher(normalized);
 
         if (!matcher.find()) {
             return null;
@@ -447,30 +408,11 @@ public class TelegramIntentService {
             return null;
         }
 
-        if (!looksLikeKnownAccount(account)) {
-            return null;
-        }
-
-        return capitalizeWords(account);
+        return telegramNaturalLanguageVocabulary.resolveAccountName(account);
     }
 
     private String trimTrailingConnector(String text) {
         return text.replaceAll("\\b(e|em|com)\\b\\s*$", "").trim();
-    }
-
-    private boolean looksLikeKnownAccount(String account) {
-        String normalized = normalize(account);
-
-        return normalized.contains("nubank")
-                || normalized.contains("inter")
-                || normalized.contains("picpay")
-                || normalized.contains("mercado pago")
-                || normalized.contains("itau")
-                || normalized.contains("bradesco")
-                || normalized.contains("caixa")
-                || normalized.contains("santander")
-                || normalized.contains("banco do brasil")
-                || normalized.contains("bb");
     }
 
     private boolean isInstallmentCountQuery(String text) {
