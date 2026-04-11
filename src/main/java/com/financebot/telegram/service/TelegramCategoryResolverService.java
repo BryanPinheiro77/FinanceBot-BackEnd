@@ -134,4 +134,27 @@ public class TelegramCategoryResolverService {
 
         return normalized.toLowerCase(Locale.ROOT).trim();
     }
+
+    @Transactional
+    public Category resolveExplicitCategory(User user, TransactionType transactionType, String categoryName) {
+        CategoryType categoryType = mapTransactionTypeToCategoryType(transactionType);
+        String normalizedCategoryName = categoryName != null ? categoryName.trim() : null;
+
+        if (normalizedCategoryName == null || normalizedCategoryName.isBlank()) {
+            return resolveCategory(user, transactionType, null);
+        }
+
+        Optional<Category> existingCategory =
+                categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
+                        user.getId(),
+                        categoryType,
+                        normalizedCategoryName
+                );
+
+        if (existingCategory.isPresent()) {
+            return existingCategory.get();
+        }
+
+        return createCategory(user, categoryType, normalizedCategoryName);
+    }
 }
