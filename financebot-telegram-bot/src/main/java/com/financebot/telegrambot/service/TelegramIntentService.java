@@ -33,6 +33,9 @@ public class TelegramIntentService {
             "\\b(?:na|no)\\s+([a-zA-Z][a-zA-Z0-9\\s]{1,30}?)(?=\\b(?:hoje|ontem|amanha|esse mes|este mes|mes passado|semana passada|ultimos 7 dias|e|,|\\?|$))"
     );
     private static final Pattern INSTALLMENT_PATTERN = Pattern.compile("\\b(?:parcelad[oa]\\s+em\\s+|em\\s+)(\\d{1,3})x\\b");
+    private static final Pattern INSTALLMENT_PURCHASE_AMOUNT_PATTERN = Pattern.compile(
+            "\\b(?:de|por|valor(?:\\s+de)?|parcelar)\\s+(\\d+[\\.,]?\\d{0,2})\\b(?!\\s*x\\b)"
+    );
 
     public ParsedTelegramMessage parse(String messageText) {
         if (messageText == null || messageText.isBlank()) {
@@ -131,7 +134,7 @@ public class TelegramIntentService {
         }
 
         if (isInstallmentPurchaseCapacityQuery(normalized)) {
-            BigDecimal totalAmount = extractAmount(normalized);
+            BigDecimal totalAmount = extractInstallmentPurchaseAmount(normalized);
             Integer totalInstallments = extractInstallmentCount(normalized);
 
             if (totalAmount != null && totalInstallments != null && totalInstallments >= 2) {
@@ -251,7 +254,7 @@ public class TelegramIntentService {
         return asksCapacity
                 && (text.contains("compra") || text.contains("parcel"))
                 && extractInstallmentCount(text) != null
-                && extractAmount(text) != null;
+                && extractInstallmentPurchaseAmount(text) != null;
     }
 
     private boolean isTransactionTotalQuery(String text) {
@@ -295,6 +298,24 @@ public class TelegramIntentService {
 
     private BigDecimal extractAmount(String text) {
         Matcher matcher = AMOUNT_PATTERN.matcher(text);
+
+        if (!matcher.find()) {
+            return null;
+        }
+
+        String value = matcher.group(1);
+
+        if (value.contains(",") && value.contains(".")) {
+            value = value.replace(".", "").replace(",", ".");
+        } else if (value.contains(",")) {
+            value = value.replace(",", ".");
+        }
+
+        return new BigDecimal(value);
+    }
+
+    private BigDecimal extractInstallmentPurchaseAmount(String text) {
+        Matcher matcher = INSTALLMENT_PURCHASE_AMOUNT_PATTERN.matcher(text);
 
         if (!matcher.find()) {
             return null;

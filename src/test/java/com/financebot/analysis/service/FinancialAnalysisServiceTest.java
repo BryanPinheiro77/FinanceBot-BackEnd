@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -113,6 +114,90 @@ class FinancialAnalysisServiceTest {
 
         assertThat(response.analysisResult()).isEqualTo("DESFAVORAVEL");
         assertThat(response.estimatedInstallmentAmount()).isEqualByComparingTo("1200.00");
+    }
+
+    @Test
+    @DisplayName("deve classificar como desfavoravel quando nao houver renda de referencia")
+    void shouldClassifyAsDesfavoravelWhenIncomeReferenceIsZero() {
+        user.setMonthlyBaseIncome(BigDecimal.ZERO);
+        mockCurrentAnalysisData(
+                BigDecimal.ZERO,
+                new BigDecimal("500"),
+                1L,
+                List.of()
+        );
+        when(transactionRepository.sumIncomeBetweenDatesByUser(eq(1L), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+
+        InstallmentPurchaseCapacityResponse response = financialAnalysisService.analyzeInstallmentPurchaseCapacity(
+                user,
+                new BigDecimal("1200"),
+                12
+        );
+
+        assertThat(response.analysisResult()).isEqualTo("DESFAVORAVEL");
+    }
+
+    @Test
+    @DisplayName("deve classificar como alerta no limiar de sessenta por cento")
+    void shouldClassifyAsAlertaAtSixtyPercentThreshold() {
+        mockCurrentAnalysisData(
+                BigDecimal.ZERO,
+                new BigDecimal("2800"),
+                1L,
+                List.of()
+        );
+
+        InstallmentPurchaseCapacityResponse response = financialAnalysisService.analyzeInstallmentPurchaseCapacity(
+                user,
+                new BigDecimal("2000"),
+                10
+        );
+
+        assertThat(response.analysisResult()).isEqualTo("ALERTA");
+        assertThat(response.estimatedInstallmentAmount()).isEqualByComparingTo("200.00");
+    }
+
+    @Test
+    @DisplayName("deve classificar como desfavoravel no limiar de oitenta por cento")
+    void shouldClassifyAsDesfavoravelAtEightyPercentThreshold() {
+        mockCurrentAnalysisData(
+                BigDecimal.ZERO,
+                new BigDecimal("3800"),
+                1L,
+                List.of()
+        );
+
+        InstallmentPurchaseCapacityResponse response = financialAnalysisService.analyzeInstallmentPurchaseCapacity(
+                user,
+                new BigDecimal("2000"),
+                10
+        );
+
+        assertThat(response.analysisResult()).isEqualTo("DESFAVORAVEL");
+        assertThat(response.estimatedInstallmentAmount()).isEqualByComparingTo("200.00");
+    }
+
+    @Test
+    @DisplayName("deve lancar erro quando valor total for invalido")
+    void shouldThrowWhenTotalAmountIsInvalid() {
+        assertThatThrownBy(() -> financialAnalysisService.analyzeInstallmentPurchaseCapacity(
+                user,
+                BigDecimal.ZERO,
+                12
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Total amount must be greater than zero");
+    }
+
+    @Test
+    @DisplayName("deve lancar erro quando quantidade de parcelas for invalida")
+    void shouldThrowWhenTotalInstallmentsIsInvalid() {
+        assertThatThrownBy(() -> financialAnalysisService.analyzeInstallmentPurchaseCapacity(
+                user,
+                new BigDecimal("1200"),
+                1
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Total installments must be at least 2");
     }
 
     private void mockCurrentAnalysisData(

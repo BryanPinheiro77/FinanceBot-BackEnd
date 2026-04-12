@@ -57,4 +57,54 @@ class TelegramIntentServiceTest {
         assertThat(parsed.totalAmount()).isEqualByComparingTo(new BigDecimal("2400"));
         assertThat(parsed.totalInstallments()).isEqualTo(12);
     }
+
+    @Test
+    @DisplayName("nao deve interpretar analise parcelada sem valor explicito")
+    void shouldNotParseInstallmentPurchaseCapacityWithoutAmount() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "consigo comprar parcelado em 12x?"
+        );
+
+        assertThat(parsed.intentType()).isNotEqualTo(TelegramIntentType.QUERY_INSTALLMENT_PURCHASE_CAPACITY);
+    }
+
+    @Test
+    @DisplayName("nao deve interpretar analise parcelada sem parcelas explicitas")
+    void shouldNotParseInstallmentPurchaseCapacityWithoutInstallments() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "consigo comprar algo de 2000?"
+        );
+
+        assertThat(parsed.intentType()).isNotEqualTo(TelegramIntentType.QUERY_INSTALLMENT_PURCHASE_CAPACITY);
+    }
+
+    @Test
+    @DisplayName("nao deve interpretar analise parcelada com apenas uma parcela")
+    void shouldNotParseInstallmentPurchaseCapacityWithSingleInstallment() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "consigo comprar algo de 2000 em 1x?"
+        );
+
+        assertThat(parsed.intentType()).isNotEqualTo(TelegramIntentType.QUERY_INSTALLMENT_PURCHASE_CAPACITY);
+    }
+
+    @Test
+    @DisplayName("nao deve confundir criacao parcelada com analise de viabilidade")
+    void shouldNotConfuseInstallmentCreationWithPurchaseCapacityAnalysis() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "gastei 2400 parcelado em 12x"
+        );
+
+        assertThat(parsed.intentType()).isEqualTo(TelegramIntentType.CREATE_INSTALLMENT_EXPENSE);
+    }
+
+    @Test
+    @DisplayName("nao deve interpretar pergunta ambigua fora do escopo")
+    void shouldNotParseOutOfScopeAmbiguousInstallmentQuestion() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "consigo fazer mais uma parcela de 10x?"
+        );
+
+        assertThat(parsed.intentType()).isNotEqualTo(TelegramIntentType.QUERY_INSTALLMENT_PURCHASE_CAPACITY);
+    }
 }
