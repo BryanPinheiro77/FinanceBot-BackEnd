@@ -1,4 +1,4 @@
-package com.financebot.telegram.dto;
+package com.financebot.telegrambot.dto.request;
 
 import java.time.LocalDate;
 

@@ -2,6 +2,8 @@ package com.financebot.telegrambot.service;
 
 import com.financebot.telegrambot.client.FinanceBotApiClient;
 import com.financebot.telegrambot.dto.*;
+import com.financebot.telegrambot.dto.request.*;
+import com.financebot.telegrambot.dto.response.*;
 import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import lombok.RequiredArgsConstructor;

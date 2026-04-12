@@ -2,7 +2,8 @@ package com.financebot.telegram.controller;
 
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.dto.response.InstallmentPurchaseCapacityResponse;
-import com.financebot.telegram.dto.*;
+import com.financebot.telegram.dto.request.*;
+import com.financebot.telegram.dto.response.*;
 import com.financebot.telegram.service.TelegramIntegrationService;
 import com.financebot.user.dto.response.TelegramUserProfileResponse;
 import com.financebot.user.dto.request.UpdateMonthlyBaseIncomeRequest;

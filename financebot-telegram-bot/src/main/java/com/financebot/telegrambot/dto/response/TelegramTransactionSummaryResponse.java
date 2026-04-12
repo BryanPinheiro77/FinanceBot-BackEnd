@@ -1,4 +1,4 @@
-package com.financebot.telegrambot.dto;
+package com.financebot.telegrambot.dto.response;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
