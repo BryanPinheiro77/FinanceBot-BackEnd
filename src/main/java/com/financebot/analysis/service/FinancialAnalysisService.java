@@ -3,6 +3,7 @@ package com.financebot.analysis.service;
 import com.financebot.account.domain.Account;
 import com.financebot.account.repository.AccountRepository;
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
+import com.financebot.analysis.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.category.domain.Category;
 import com.financebot.category.domain.CategoryType;
 import com.financebot.category.repository.CategoryRepository;
@@ -49,6 +50,79 @@ public class FinancialAnalysisService {
         }
 
         return buildCurrentAnalysis(user);
+    }
+
+    @Transactional(readOnly = true)
+    public InstallmentPurchaseCapacityResponse analyzeInstallmentPurchaseCapacity(
+            User user,
+            BigDecimal totalAmount,
+            Integer totalInstallments
+    ) {
+        if (user == null) {
+            throw new IllegalArgumentException("User is required");
+        }
+
+        if (totalAmount == null || totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Total amount must be greater than zero");
+        }
+
+        if (totalInstallments == null || totalInstallments < 2) {
+            throw new IllegalArgumentException("Total installments must be at least 2");
+        }
+
+        FinancialCommitmentResponse currentAnalysis = buildCurrentAnalysis(user);
+
+        BigDecimal estimatedInstallmentAmount = totalAmount.divide(
+                BigDecimal.valueOf(totalInstallments),
+                2,
+                RoundingMode.HALF_UP
+        );
+
+        BigDecimal estimatedProjectedExpense = currentAnalysis.nextMonthProjectedExpense().add(estimatedInstallmentAmount);
+        BigDecimal estimatedProjectedNet = currentAnalysis.nextMonthProjectedIncome().subtract(estimatedProjectedExpense);
+
+        BigDecimal estimatedCommitmentPercentage = BigDecimal.ZERO;
+        if (currentAnalysis.monthlyIncomeReference().compareTo(BigDecimal.ZERO) > 0) {
+            estimatedCommitmentPercentage = estimatedProjectedExpense
+                    .multiply(BigDecimal.valueOf(100))
+                    .divide(currentAnalysis.monthlyIncomeReference(), 2, RoundingMode.HALF_UP);
+        }
+
+        BigDecimal installmentIncomeRatio = BigDecimal.ZERO;
+        if (currentAnalysis.monthlyIncomeReference().compareTo(BigDecimal.ZERO) > 0) {
+            installmentIncomeRatio = estimatedInstallmentAmount
+                    .multiply(BigDecimal.valueOf(100))
+                    .divide(currentAnalysis.monthlyIncomeReference(), 2, RoundingMode.HALF_UP);
+        }
+
+        String analysisResult;
+        String observation;
+
+        if ("HIGH".equalsIgnoreCase(currentAnalysis.riskLevel())
+                || currentAnalysis.monthlyIncomeReference().compareTo(BigDecimal.ZERO) <= 0
+                || estimatedProjectedNet.compareTo(BigDecimal.ZERO) < 0
+                || estimatedCommitmentPercentage.compareTo(BigDecimal.valueOf(80)) >= 0) {
+            analysisResult = "DESFAVORAVEL";
+            observation = currentAnalysis.monthlyIncomeReference().compareTo(BigDecimal.ZERO) <= 0
+                    ? "Sem renda de referência configurada, a análise fica conservadora e desfavorável."
+                    : "A nova parcela tende a pressionar demais seu orçamento no cenário atual.";
+        } else if ("MEDIUM".equalsIgnoreCase(currentAnalysis.riskLevel())
+                || estimatedCommitmentPercentage.compareTo(BigDecimal.valueOf(60)) >= 0
+                || installmentIncomeRatio.compareTo(BigDecimal.valueOf(20)) >= 0) {
+            analysisResult = "ALERTA";
+            observation = "A compra pode caber, mas aumenta o comprometimento do orçamento desde a parcela atual.";
+        } else {
+            analysisResult = "VIAVEL";
+            observation = "A parcela estimada ainda parece compatível com seu cenário financeiro atual.";
+        }
+
+        return new InstallmentPurchaseCapacityResponse(
+                totalAmount,
+                totalInstallments,
+                estimatedInstallmentAmount,
+                analysisResult,
+                observation
+        );
     }
 
     @Transactional(readOnly = true)

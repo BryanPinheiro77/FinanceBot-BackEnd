@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.1.1
+- Reorganização dos DTOs do Telegram em pacotes de `request` e `response`
+- Ampliação da cobertura automatizada para a análise de compra parcelada
+- Testes para parser, fluxo do bot e service
+- Validação de cenários felizes, entradas inválidas e regras de classificação
+
+## v1.1.0
+- Análise de capacidade para nova compra parcelada no bot do Telegram
+- Interpretação de valor total e quantidade de parcelas explícitos na mensagem
+- Simulação determinística baseada na análise financeira atual do usuário
+- Resposta com valor total, parcelas, valor estimado por parcela, resultado e observação curta
+- Novos estados de decisão: `VIAVEL`, `ALERTA` e `DESFAVORAVEL`
+- Endpoint Telegram dedicado para consulta de viabilidade de compra parcelada
+- Cobertura inicial com testes unitários do parser e da regra de análise
+
 ## v1.0.0
 - Criação de transações por linguagem natural no Telegram
 - Preview da operação com confirmação ou cancelamento

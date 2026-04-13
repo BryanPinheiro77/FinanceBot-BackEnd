@@ -40,6 +40,7 @@ public class TelegramMessageFormatter {
                 • recebi 1200 de salário
                 • quanto gastei esse mês?
                 • me dá a análise desse mês
+                • consigo comprar algo de 2000 parcelado em 12x?
                 """.formatted(greeting);
     }
 
@@ -69,6 +70,7 @@ public class TelegramMessageFormatter {
                 • quanto gastei esse mês?
                 • quanto recebi esse mês?
                 • me dá a análise desse mês
+                • se eu parcelar 2400 em 12x, cabe no meu orçamento?
                 """;
     }
 
@@ -92,6 +94,7 @@ public class TelegramMessageFormatter {
                 • gastei 50 no mercado
                 • recebi 1200
                 • quanto gastei esse mês?
+                • consigo fazer uma compra de 3000 em 10x?
                 """.formatted(greeting);
     }
 
@@ -315,8 +318,46 @@ public class TelegramMessageFormatter {
         );
     }
 
+    public String formatInstallmentPurchaseCapacityMessage(
+            BigDecimal totalAmount,
+            Integer totalInstallments,
+            BigDecimal estimatedInstallmentAmount,
+            String analysisResult,
+            String observation
+    ) {
+        return """
+            💳 <b>Análise de compra parcelada</b>
+            
+            <b>Valor total:</b> %s
+            <b>Parcelas:</b> %s
+            <b>Valor estimado por parcela:</b> %s
+            <b>Resultado:</b> %s
+            
+            %s
+            """.formatted(
+                formatCurrency(totalAmount),
+                totalInstallments != null ? totalInstallments + "x" : "Não informado",
+                formatCurrency(estimatedInstallmentAmount),
+                escapeHtml(formatAnalysisResult(analysisResult)),
+                escapeHtml(defaultText(observation))
+        );
+    }
+
     private String defaultText(String value) {
         return value != null && !value.isBlank() ? value : "Não informado";
+    }
+
+    private String formatAnalysisResult(String analysisResult) {
+        if (analysisResult == null || analysisResult.isBlank()) {
+            return "Não informado";
+        }
+
+        return switch (analysisResult.toUpperCase(Locale.ROOT)) {
+            case "VIAVEL" -> "Viável";
+            case "ALERTA" -> "Alerta";
+            case "DESFAVORAVEL" -> "Desfavorável";
+            default -> analysisResult;
+        };
     }
 
     public String formatTransactionSuccess(TelegramIntentType intentType) {
