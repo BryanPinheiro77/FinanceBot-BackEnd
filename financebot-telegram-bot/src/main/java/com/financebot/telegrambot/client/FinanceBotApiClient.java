@@ -1,6 +1,7 @@
 package com.financebot.telegrambot.client;
 
-import com.financebot.telegrambot.dto.*;
+import com.financebot.telegrambot.dto.request.*;
+import com.financebot.telegrambot.dto.response.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -130,6 +131,17 @@ public class FinanceBotApiClient {
                 .body(request)
                 .retrieve()
                 .body(TelegramInstallmentCountResponse.class);
+    }
+
+    public InstallmentPurchaseCapacityResponse getInstallmentPurchaseCapacity(
+            InstallmentPurchaseCapacityRequest request
+    ) {
+        return restClient.post()
+                .uri("/telegram/installments/purchase-capacity")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .body(InstallmentPurchaseCapacityResponse.class);
     }
 
     public TelegramActiveInstallmentsResponse getActiveInstallments(Long telegramId) {

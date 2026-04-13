@@ -2,6 +2,8 @@ package com.financebot.telegrambot.service;
 
 import com.financebot.telegrambot.client.FinanceBotApiClient;
 import com.financebot.telegrambot.dto.*;
+import com.financebot.telegrambot.dto.request.*;
+import com.financebot.telegrambot.dto.response.*;
 import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import lombok.RequiredArgsConstructor;
@@ -369,6 +371,25 @@ public class TelegramCommandService {
                     );
                 }
 
+                case QUERY_INSTALLMENT_PURCHASE_CAPACITY -> {
+                    InstallmentPurchaseCapacityResponse response =
+                            financeBotApiClient.getInstallmentPurchaseCapacity(
+                                    new InstallmentPurchaseCapacityRequest(
+                                            telegramId,
+                                            parsedMessage.totalAmount(),
+                                            parsedMessage.totalInstallments()
+                                    )
+                            );
+
+                    yield telegramMessageFormatter.formatInstallmentPurchaseCapacityMessage(
+                            response.totalAmount(),
+                            response.totalInstallments(),
+                            response.estimatedInstallmentAmount(),
+                            response.analysisResult(),
+                            response.observation()
+                    );
+                }
+
                 case QUERY_ACTIVE_INSTALLMENTS -> {
                     TelegramActiveInstallmentsResponse response = financeBotApiClient.getActiveInstallments(telegramId);
 
@@ -540,7 +561,8 @@ public class TelegramCommandService {
                 pending.startDate(),
                 pending.endDate(),
                 pending.totalInstallments(),
-                selectedTarget
+                selectedTarget,
+                pending.totalAmount()
         );
 
         telegramPendingConfirmationService.clearPending(telegramId);
@@ -624,7 +646,8 @@ public class TelegramCommandService {
                 pending.startDate(),
                 pending.endDate(),
                 pending.totalInstallments(),
-                pending.installmentQueryTarget()
+                pending.installmentQueryTarget(),
+                pending.totalAmount()
         );
 
         telegramPendingConfirmationService.savePending(telegramId, updated);

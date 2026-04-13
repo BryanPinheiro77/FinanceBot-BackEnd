@@ -92,6 +92,7 @@ public class TelegramQueryContextService {
                 startDate,
                 endDate,
                 null,
+                null,
                 null
         );
     }
@@ -117,7 +118,8 @@ public class TelegramQueryContextService {
                 null,
                 null,
                 null,
-                target
+                target,
+                null
         );
     }
 
