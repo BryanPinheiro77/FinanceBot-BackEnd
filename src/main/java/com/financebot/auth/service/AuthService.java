@@ -4,6 +4,8 @@ import com.financebot.auth.dto.AuthResponse;
 import com.financebot.auth.dto.LoginRequest;
 import com.financebot.auth.dto.RegisterRequest;
 import com.financebot.category.service.CategoryService;
+import com.financebot.common.exception.UnauthorizedException;
+import com.financebot.common.exception.ValidationException;
 import com.financebot.security.jwt.JwtService;
 import com.financebot.user.domain.User;
 import com.financebot.user.domain.UserRole;
@@ -32,13 +34,15 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Já existe um usuário cadastrado com este email");
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+
+        if (userRepository.existsByEmail(normalizedEmail)) {
+            throw new ValidationException("Já existe um usuário cadastrado com este email");
         }
 
         User user = new User();
         user.setName(request.getName().trim());
-        user.setEmail(request.getEmail().trim().toLowerCase());
+        user.setEmail(normalizedEmail);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(UserRole.USER);
 
@@ -59,13 +63,15 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Email ou senha inválidos"));
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+
+        User user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new UnauthorizedException("Email ou senha inválidos"));
 
         boolean passwordMatches = passwordEncoder.matches(request.getPassword(), user.getPassword());
 
         if (!passwordMatches) {
-            throw new RuntimeException("Email ou senha inválidos");
+            throw new UnauthorizedException("Email ou senha inválidos");
         }
 
         String token = jwtService.generateToken(user);

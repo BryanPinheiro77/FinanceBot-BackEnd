@@ -1,5 +1,18 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Configuração de CORS com origem permitida por propriedade
+
+### Changed
+- Ajustado suporte da API ao fluxo web da v1.2.0
+- Correção do tratamento de erros de autenticação
+
+### Fixed
+- Login inválido agora retorna 401 em vez de erro genérico
+- E-mail já cadastrado agora retorna 400 em vez de erro 500
+
 ## v1.1.1
 - Reorganização dos DTOs do Telegram em pacotes de `request` e `response`
 - Ampliação da cobertura automatizada para a análise de compra parcelada
