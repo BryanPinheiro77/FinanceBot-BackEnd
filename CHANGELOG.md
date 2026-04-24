@@ -7,7 +7,7 @@
 - Configuração local do SonarQube via Docker
 - Configuração do JaCoCo para geração de relatório de cobertura de testes
 - Perfil de testes com banco H2 em memória
-- API principal ajustada para execução com Java 21
+- API e bot padronizados para execução com Java 21
 - Suporte da API alinhado ao fluxo web da v1.2.0
 - Tratamento de erros de autenticação ajustado para respostas 401 consistentes
 - Login inválido agora retorna 401 em vez de erro genérico
