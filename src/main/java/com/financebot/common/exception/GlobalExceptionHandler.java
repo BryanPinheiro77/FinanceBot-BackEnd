@@ -15,6 +15,8 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final String INVALID_REQUEST_TITLE = "Invalid request";
+
     @ExceptionHandler(EntityNotFoundException.class)
     public ProblemDetail handleEntityNotFound(EntityNotFoundException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
@@ -34,7 +36,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        problemDetail.setTitle("Invalid request");
+        problemDetail.setTitle(INVALID_REQUEST_TITLE);
         problemDetail.setDetail(ex.getMessage());
         return problemDetail;
     }
@@ -42,7 +44,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ValidationException.class)
     public ProblemDetail handleValidation(ValidationException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        problemDetail.setTitle("Invalid request");
+        problemDetail.setTitle(INVALID_REQUEST_TITLE);
         problemDetail.setDetail(ex.getMessage());
         return problemDetail;
     }
@@ -64,7 +66,7 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining("; "));
 
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        problemDetail.setTitle("Invalid request");
+        problemDetail.setTitle(INVALID_REQUEST_TITLE);
         problemDetail.setDetail(detail.isBlank() ? "Dados inválidos" : detail);
         return problemDetail;
     }
@@ -72,7 +74,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ProblemDetail handleConstraintViolation(ConstraintViolationException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        problemDetail.setTitle("Invalid request");
+        problemDetail.setTitle(INVALID_REQUEST_TITLE);
         problemDetail.setDetail(ex.getMessage());
         return problemDetail;
     }
