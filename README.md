@@ -102,7 +102,7 @@ O repositório está organizado em duas aplicações Spring Boot que trabalham e
 - Lombok
 
 ### Bot
-- Java 26
+- Java 21
 - Spring Boot 4
 - Telegram Bot API
 - RestClient
