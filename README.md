@@ -149,8 +149,7 @@ A ideia não é substituir as regras de negócio do backend, mas enriquecer a ca
 ## Como executar localmente
 
 ### Pré-requisitos
-- Java 21 para a API principal
-- Java 21 para o módulo `financebot-telegram-bot`
+- Java 21
 - Maven 3.9+
 - Docker / Docker Compose
 - token de bot do Telegram
@@ -253,7 +252,7 @@ Depois, acesse:
 http://localhost:9000
 ```
 
-### Subindo o bot
+## Subindo o bot
 Dentro da pasta do bot:
 
 ```bash
@@ -261,7 +260,7 @@ cd financebot-telegram-bot
 ../mvnw spring-boot:run
 ```
 
-### Fluxo básico de uso
+## Fluxo básico de uso
 1. Suba a infraestrutura com Docker Compose.
 2. Inicie a API.
 3. Inicie o bot do Telegram.
