@@ -4,14 +4,24 @@
 
 ### Added
 - Configuração de CORS com origem permitida por propriedade
+- Configuração local do SonarQube via Docker
+- Configuração do JaCoCo para geração de relatório de cobertura de testes
+- Perfil de testes com banco H2 em memória
+- Testes unitários para validação do tratamento global de erros
+- Testes unitários para cobertura da normalização de descrições de parcelas no fluxo do Telegram
 
 ### Changed
 - Ajustado suporte da API ao fluxo web da v1.2.0
 - Correção do tratamento de erros de autenticação
+- Ajustada lógica de cálculo de datas de parcelas para evitar alerta de overflow em operações numéricas
+- Refatorada a remoção de sufixo de parcelas em descrições para evitar regex com possível risco de backtracking
 
 ### Fixed
 - Login inválido agora retorna 401 em vez de erro genérico
 - E-mail já cadastrado agora retorna 400 em vez de erro 500
+- Corrigidos apontamentos de confiabilidade identificados pelo SonarQube
+- Corrigidos security hotspots identificados pelo SonarQube
+- Corrigida ausência de relatório de cobertura no SonarQube
 
 ## v1.1.1
 - Reorganização dos DTOs do Telegram em pacotes de `request` e `response`

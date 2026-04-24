@@ -451,7 +451,44 @@ public class TelegramIntegrationService {
             return description;
         }
 
-        return description.replaceFirst("\\s*-\\s*\\d+/\\d+\\s*$", "").trim();
+        String trimmedDescription = description.trim();
+        int lastDashIndex = trimmedDescription.lastIndexOf('-');
+
+        if (lastDashIndex == -1) {
+            return trimmedDescription;
+        }
+
+        String possibleSuffix = trimmedDescription.substring(lastDashIndex + 1).trim();
+
+        if (!isInstallmentSuffix(possibleSuffix)) {
+            return trimmedDescription;
+        }
+
+        return trimmedDescription.substring(0, lastDashIndex).trim();
+    }
+
+    private boolean isInstallmentSuffix(String value) {
+        String[] parts = value.split("/");
+
+        if (parts.length != 2) {
+            return false;
+        }
+
+        return isPositiveInteger(parts[0]) && isPositiveInteger(parts[1]);
+    }
+
+    private boolean isPositiveInteger(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+
+        for (char character : value.toCharArray()) {
+            if (!Character.isDigit(character)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private String normalizeInstallmentSearchText(String value) {

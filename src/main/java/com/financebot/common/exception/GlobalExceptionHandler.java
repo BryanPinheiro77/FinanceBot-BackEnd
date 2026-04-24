@@ -78,10 +78,12 @@ public class GlobalExceptionHandler {
     }
 
     private String formatFieldError(FieldError error) {
-        if (error.getDefaultMessage() == null || error.getDefaultMessage().isBlank()) {
+        String defaultMessage = error.getDefaultMessage();
+
+        if (defaultMessage == null || defaultMessage.isBlank()) {
             return error.getField();
         }
 
-        return error.getDefaultMessage();
+        return defaultMessage;
     }
 }
