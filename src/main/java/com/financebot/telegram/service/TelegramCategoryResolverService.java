@@ -17,10 +17,40 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class TelegramCategoryResolverService {
 
+    private static final String OTHER_EXPENSES_CATEGORY = "Outros";
+    private static final String GENERAL_INCOME_CATEGORY = "Receitas Gerais";
+
     private final CategoryRepository categoryRepository;
 
     @Transactional
     public Category resolveCategory(User user, TransactionType transactionType, String description) {
+        return resolveSuggestedCategory(user, transactionType, description);
+    }
+
+    @Transactional
+    public Category resolveExplicitCategory(User user, TransactionType transactionType, String categoryName) {
+        CategoryType categoryType = mapTransactionTypeToCategoryType(transactionType);
+        String normalizedCategoryName = categoryName != null ? categoryName.trim() : null;
+
+        if (normalizedCategoryName == null || normalizedCategoryName.isBlank()) {
+            return resolveSuggestedCategory(user, transactionType, null);
+        }
+
+        Optional<Category> existingCategory =
+                categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
+                        user.getId(),
+                        categoryType,
+                        normalizedCategoryName
+                );
+
+        if (existingCategory.isPresent()) {
+            return existingCategory.get();
+        }
+
+        return createCategory(user, categoryType, normalizedCategoryName);
+    }
+
+    private Category resolveSuggestedCategory(User user, TransactionType transactionType, String description) {
         CategoryType categoryType = mapTransactionTypeToCategoryType(transactionType);
         String suggestedCategoryName = suggestCategoryName(transactionType, description);
 
@@ -61,50 +91,96 @@ public class TelegramCategoryResolverService {
     private String suggestCategoryName(TransactionType transactionType, String description) {
         String normalized = normalize(description);
 
-        if (transactionType == TransactionType.EXPENSE) {
-            if (containsAny(normalized, "mercado", "supermercado", "atacadao", "atacado")) {
-                return "Mercado";
-            }
-            if (containsAny(normalized, "gasolina", "combustivel", "posto", "etanol", "diesel")) {
-                return "Combustível";
-            }
-            if (containsAny(normalized, "ifood", "restaurante", "lanche", "lanchonete", "pizza", "comida")) {
-                return "Alimentação";
-            }
-            if (containsAny(normalized, "aluguel", "condominio", "moradia")) {
-                return "Moradia";
-            }
-            if (containsAny(normalized, "uber", "99", "taxi", "onibus", "metro", "transporte")) {
-                return "Transporte";
-            }
-            if (containsAny(normalized, "farmacia", "remedio", "medico", "consulta")) {
-                return "Saúde";
-            }
+        return switch (transactionType) {
+            case EXPENSE -> suggestExpenseCategoryName(normalized);
+            case INCOME -> suggestIncomeCategoryName(normalized);
+        };
+    }
 
-            return "Outros";
+    private String suggestExpenseCategoryName(String normalizedDescription) {
+        if (isMarketExpense(normalizedDescription)) {
+            return "Mercado";
         }
 
-        if (transactionType == TransactionType.INCOME) {
-            if (containsAny(normalized, "salario", "pagamento", "empresa")) {
-                return "Salário";
-            }
-            if (containsAny(normalized, "freela", "freelance", "bico", "servico")) {
-                return "Freelance";
-            }
-            if (containsAny(normalized, "pix", "transferencia", "deposito")) {
-                return "Transferências";
-            }
-
-            return "Receitas Gerais";
+        if (isFuelExpense(normalizedDescription)) {
+            return "Combustível";
         }
 
-        return "Outros";
+        if (isFoodExpense(normalizedDescription)) {
+            return "Alimentação";
+        }
+
+        if (isHousingExpense(normalizedDescription)) {
+            return "Moradia";
+        }
+
+        if (isTransportExpense(normalizedDescription)) {
+            return "Transporte";
+        }
+
+        if (isHealthExpense(normalizedDescription)) {
+            return "Saúde";
+        }
+
+        return OTHER_EXPENSES_CATEGORY;
+    }
+
+    private String suggestIncomeCategoryName(String normalizedDescription) {
+        if (isSalaryIncome(normalizedDescription)) {
+            return "Salário";
+        }
+
+        if (isFreelanceIncome(normalizedDescription)) {
+            return "Freelance";
+        }
+
+        if (isTransferIncome(normalizedDescription)) {
+            return "Transferências";
+        }
+
+        return GENERAL_INCOME_CATEGORY;
+    }
+
+    private boolean isMarketExpense(String normalizedDescription) {
+        return containsAny(normalizedDescription, "mercado", "supermercado", "atacadao", "atacado");
+    }
+
+    private boolean isFuelExpense(String normalizedDescription) {
+        return containsAny(normalizedDescription, "gasolina", "combustivel", "posto", "etanol", "diesel");
+    }
+
+    private boolean isFoodExpense(String normalizedDescription) {
+        return containsAny(normalizedDescription, "ifood", "restaurante", "lanche", "lanchonete", "pizza", "comida");
+    }
+
+    private boolean isHousingExpense(String normalizedDescription) {
+        return containsAny(normalizedDescription, "aluguel", "condominio", "moradia");
+    }
+
+    private boolean isTransportExpense(String normalizedDescription) {
+        return containsAny(normalizedDescription, "uber", "99", "taxi", "onibus", "metro", "transporte");
+    }
+
+    private boolean isHealthExpense(String normalizedDescription) {
+        return containsAny(normalizedDescription, "farmacia", "remedio", "medico", "consulta");
+    }
+
+    private boolean isSalaryIncome(String normalizedDescription) {
+        return containsAny(normalizedDescription, "salario", "pagamento", "empresa");
+    }
+
+    private boolean isFreelanceIncome(String normalizedDescription) {
+        return containsAny(normalizedDescription, "freela", "freelance", "bico", "servico");
+    }
+
+    private boolean isTransferIncome(String normalizedDescription) {
+        return containsAny(normalizedDescription, "pix", "transferencia", "deposito");
     }
 
     private String getFallbackCategoryName(TransactionType transactionType) {
         return transactionType == TransactionType.INCOME
-                ? "Receitas Gerais"
-                : "Outros";
+                ? GENERAL_INCOME_CATEGORY
+                : OTHER_EXPENSES_CATEGORY;
     }
 
     private Category createCategory(User user, CategoryType categoryType, String name) {
@@ -121,6 +197,7 @@ public class TelegramCategoryResolverService {
                 return true;
             }
         }
+
         return false;
     }
 
@@ -133,28 +210,5 @@ public class TelegramCategoryResolverService {
                 .replaceAll("\\p{M}", "");
 
         return normalized.toLowerCase(Locale.ROOT).trim();
-    }
-
-    @Transactional
-    public Category resolveExplicitCategory(User user, TransactionType transactionType, String categoryName) {
-        CategoryType categoryType = mapTransactionTypeToCategoryType(transactionType);
-        String normalizedCategoryName = categoryName != null ? categoryName.trim() : null;
-
-        if (normalizedCategoryName == null || normalizedCategoryName.isBlank()) {
-            return resolveCategory(user, transactionType, null);
-        }
-
-        Optional<Category> existingCategory =
-                categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
-                        user.getId(),
-                        categoryType,
-                        normalizedCategoryName
-                );
-
-        if (existingCategory.isPresent()) {
-            return existingCategory.get();
-        }
-
-        return createCategory(user, categoryType, normalizedCategoryName);
     }
 }

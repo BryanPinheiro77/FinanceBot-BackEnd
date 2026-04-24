@@ -278,7 +278,7 @@ public class TelegramIntegrationService {
         User user = userRepository.findByTelegramId(telegramId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado para este Telegram."));
 
-        Account account = telegramAccountResolverService.resolveDefaultAccount(user);
+        Account account = telegramAccountResolverService.getOrCreateDefaultAccount(user);
 
         return new TelegramDefaultAccountResponse(
                 account.getId(),

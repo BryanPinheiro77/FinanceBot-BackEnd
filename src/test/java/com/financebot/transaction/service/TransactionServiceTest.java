@@ -8,12 +8,12 @@ import com.financebot.category.repository.CategoryRepository;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
+import com.financebot.transaction.dto.TransactionFilter;
 import com.financebot.transaction.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.dto.request.CreateTransactionRequest;
-import com.financebot.transaction.dto.response.InstallmentTransactionResponse;
-import com.financebot.transaction.dto.TransactionFilter;
-import com.financebot.transaction.dto.response.TransactionResponse;
 import com.financebot.transaction.dto.request.UpdateTransactionRequest;
+import com.financebot.transaction.dto.response.InstallmentTransactionResponse;
+import com.financebot.transaction.dto.response.TransactionResponse;
 import com.financebot.transaction.mapper.TransactionMapper;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.user.domain.User;
@@ -27,7 +27,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 
@@ -36,9 +40,17 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class TransactionServiceTest {
@@ -260,6 +272,28 @@ class TransactionServiceTest {
 
             verifyNoInteractions(transactionRepository, transactionMapper);
         }
+
+        @Test
+        @DisplayName("deve lançar erro quando authentication possuir nome em branco")
+        void shouldThrowWhenAuthenticationNameIsBlank() {
+            CreateTransactionRequest request = new CreateTransactionRequest(
+                    new BigDecimal("150.00"),
+                    "Mercado",
+                    LocalDate.of(2026, 4, 4),
+                    TransactionType.EXPENSE,
+                    SourceType.WEB,
+                    10L,
+                    20L
+            );
+
+            when(authentication.getName()).thenReturn("   ");
+
+            assertThatThrownBy(() -> transactionService.create(request, authentication))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("Authenticated user is invalid");
+
+            verify(userRepository, never()).findByEmail(anyString());
+        }
     }
 
     @Nested
@@ -273,81 +307,25 @@ class TransactionServiceTest {
             Account account = buildAccount(10L);
             Category category = buildCategory(20L, CategoryType.EXPENSE);
 
-            CreateInstallmentTransactionRequest request = new CreateInstallmentTransactionRequest(
-                    new BigDecimal("1000.00"),
-                    "Notebook",
-                    LocalDate.of(2026, 4, 10),
-                    TransactionType.EXPENSE,
-                    SourceType.WEB,
-                    10L,
-                    20L,
-                    3
-            );
+            CreateInstallmentTransactionRequest request = buildInstallmentRequest();
 
             TransactionResponse response1 = mock(TransactionResponse.class);
             TransactionResponse response2 = mock(TransactionResponse.class);
             TransactionResponse response3 = mock(TransactionResponse.class);
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
-            when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.of(category));
-            when(transactionRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
-
-            when(transactionMapper.toResponse(any(Transaction.class)))
-                    .thenReturn(response1, response2, response3);
+            mockInstallmentCreationDependencies(user, account, category, request, response1, response2, response3);
 
             InstallmentTransactionResponse result =
                     transactionService.createInstallment(request, authentication);
 
-            ArgumentCaptor<List<Transaction>> captor = ArgumentCaptor.forClass(List.class);
-            verify(transactionRepository).saveAll(captor.capture());
+            List<Transaction> savedTransactions = captureSavedInstallments();
 
-            List<Transaction> savedTransactions = captor.getValue();
-
-            assertThat(savedTransactions).hasSize(3);
-
-            Transaction first = savedTransactions.get(0);
-            Transaction second = savedTransactions.get(1);
-            Transaction third = savedTransactions.get(2);
-
-            assertThat(first.getAmount()).isEqualByComparingTo("333.33");
-            assertThat(second.getAmount()).isEqualByComparingTo("333.33");
-            assertThat(third.getAmount()).isEqualByComparingTo("333.34");
-
-            assertThat(first.getDescription()).isEqualTo("Notebook - 1/3");
-            assertThat(second.getDescription()).isEqualTo("Notebook - 2/3");
-            assertThat(third.getDescription()).isEqualTo("Notebook - 3/3");
-
-            assertThat(first.getDate()).isEqualTo(LocalDate.of(2026, 4, 10));
-            assertThat(second.getDate()).isEqualTo(LocalDate.of(2026, 5, 10));
-            assertThat(third.getDate()).isEqualTo(LocalDate.of(2026, 6, 10));
-
-            assertThat(first.getType()).isEqualTo(TransactionType.EXPENSE);
-            assertThat(first.getSourceType()).isEqualTo(SourceType.WEB);
-            assertThat(first.getUser()).isEqualTo(user);
-            assertThat(first.getAccount()).isEqualTo(account);
-            assertThat(first.getCategory()).isEqualTo(category);
-
-            assertThat(first.getInstallment()).isTrue();
-            assertThat(second.getInstallment()).isTrue();
-            assertThat(third.getInstallment()).isTrue();
-
-            assertThat(first.getInstallmentNumber()).isEqualTo(1);
-            assertThat(second.getInstallmentNumber()).isEqualTo(2);
-            assertThat(third.getInstallmentNumber()).isEqualTo(3);
-
-            assertThat(first.getTotalInstallments()).isEqualTo(3);
-            assertThat(second.getTotalInstallments()).isEqualTo(3);
-            assertThat(third.getTotalInstallments()).isEqualTo(3);
-
-            assertThat(first.getInstallmentGroupId()).isNotBlank();
-            assertThat(second.getInstallmentGroupId()).isEqualTo(first.getInstallmentGroupId());
-            assertThat(third.getInstallmentGroupId()).isEqualTo(first.getInstallmentGroupId());
-
-            assertThat(result.installmentGroupId()).isEqualTo(first.getInstallmentGroupId());
-            assertThat(result.totalInstallments()).isEqualTo(3);
-            assertThat(result.transactions()).containsExactly(response1, response2, response3);
+            assertInstallmentAmounts(savedTransactions);
+            assertInstallmentDescriptions(savedTransactions);
+            assertInstallmentDates(savedTransactions);
+            assertInstallmentCommonData(savedTransactions, user, account, category);
+            assertInstallmentMetadata(savedTransactions, result);
+            assertInstallmentResponse(result, response1, response2, response3);
         }
 
         @Test
@@ -538,6 +516,43 @@ class TransactionServiceTest {
             verifyNoInteractions(transactionMapper);
             verify(transactionRepository, never()).saveAll(anyList());
         }
+    }
+
+    @Test
+    @DisplayName("deve criar parcelamento para usuario informado diretamente")
+    void shouldCreateInstallmentForUserSuccessfully() {
+        User user = buildUser(1L, "bryan@email.com");
+        Account account = buildAccount(10L);
+        Category category = buildCategory(20L, CategoryType.EXPENSE);
+
+        CreateInstallmentTransactionRequest request = buildInstallmentRequest();
+
+        TransactionResponse response1 = mock(TransactionResponse.class);
+        TransactionResponse response2 = mock(TransactionResponse.class);
+        TransactionResponse response3 = mock(TransactionResponse.class);
+
+        when(accountRepository.findByIdAndUserId(request.accountId(), user.getId()))
+                .thenReturn(Optional.of(account));
+
+        when(categoryRepository.findByIdAndUserId(request.categoryId(), user.getId()))
+                .thenReturn(Optional.of(category));
+
+        when(transactionRepository.saveAll(anyList()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(transactionMapper.toResponse(any(Transaction.class)))
+                .thenReturn(response1, response2, response3);
+
+        InstallmentTransactionResponse result =
+                transactionService.createInstallmentForUser(request, user);
+
+        List<Transaction> savedTransactions = captureSavedInstallments();
+
+        assertThat(savedTransactions).hasSize(3);
+        assertThat(result.totalInstallments()).isEqualTo(3);
+        assertThat(result.transactions()).containsExactly(response1, response2, response3);
+
+        verify(userRepository, never()).findByEmail(anyString());
     }
 
     @Nested
@@ -843,6 +858,117 @@ class TransactionServiceTest {
 
             verify(transactionRepository, never()).delete(any(Transaction.class));
         }
+    }
+
+    private CreateInstallmentTransactionRequest buildInstallmentRequest() {
+        return new CreateInstallmentTransactionRequest(
+                new BigDecimal("1000.00"),
+                "Notebook",
+                LocalDate.of(2026, 4, 10),
+                TransactionType.EXPENSE,
+                SourceType.WEB,
+                10L,
+                20L,
+                3
+        );
+    }
+
+    private void mockInstallmentCreationDependencies(
+            User user,
+            Account account,
+            Category category,
+            CreateInstallmentTransactionRequest request,
+            TransactionResponse response1,
+            TransactionResponse response2,
+            TransactionResponse response3
+    ) {
+        when(authentication.getName()).thenReturn("bryan@email.com");
+        when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+        when(accountRepository.findByIdAndUserId(request.accountId(), user.getId())).thenReturn(Optional.of(account));
+        when(categoryRepository.findByIdAndUserId(request.categoryId(), user.getId())).thenReturn(Optional.of(category));
+        when(transactionRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(transactionMapper.toResponse(any(Transaction.class)))
+                .thenReturn(response1, response2, response3);
+    }
+
+    private List<Transaction> captureSavedInstallments() {
+        ArgumentCaptor<List<Transaction>> captor = ArgumentCaptor.forClass(List.class);
+
+        verify(transactionRepository).saveAll(captor.capture());
+
+        return captor.getValue();
+    }
+
+    private void assertInstallmentAmounts(List<Transaction> savedTransactions) {
+        assertThat(savedTransactions).hasSize(3);
+        assertThat(savedTransactions.get(0).getAmount()).isEqualByComparingTo("333.33");
+        assertThat(savedTransactions.get(1).getAmount()).isEqualByComparingTo("333.33");
+        assertThat(savedTransactions.get(2).getAmount()).isEqualByComparingTo("333.34");
+    }
+
+    private void assertInstallmentDescriptions(List<Transaction> savedTransactions) {
+        assertThat(savedTransactions.get(0).getDescription()).isEqualTo("Notebook - 1/3");
+        assertThat(savedTransactions.get(1).getDescription()).isEqualTo("Notebook - 2/3");
+        assertThat(savedTransactions.get(2).getDescription()).isEqualTo("Notebook - 3/3");
+    }
+
+    private void assertInstallmentDates(List<Transaction> savedTransactions) {
+        assertThat(savedTransactions.get(0).getDate()).isEqualTo(LocalDate.of(2026, 4, 10));
+        assertThat(savedTransactions.get(1).getDate()).isEqualTo(LocalDate.of(2026, 5, 10));
+        assertThat(savedTransactions.get(2).getDate()).isEqualTo(LocalDate.of(2026, 6, 10));
+    }
+
+    private void assertInstallmentCommonData(
+            List<Transaction> savedTransactions,
+            User user,
+            Account account,
+            Category category
+    ) {
+        Transaction first = savedTransactions.get(0);
+
+        assertThat(first.getType()).isEqualTo(TransactionType.EXPENSE);
+        assertThat(first.getSourceType()).isEqualTo(SourceType.WEB);
+        assertThat(first.getUser()).isEqualTo(user);
+        assertThat(first.getAccount()).isEqualTo(account);
+        assertThat(first.getCategory()).isEqualTo(category);
+    }
+
+    private void assertInstallmentMetadata(
+            List<Transaction> savedTransactions,
+            InstallmentTransactionResponse result
+    ) {
+        Transaction first = savedTransactions.get(0);
+        Transaction second = savedTransactions.get(1);
+        Transaction third = savedTransactions.get(2);
+
+        assertThat(first.getInstallment()).isTrue();
+        assertThat(second.getInstallment()).isTrue();
+        assertThat(third.getInstallment()).isTrue();
+
+        assertThat(first.getInstallmentNumber()).isEqualTo(1);
+        assertThat(second.getInstallmentNumber()).isEqualTo(2);
+        assertThat(third.getInstallmentNumber()).isEqualTo(3);
+
+        assertThat(first.getTotalInstallments()).isEqualTo(3);
+        assertThat(second.getTotalInstallments()).isEqualTo(3);
+        assertThat(third.getTotalInstallments()).isEqualTo(3);
+
+        assertThat(first.getInstallmentGroupId()).isNotBlank();
+        assertThat(second.getInstallmentGroupId()).isEqualTo(first.getInstallmentGroupId());
+        assertThat(third.getInstallmentGroupId()).isEqualTo(first.getInstallmentGroupId());
+
+        assertThat(result.installmentGroupId()).isEqualTo(first.getInstallmentGroupId());
+    }
+
+    private void assertInstallmentResponse(
+            InstallmentTransactionResponse result,
+            TransactionResponse response1,
+            TransactionResponse response2,
+            TransactionResponse response3
+    ) {
+        assertThat(result.totalInstallments()).isEqualTo(3);
+        assertThat(result.transactions()).containsExactly(response1, response2, response3);
     }
 
     private User buildUser(Long id, String email) {
