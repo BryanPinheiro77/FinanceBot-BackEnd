@@ -23,6 +23,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AccountService {
 
+    private static final String ACCOUNT_NOT_FOUND_MESSAGE = "Account not found";
+    private static final String AUTHENTICATED_USER_NOT_FOUND_MESSAGE = "Authenticated user not found";
+
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
@@ -60,7 +63,7 @@ public class AccountService {
         User user = getAuthenticatedUser(authentication);
 
         Account account = accountRepository.findByIdAndUserId(id, user.getId())
-                .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ACCOUNT_NOT_FOUND_MESSAGE));
 
         BigDecimal currentBalance = calculateCurrentBalance(account);
 
@@ -72,7 +75,7 @@ public class AccountService {
         User user = getAuthenticatedUser(authentication);
 
         Account account = accountRepository.findByIdAndUserId(id, user.getId())
-                .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ACCOUNT_NOT_FOUND_MESSAGE));
 
         boolean changedName = !account.getName().equalsIgnoreCase(request.name().trim());
 
@@ -96,7 +99,7 @@ public class AccountService {
         User user = getAuthenticatedUser(authentication);
 
         Account account = accountRepository.findByIdAndUserId(id, user.getId())
-                .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ACCOUNT_NOT_FOUND_MESSAGE));
 
         accountRepository.delete(account);
     }
@@ -144,6 +147,6 @@ public class AccountService {
         String email = authentication.getName();
 
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("Authenticated user not found"));
+                .orElseThrow(() -> new EntityNotFoundException(AUTHENTICATED_USER_NOT_FOUND_MESSAGE));
     }
 }
