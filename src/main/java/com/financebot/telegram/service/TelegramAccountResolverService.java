@@ -16,6 +16,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class TelegramAccountResolverService {
 
+    private static final String DEFAULT_ACCOUNT_NAME = "Banco Principal";
+
     private final AccountRepository accountRepository;
 
     @Transactional
@@ -42,7 +44,11 @@ public class TelegramAccountResolverService {
     }
 
     @Transactional
-    public Account resolveDefaultAccount(User user) {
+    public Account getOrCreateDefaultAccount(User user) {
+        return resolveDefaultAccount(user);
+    }
+
+    private Account resolveDefaultAccount(User user) {
         Optional<Account> defaultAccount = accountRepository.findByUserIdAndDefaultAccountTrue(user.getId());
 
         if (defaultAccount.isPresent()) {
@@ -59,7 +65,7 @@ public class TelegramAccountResolverService {
 
         if (accounts.isEmpty()) {
             Account newAccount = new Account();
-            newAccount.setName("Banco Principal");
+            newAccount.setName(DEFAULT_ACCOUNT_NAME);
             newAccount.setType(AccountType.CHECKING_ACCOUNT);
             newAccount.setInitialBalance(BigDecimal.ZERO);
             newAccount.setDefaultAccount(true);

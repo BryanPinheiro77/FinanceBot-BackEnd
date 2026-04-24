@@ -29,6 +29,8 @@ public class SecurityConfig {
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final CustomUserDetailsService customUserDetailsService;
 
+    private static final String TELEGRAM_ENDPOINTS_PATTERN = "/telegram/**";
+
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
                           JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
                           CustomUserDetailsService customUserDetailsService) {
@@ -63,7 +65,6 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/users/telegram/confirm-link"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/telegram/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/telegram/installments/summary").permitAll()
                         .requestMatchers(HttpMethod.GET, "/telegram/installments/active").permitAll()
                         .requestMatchers(HttpMethod.GET, "/telegram/accounts/default").permitAll()
@@ -76,8 +77,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/telegram/transactions/summary").permitAll()
                         .requestMatchers(HttpMethod.POST, "/telegram/installments/count").permitAll()
                         .requestMatchers(HttpMethod.POST, "/telegram/installments/purchase-capacity").permitAll()
-                        .requestMatchers(HttpMethod.PATCH, "/telegram/**").permitAll()
-                        .requestMatchers(HttpMethod.DELETE, "/telegram/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, TELEGRAM_ENDPOINTS_PATTERN).permitAll()
+                        .requestMatchers(HttpMethod.PATCH, TELEGRAM_ENDPOINTS_PATTERN).permitAll()
+                        .requestMatchers(HttpMethod.DELETE, TELEGRAM_ENDPOINTS_PATTERN).permitAll()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
