@@ -89,7 +89,7 @@ O repositório está organizado em duas aplicações Spring Boot que trabalham e
 ## Tecnologias utilizadas
 
 ### Backend / API
-- Java 26
+- Java 21
 - Spring Boot 4
 - Spring Security
 - JWT
@@ -102,7 +102,7 @@ O repositório está organizado em duas aplicações Spring Boot que trabalham e
 - Lombok
 
 ### Bot
-- Java 26
+- Java 21
 - Spring Boot 4
 - Telegram Bot API
 - RestClient
@@ -149,7 +149,8 @@ A ideia não é substituir as regras de negócio do backend, mas enriquecer a ca
 ## Como executar localmente
 
 ### Pré-requisitos
-- Java 26
+- Java 21 para a API principal
+- Java 26 para o módulo `financebot-telegram-bot`
 - Maven 3.9+
 - Docker / Docker Compose
 - token de bot do Telegram
@@ -180,6 +181,14 @@ Se precisar sobrescrever segredos locais, crie o arquivo:
 src/main/resources/application-secret.properties
 ```
 
+Para liberar o frontend web local, a API aceita por padrão a origem:
+
+```properties
+app.cors.allowed-origins=http://localhost:5173
+```
+
+Se precisar, sobrescreva essa propriedade no `application-secret.properties` com uma ou mais origens separadas por vírgula.
+
 ### Subindo a API
 Na raiz do projeto:
 
@@ -208,6 +217,40 @@ Principalmente a propriedade:
 
 ```properties
 financebot.api.base-url=http://localhost:8080
+```
+
+## Testes e qualidade
+
+Os testes da API usam o perfil `test` com banco H2 em memória. Para executar:
+
+```bash
+./mvnw test
+```
+
+Para gerar também o relatório de cobertura do JaCoCo:
+
+```bash
+./mvnw verify
+```
+
+O relatório é gerado em:
+
+```text
+target/site/jacoco/index.html
+```
+
+## SonarQube local
+
+Para subir uma instância local do SonarQube:
+
+```bash
+docker compose -f compose.sonar.yml up -d
+```
+
+Depois, acesse:
+
+```text
+http://localhost:9000
 ```
 
 ### Subindo o bot

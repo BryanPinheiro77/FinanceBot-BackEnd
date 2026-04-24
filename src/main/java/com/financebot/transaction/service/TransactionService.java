@@ -7,12 +7,12 @@ import com.financebot.category.domain.CategoryType;
 import com.financebot.category.repository.CategoryRepository;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
+import com.financebot.transaction.dto.TransactionFilter;
 import com.financebot.transaction.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.dto.request.CreateTransactionRequest;
-import com.financebot.transaction.dto.response.InstallmentTransactionResponse;
-import com.financebot.transaction.dto.TransactionFilter;
-import com.financebot.transaction.dto.response.TransactionResponse;
 import com.financebot.transaction.dto.request.UpdateTransactionRequest;
+import com.financebot.transaction.dto.response.InstallmentTransactionResponse;
+import com.financebot.transaction.dto.response.TransactionResponse;
 import com.financebot.transaction.mapper.TransactionMapper;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.transaction.specification.TransactionSpecification;
@@ -36,6 +36,17 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class TransactionService {
+
+    private static final String TRANSACTION_NOT_FOUND_MESSAGE = "Transaction not found";
+    private static final String ACCOUNT_NOT_FOUND_MESSAGE = "Account not found";
+    private static final String CATEGORY_NOT_FOUND_MESSAGE = "Category not found";
+    private static final String AUTHENTICATED_USER_NOT_FOUND_MESSAGE = "Authenticated user not found";
+    private static final String AUTHENTICATED_USER_INVALID_MESSAGE = "Authenticated user is invalid";
+    private static final String INSTALLMENT_ONLY_EXPENSE_MESSAGE =
+            "Installment transactions are allowed only for expenses";
+    private static final String TOTAL_INSTALLMENTS_MINIMUM_MESSAGE = "Total installments must be at least 2";
+    private static final String CATEGORY_TYPE_MISMATCH_MESSAGE = "Category type does not match transaction type";
+    private static final String INVALID_PERIOD_MESSAGE = "Start date cannot be after end date";
 
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
@@ -72,7 +83,7 @@ public class TransactionService {
     ) {
         User user = getAuthenticatedUser(authentication);
 
-        return createInstallmentForUser(request, user);
+        return createInstallmentInternal(request, user);
     }
 
     @Transactional
@@ -80,14 +91,14 @@ public class TransactionService {
             CreateInstallmentTransactionRequest request,
             User user
     ) {
+        return createInstallmentInternal(request, user);
+    }
 
-        if (request.type() != TransactionType.EXPENSE) {
-            throw new IllegalArgumentException("Installment transactions are allowed only for expenses");
-        }
-
-        if (request.totalInstallments() == null || request.totalInstallments() < 2) {
-            throw new IllegalArgumentException("Total installments must be at least 2");
-        }
+    private InstallmentTransactionResponse createInstallmentInternal(
+            CreateInstallmentTransactionRequest request,
+            User user
+    ) {
+        validateInstallmentRequest(request);
 
         Account account = getUserAccount(request.accountId(), user.getId());
         Category category = getUserCategory(request.categoryId(), user.getId());
@@ -107,30 +118,33 @@ public class TransactionService {
         BigDecimal accumulated = BigDecimal.ZERO;
         List<Transaction> transactions = new ArrayList<>();
 
+        InstallmentTransactionContext context = new InstallmentTransactionContext(
+                request,
+                user,
+                account,
+                category,
+                installmentGroupId,
+                totalInstallments
+        );
+
         for (int i = 1; i <= totalInstallments; i++) {
-            BigDecimal currentAmount = installmentAmount;
+            BigDecimal currentAmount = calculateCurrentInstallmentAmount(
+                    i,
+                    totalInstallments,
+                    installmentAmount,
+                    totalAmount,
+                    accumulated
+            );
 
             if (i < totalInstallments) {
                 accumulated = accumulated.add(currentAmount);
-            } else {
-                currentAmount = totalAmount.subtract(accumulated);
             }
 
-            Transaction transaction = new Transaction();
-            transaction.setAmount(currentAmount);
-            transaction.setDescription(request.description().trim() + " - " + i + "/" + totalInstallments);
-            transaction.setDate(request.firstInstallmentDate().plusMonths((long) i - 1));
-            transaction.setType(request.type());
-            transaction.setSourceType(request.sourceType());
-            transaction.setUser(user);
-            transaction.setAccount(account);
-            transaction.setCategory(category);
-            transaction.setInstallment(true);
-            transaction.setInstallmentNumber(i);
-            transaction.setTotalInstallments(totalInstallments);
-            transaction.setInstallmentGroupId(installmentGroupId);
-
-            transactions.add(transaction);
+            transactions.add(buildInstallmentTransaction(
+                    context,
+                    i,
+                    currentAmount
+            ));
         }
 
         List<Transaction> savedTransactions = transactionRepository.saveAll(transactions);
@@ -197,6 +211,58 @@ public class TransactionService {
         transactionRepository.delete(transaction);
     }
 
+    private void validateInstallmentRequest(CreateInstallmentTransactionRequest request) {
+        if (request.type() != TransactionType.EXPENSE) {
+            throw new IllegalArgumentException(INSTALLMENT_ONLY_EXPENSE_MESSAGE);
+        }
+
+        if (request.totalInstallments() == null || request.totalInstallments() < 2) {
+            throw new IllegalArgumentException(TOTAL_INSTALLMENTS_MINIMUM_MESSAGE);
+        }
+    }
+
+    private BigDecimal calculateCurrentInstallmentAmount(
+            int currentInstallment,
+            int totalInstallments,
+            BigDecimal installmentAmount,
+            BigDecimal totalAmount,
+            BigDecimal accumulated
+    ) {
+        if (currentInstallment < totalInstallments) {
+            return installmentAmount;
+        }
+
+        return totalAmount.subtract(accumulated);
+    }
+
+    private Transaction buildInstallmentTransaction(
+            InstallmentTransactionContext context,
+            int installmentNumber,
+            BigDecimal currentAmount
+    ) {
+        Transaction transaction = new Transaction();
+        transaction.setAmount(currentAmount);
+        transaction.setDescription(
+                context.request().description().trim()
+                        + " - "
+                        + installmentNumber
+                        + "/"
+                        + context.totalInstallments()
+        );
+        transaction.setDate(context.request().firstInstallmentDate().plusMonths((long) installmentNumber - 1));
+        transaction.setType(context.request().type());
+        transaction.setSourceType(context.request().sourceType());
+        transaction.setUser(context.user());
+        transaction.setAccount(context.account());
+        transaction.setCategory(context.category());
+        transaction.setInstallment(true);
+        transaction.setInstallmentNumber(installmentNumber);
+        transaction.setTotalInstallments(context.totalInstallments());
+        transaction.setInstallmentGroupId(context.installmentGroupId());
+
+        return transaction;
+    }
+
     private void validateCategoryMatchesTransactionType(Category category, TransactionType transactionType) {
         boolean isIncomeMatch =
                 category.getType() == CategoryType.INCOME && transactionType == TransactionType.INCOME;
@@ -205,37 +271,47 @@ public class TransactionService {
                 category.getType() == CategoryType.EXPENSE && transactionType == TransactionType.EXPENSE;
 
         if (!isIncomeMatch && !isExpenseMatch) {
-            throw new IllegalArgumentException("Category type does not match transaction type");
+            throw new IllegalArgumentException(CATEGORY_TYPE_MISMATCH_MESSAGE);
         }
     }
 
     private void validatePeriod(LocalDate startDate, LocalDate endDate) {
         if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-            throw new IllegalArgumentException("Start date cannot be after end date");
+            throw new IllegalArgumentException(INVALID_PERIOD_MESSAGE);
         }
     }
 
     private Transaction getUserTransaction(Long transactionId, Long userId) {
         return transactionRepository.findByIdAndUserId(transactionId, userId)
-                .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
+                .orElseThrow(() -> new EntityNotFoundException(TRANSACTION_NOT_FOUND_MESSAGE));
     }
 
     private Account getUserAccount(Long accountId, Long userId) {
         return accountRepository.findByIdAndUserId(accountId, userId)
-                .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ACCOUNT_NOT_FOUND_MESSAGE));
     }
 
     private Category getUserCategory(Long categoryId, Long userId) {
         return categoryRepository.findByIdAndUserId(categoryId, userId)
-                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+                .orElseThrow(() -> new EntityNotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
     }
 
     private User getAuthenticatedUser(Authentication authentication) {
         if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
-            throw new IllegalArgumentException("Authenticated user is invalid");
+            throw new IllegalArgumentException(AUTHENTICATED_USER_INVALID_MESSAGE);
         }
 
         return userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new EntityNotFoundException("Authenticated user not found"));
+                .orElseThrow(() -> new EntityNotFoundException(AUTHENTICATED_USER_NOT_FOUND_MESSAGE));
+    }
+
+    private record InstallmentTransactionContext(
+            CreateInstallmentTransactionRequest request,
+            User user,
+            Account account,
+            Category category,
+            String installmentGroupId,
+            int totalInstallments
+    ) {
     }
 }
