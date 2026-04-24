@@ -192,9 +192,11 @@ class FinancialAnalysisServiceTest {
     @Test
     @DisplayName("deve lancar erro quando quantidade de parcelas for invalida")
     void shouldThrowWhenTotalInstallmentsIsInvalid() {
+        BigDecimal totalAmount = new BigDecimal("1200");
+
         assertThatThrownBy(() -> financialAnalysisService.analyzeInstallmentPurchaseCapacity(
                 user,
-                new BigDecimal("1200"),
+                totalAmount,
                 1
         )).isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Total installments must be at least 2");

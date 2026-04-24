@@ -38,7 +38,7 @@ public class SecurityConfig {
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
         this.customUserDetailsService = customUserDetailsService;
     }
-
+    @SuppressWarnings("java:S112")
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -95,6 +95,7 @@ public class SecurityConfig {
         return provider;
     }
 
+    @SuppressWarnings("java:S112")
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
