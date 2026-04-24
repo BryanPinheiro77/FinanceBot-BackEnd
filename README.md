@@ -150,7 +150,7 @@ A ideia não é substituir as regras de negócio do backend, mas enriquecer a ca
 
 ### Pré-requisitos
 - Java 21 para a API principal
-- Java 26 para o módulo `financebot-telegram-bot`
+- Java 21 para o módulo `financebot-telegram-bot`
 - Maven 3.9+
 - Docker / Docker Compose
 - token de bot do Telegram
