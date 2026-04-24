@@ -1,9 +1,7 @@
 package com.financebot.telegram.service;
 
-import com.financebot.account.repository.AccountRepository;
 import com.financebot.analysis.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
-import com.financebot.category.repository.CategoryRepository;
 import com.financebot.telegram.dto.request.InstallmentPurchaseCapacityRequest;
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
 import com.financebot.transaction.repository.TransactionRepository;
@@ -11,6 +9,7 @@ import com.financebot.transaction.service.TransactionService;
 import com.financebot.user.domain.User;
 import com.financebot.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.Optional;
 
@@ -50,78 +50,163 @@ class TelegramIntegrationServiceTest {
     @InjectMocks
     private TelegramIntegrationService telegramIntegrationService;
 
-    @Test
-    @DisplayName("deve delegar analise de compra parcelada para o financial analysis service")
-    void shouldDelegateInstallmentPurchaseCapacityAnalysis() {
-        User user = new User();
-        user.setId(1L);
-        user.setTelegramId(123L);
+    @Nested
+    @DisplayName("analyzeInstallmentPurchaseCapacity")
+    class AnalyzeInstallmentPurchaseCapacityTests {
 
-        InstallmentPurchaseCapacityRequest request = new InstallmentPurchaseCapacityRequest(
-                123L,
-                new BigDecimal("2400"),
-                12
-        );
+        @Test
+        @DisplayName("deve delegar analise de compra parcelada para o financial analysis service")
+        void shouldDelegateInstallmentPurchaseCapacityAnalysis() {
+            User user = new User();
+            user.setId(1L);
+            user.setTelegramId(123L);
 
-        InstallmentPurchaseCapacityResponse expectedResponse = new InstallmentPurchaseCapacityResponse(
-                new BigDecimal("2400"),
-                12,
-                new BigDecimal("200.00"),
-                "ALERTA",
-                "observacao"
-        );
+            InstallmentPurchaseCapacityRequest request = new InstallmentPurchaseCapacityRequest(
+                    123L,
+                    new BigDecimal("2400"),
+                    12
+            );
 
-        when(userRepository.findByTelegramId(123L)).thenReturn(Optional.of(user));
-        when(financialAnalysisService.analyzeInstallmentPurchaseCapacity(user, new BigDecimal("2400"), 12))
-                .thenReturn(expectedResponse);
+            InstallmentPurchaseCapacityResponse expectedResponse = new InstallmentPurchaseCapacityResponse(
+                    new BigDecimal("2400"),
+                    12,
+                    new BigDecimal("200.00"),
+                    "ALERTA",
+                    "observacao"
+            );
 
-        InstallmentPurchaseCapacityResponse response =
-                telegramIntegrationService.analyzeInstallmentPurchaseCapacity(request);
+            when(userRepository.findByTelegramId(123L)).thenReturn(Optional.of(user));
+            when(financialAnalysisService.analyzeInstallmentPurchaseCapacity(user, new BigDecimal("2400"), 12))
+                    .thenReturn(expectedResponse);
 
-        assertThat(response).isEqualTo(expectedResponse);
-        verify(financialAnalysisService).analyzeInstallmentPurchaseCapacity(user, new BigDecimal("2400"), 12);
+            InstallmentPurchaseCapacityResponse response =
+                    telegramIntegrationService.analyzeInstallmentPurchaseCapacity(request);
+
+            assertThat(response).isEqualTo(expectedResponse);
+
+            verify(financialAnalysisService)
+                    .analyzeInstallmentPurchaseCapacity(user, new BigDecimal("2400"), 12);
+        }
+
+        @Test
+        @DisplayName("deve retornar bad request quando valor total for invalido")
+        void shouldThrowBadRequestWhenTotalAmountIsInvalid() {
+            InstallmentPurchaseCapacityRequest request = new InstallmentPurchaseCapacityRequest(
+                    123L,
+                    BigDecimal.ZERO,
+                    12
+            );
+
+            assertThatThrownBy(() -> telegramIntegrationService.analyzeInstallmentPurchaseCapacity(request))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .hasMessageContaining("400 BAD_REQUEST");
+        }
+
+        @Test
+        @DisplayName("deve retornar bad request quando quantidade de parcelas for invalida")
+        void shouldThrowBadRequestWhenTotalInstallmentsIsInvalid() {
+            InstallmentPurchaseCapacityRequest request = new InstallmentPurchaseCapacityRequest(
+                    123L,
+                    new BigDecimal("2400"),
+                    1
+            );
+
+            assertThatThrownBy(() -> telegramIntegrationService.analyzeInstallmentPurchaseCapacity(request))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .hasMessageContaining("400 BAD_REQUEST");
+        }
+
+        @Test
+        @DisplayName("deve lancar erro quando usuario do telegram nao existir")
+        void shouldThrowWhenTelegramUserDoesNotExist() {
+            InstallmentPurchaseCapacityRequest request = new InstallmentPurchaseCapacityRequest(
+                    123L,
+                    new BigDecimal("2400"),
+                    12
+            );
+
+            when(userRepository.findByTelegramId(123L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> telegramIntegrationService.analyzeInstallmentPurchaseCapacity(request))
+                    .isInstanceOf(TelegramUserNotFoundException.class);
+        }
     }
 
-    @Test
-    @DisplayName("deve retornar bad request quando valor total for invalido")
-    void shouldThrowBadRequestWhenTotalAmountIsInvalid() {
-        InstallmentPurchaseCapacityRequest request = new InstallmentPurchaseCapacityRequest(
-                123L,
-                BigDecimal.ZERO,
-                12
-        );
+    @Nested
+    @DisplayName("stripInstallmentSuffix")
+    class StripInstallmentSuffixTests {
 
-        assertThatThrownBy(() -> telegramIntegrationService.analyzeInstallmentPurchaseCapacity(request))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("400 BAD_REQUEST");
-    }
+        @Test
+        @DisplayName("deve remover sufixo de parcela simples")
+        void shouldRemoveSimpleInstallmentSuffix() throws Exception {
+            String result = invokeStripInstallmentSuffix("Netflix - 2/10");
 
-    @Test
-    @DisplayName("deve retornar bad request quando quantidade de parcelas for invalida")
-    void shouldThrowBadRequestWhenTotalInstallmentsIsInvalid() {
-        InstallmentPurchaseCapacityRequest request = new InstallmentPurchaseCapacityRequest(
-                123L,
-                new BigDecimal("2400"),
-                1
-        );
+            assertThat(result).isEqualTo("Netflix");
+        }
 
-        assertThatThrownBy(() -> telegramIntegrationService.analyzeInstallmentPurchaseCapacity(request))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("400 BAD_REQUEST");
-    }
+        @Test
+        @DisplayName("deve remover sufixo de parcela com espacos")
+        void shouldRemoveInstallmentSuffixWithSpaces() throws Exception {
+            String result = invokeStripInstallmentSuffix("Cartao mercado   -   12/12   ");
 
-    @Test
-    @DisplayName("deve lancar erro quando usuario do telegram nao existir")
-    void shouldThrowWhenTelegramUserDoesNotExist() {
-        InstallmentPurchaseCapacityRequest request = new InstallmentPurchaseCapacityRequest(
-                123L,
-                new BigDecimal("2400"),
-                12
-        );
+            assertThat(result).isEqualTo("Cartao mercado");
+        }
 
-        when(userRepository.findByTelegramId(123L)).thenReturn(Optional.empty());
+        @Test
+        @DisplayName("deve remover apenas o ultimo sufixo quando descricao tiver hifens")
+        void shouldRemoveOnlyLastInstallmentSuffixWhenDescriptionHasHyphens() throws Exception {
+            String result = invokeStripInstallmentSuffix("Compra - mercado - 3/6");
 
-        assertThatThrownBy(() -> telegramIntegrationService.analyzeInstallmentPurchaseCapacity(request))
-                .isInstanceOf(TelegramUserNotFoundException.class);
+            assertThat(result).isEqualTo("Compra - mercado");
+        }
+
+        @Test
+        @DisplayName("deve manter descricao sem sufixo de parcela")
+        void shouldKeepDescriptionWithoutInstallmentSuffix() throws Exception {
+            String result = invokeStripInstallmentSuffix("Netflix");
+
+            assertThat(result).isEqualTo("Netflix");
+        }
+
+        @Test
+        @DisplayName("deve manter descricao quando texto apos hifen nao for parcela")
+        void shouldKeepDescriptionWhenSuffixIsNotInstallmentPattern() throws Exception {
+            String result = invokeStripInstallmentSuffix("Compra - mercado");
+
+            assertThat(result).isEqualTo("Compra - mercado");
+        }
+
+        @Test
+        @DisplayName("deve manter descricao quando sufixo tiver formato invalido")
+        void shouldKeepDescriptionWhenInstallmentSuffixIsInvalid() throws Exception {
+            String result = invokeStripInstallmentSuffix("Compra - 2/a");
+
+            assertThat(result).isEqualTo("Compra - 2/a");
+        }
+
+        @Test
+        @DisplayName("deve retornar string vazia quando descricao for vazia")
+        void shouldReturnEmptyStringWhenDescriptionIsEmpty() throws Exception {
+            String result = invokeStripInstallmentSuffix("");
+
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        @DisplayName("deve retornar null quando descricao for null")
+        void shouldReturnNullWhenDescriptionIsNull() throws Exception {
+            String result = invokeStripInstallmentSuffix(null);
+
+            assertThat(result).isNull();
+        }
+
+        private String invokeStripInstallmentSuffix(String description) throws Exception {
+            Method method = TelegramIntegrationService.class
+                    .getDeclaredMethod("stripInstallmentSuffix", String.class);
+
+            method.setAccessible(true);
+
+            return (String) method.invoke(telegramIntegrationService, description);
+        }
     }
 }
