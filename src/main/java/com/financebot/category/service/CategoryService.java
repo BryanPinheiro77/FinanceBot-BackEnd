@@ -21,6 +21,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CategoryService {
 
+    private static final String CATEGORY_NOT_FOUND_MESSAGE = "Category not found";
+    private static final String AUTHENTICATED_USER_NOT_FOUND_MESSAGE = "Authenticated user not found";
+
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final CategoryMapper categoryMapper;
@@ -63,7 +66,7 @@ public class CategoryService {
         User user = getAuthenticatedUser(authentication);
 
         Category category = categoryRepository.findByIdAndUserId(id, user.getId())
-                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+                .orElseThrow(() -> new EntityNotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
 
         return categoryMapper.toResponse(category);
     }
@@ -73,7 +76,7 @@ public class CategoryService {
         User user = getAuthenticatedUser(authentication);
 
         Category category = categoryRepository.findByIdAndUserId(id, user.getId())
-                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+                .orElseThrow(() -> new EntityNotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
 
         boolean changedName = !category.getName().equalsIgnoreCase(request.name().trim());
         boolean changedType = category.getType() != request.type();
@@ -93,7 +96,7 @@ public class CategoryService {
         User user = getAuthenticatedUser(authentication);
 
         Category category = categoryRepository.findByIdAndUserId(id, user.getId())
-                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+                .orElseThrow(() -> new EntityNotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
 
         categoryRepository.delete(category);
     }
@@ -147,6 +150,6 @@ public class CategoryService {
         String email = authentication.getName();
 
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("Authenticated user not found"));
+                .orElseThrow(() -> new EntityNotFoundException(AUTHENTICATED_USER_NOT_FOUND_MESSAGE));
     }
 }
