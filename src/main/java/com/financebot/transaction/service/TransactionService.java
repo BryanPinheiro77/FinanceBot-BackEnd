@@ -119,7 +119,7 @@ public class TransactionService {
             Transaction transaction = new Transaction();
             transaction.setAmount(currentAmount);
             transaction.setDescription(request.description().trim() + " - " + i + "/" + totalInstallments);
-            transaction.setDate(request.firstInstallmentDate().plusMonths(i - 1));
+            transaction.setDate(request.firstInstallmentDate().plusMonths((long) i - 1));
             transaction.setType(request.type());
             transaction.setSourceType(request.sourceType());
             transaction.setUser(user);

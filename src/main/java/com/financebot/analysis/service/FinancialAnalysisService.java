@@ -220,7 +220,7 @@ public class FinancialAnalysisService {
                 currentAmount = totalAmount.subtract(accumulated);
             }
 
-            LocalDate installmentDate = request.firstInstallmentDate().plusMonths(i - 1);
+            LocalDate installmentDate = request.firstInstallmentDate().plusMonths((long) i - 1);
 
             if (installmentDate.isAfter(today)) {
                 totalFutureInstallments = totalFutureInstallments.add(currentAmount);
