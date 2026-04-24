@@ -272,6 +272,28 @@ class TransactionServiceTest {
 
             verifyNoInteractions(transactionRepository, transactionMapper);
         }
+
+        @Test
+        @DisplayName("deve lançar erro quando authentication possuir nome em branco")
+        void shouldThrowWhenAuthenticationNameIsBlank() {
+            CreateTransactionRequest request = new CreateTransactionRequest(
+                    new BigDecimal("150.00"),
+                    "Mercado",
+                    LocalDate.of(2026, 4, 4),
+                    TransactionType.EXPENSE,
+                    SourceType.WEB,
+                    10L,
+                    20L
+            );
+
+            when(authentication.getName()).thenReturn("   ");
+
+            assertThatThrownBy(() -> transactionService.create(request, authentication))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("Authenticated user is invalid");
+
+            verify(userRepository, never()).findByEmail(anyString());
+        }
     }
 
     @Nested
@@ -494,6 +516,43 @@ class TransactionServiceTest {
             verifyNoInteractions(transactionMapper);
             verify(transactionRepository, never()).saveAll(anyList());
         }
+    }
+
+    @Test
+    @DisplayName("deve criar parcelamento para usuario informado diretamente")
+    void shouldCreateInstallmentForUserSuccessfully() {
+        User user = buildUser(1L, "bryan@email.com");
+        Account account = buildAccount(10L);
+        Category category = buildCategory(20L, CategoryType.EXPENSE);
+
+        CreateInstallmentTransactionRequest request = buildInstallmentRequest();
+
+        TransactionResponse response1 = mock(TransactionResponse.class);
+        TransactionResponse response2 = mock(TransactionResponse.class);
+        TransactionResponse response3 = mock(TransactionResponse.class);
+
+        when(accountRepository.findByIdAndUserId(request.accountId(), user.getId()))
+                .thenReturn(Optional.of(account));
+
+        when(categoryRepository.findByIdAndUserId(request.categoryId(), user.getId()))
+                .thenReturn(Optional.of(category));
+
+        when(transactionRepository.saveAll(anyList()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(transactionMapper.toResponse(any(Transaction.class)))
+                .thenReturn(response1, response2, response3);
+
+        InstallmentTransactionResponse result =
+                transactionService.createInstallmentForUser(request, user);
+
+        List<Transaction> savedTransactions = captureSavedInstallments();
+
+        assertThat(savedTransactions).hasSize(3);
+        assertThat(result.totalInstallments()).isEqualTo(3);
+        assertThat(result.transactions()).containsExactly(response1, response2, response3);
+
+        verify(userRepository, never()).findByEmail(anyString());
     }
 
     @Nested
