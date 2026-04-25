@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Tests
+- Adicionados testes unitários para `UserService` e `RecurringTransactionService`, ampliando a cobertura geral do projeto.
+
 ## v1.1.2
 - Configuração de CORS com origem permitida por propriedade
 - Configuração local do SonarQube via Docker
