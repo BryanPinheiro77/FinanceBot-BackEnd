@@ -2,27 +2,27 @@
 
 ## [Unreleased]
 
-### Added
+### Tests
+- Adicionados testes unitários para `UserService` e `RecurringTransactionService`, ampliando a cobertura geral do projeto.
+
+## v1.1.2
 - Configuração de CORS com origem permitida por propriedade
 - Configuração local do SonarQube via Docker
 - Configuração do JaCoCo para geração de relatório de cobertura de testes
 - Perfil de testes com banco H2 em memória
-- Novos testes unitários para tratamento global de erros, serviços principais da API e fluxo de análise parcelada no bot
-
-### Changed
+- API e bot padronizados para execução com Java 21
 - Suporte da API alinhado ao fluxo web da v1.2.0
-- API principal ajustada para execução com Java 21
-- Interpretação de mensagens do Telegram refinada para exigir valor e quantidade de parcelas explícitos na análise de compra parcelada
-- Ajustada lógica de cálculo de datas de parcelas para evitar alerta de overflow em operações numéricas
-- Refatoração de constantes e trechos repetidos em services, segurança e tratamento de erros
-
-### Fixed
 - Tratamento de erros de autenticação ajustado para respostas 401 consistentes
 - Login inválido agora retorna 401 em vez de erro genérico
 - E-mail já cadastrado agora retorna 400 em vez de erro 500
 - Respostas de validação HTTP padronizadas com retorno 400 para requisições inválidas
+- Interpretação de mensagens do Telegram refinada para exigir valor e quantidade de parcelas explícitos na análise de compra parcelada
 - Normalização de descrições de parcelas ajustada para evitar remoções incorretas e regex com risco de backtracking
-- Ajustes de confiabilidade, cobertura e security hotspots identificados no SonarQube
+- Ajustada lógica de cálculo de datas de parcelas para evitar alerta de overflow em operações numéricas
+- Refatoração de constantes e trechos repetidos em services, segurança e tratamento de erros
+- Novos testes unitários para tratamento global de erros, services principais da API e fluxo de análise parcelada no bot
+- Ajustes de confiabilidade, cobertura, Maintainability e Security Hotspots identificados no SonarQube
+- Quality Gate aprovado com cobertura mínima de New Code
 
 ## v1.1.1
 - Reorganização dos DTOs do Telegram em pacotes de `request` e `response`
