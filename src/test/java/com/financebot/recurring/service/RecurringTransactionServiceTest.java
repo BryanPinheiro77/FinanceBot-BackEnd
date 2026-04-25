@@ -218,6 +218,38 @@ class RecurringTransactionServiceTest {
 
             verify(recurringTransactionRepository, never()).save(any(RecurringTransaction.class));
         }
+
+        @Test
+        @DisplayName("deve lancar erro quando data final for anterior a data inicial ao criar")
+        void shouldThrowWhenEndDateIsBeforeStartDateOnCreate() {
+            User user = buildUser();
+            Account account = buildAccount();
+            Category category = buildCategory(CategoryType.EXPENSE);
+
+            CreateRecurringTransactionRequest request = new CreateRecurringTransactionRequest(
+                    "Aluguel",
+                    new BigDecimal("1200.00"),
+                    TransactionType.EXPENSE,
+                    SourceType.WEB,
+                    RecurrenceFrequency.MONTHLY,
+                    LocalDate.of(2026, 4, 10),
+                    LocalDate.of(2026, 4, 1),
+                    ACCOUNT_ID,
+                    CATEGORY_ID
+            );
+
+            mockAuthenticatedUser(user);
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(account));
+            when(categoryRepository.findByIdAndUserId(CATEGORY_ID, USER_ID))
+                    .thenReturn(Optional.of(category));
+
+            assertThatThrownBy(() -> recurringTransactionService.create(request, authentication))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("End date cannot be before start date");
+
+            verify(recurringTransactionRepository, never()).save(any(RecurringTransaction.class));
+        }
     }
 
     @Nested
@@ -422,6 +454,98 @@ class RecurringTransactionServiceTest {
                     .hasMessage("Category type does not match transaction type");
 
             verify(recurringTransactionRepository, never()).save(any(RecurringTransaction.class));
+        }
+
+        @Test
+        @DisplayName("deve lancar erro quando data final for anterior a data inicial ao atualizar")
+        void shouldThrowWhenEndDateIsBeforeStartDateOnUpdate() {
+            User user = buildUser();
+            Account account = buildAccount();
+            Category category = buildCategory(CategoryType.EXPENSE);
+
+            RecurringTransaction recurringTransaction = buildRecurringTransaction(
+                    RECURRING_TRANSACTION_ID,
+                    "Aluguel",
+                    TransactionType.EXPENSE,
+                    CategoryType.EXPENSE
+            );
+
+            UpdateRecurringTransactionRequest request = new UpdateRecurringTransactionRequest(
+                    "Internet",
+                    new BigDecimal("150.00"),
+                    TransactionType.EXPENSE,
+                    SourceType.WEB,
+                    RecurrenceFrequency.MONTHLY,
+                    LocalDate.of(2026, 5, 10),
+                    LocalDate.of(2026, 5, 1),
+                    ACCOUNT_ID,
+                    CATEGORY_ID,
+                    true
+            );
+
+            mockAuthenticatedUser(user);
+            when(recurringTransactionRepository.findByIdAndUserId(RECURRING_TRANSACTION_ID, USER_ID))
+                    .thenReturn(Optional.of(recurringTransaction));
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(account));
+            when(categoryRepository.findByIdAndUserId(CATEGORY_ID, USER_ID))
+                    .thenReturn(Optional.of(category));
+
+            assertThatThrownBy(() -> recurringTransactionService.update(RECURRING_TRANSACTION_ID, request, authentication))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("End date cannot be before start date");
+
+            verify(recurringTransactionRepository, never()).save(any(RecurringTransaction.class));
+        }
+
+        @Test
+        @DisplayName("deve desativar transacao recorrente ao atualizar active como falso")
+        void shouldDeactivateRecurringTransactionWhenUpdatingActiveToFalse() {
+            User user = buildUser();
+            Account account = buildAccount();
+            Category category = buildCategory(CategoryType.EXPENSE);
+
+            RecurringTransaction recurringTransaction = buildRecurringTransaction(
+                    RECURRING_TRANSACTION_ID,
+                    "Aluguel",
+                    TransactionType.EXPENSE,
+                    CategoryType.EXPENSE
+            );
+            recurringTransaction.setActive(true);
+
+            UpdateRecurringTransactionRequest request = new UpdateRecurringTransactionRequest(
+                    "Internet",
+                    new BigDecimal("150.00"),
+                    TransactionType.EXPENSE,
+                    SourceType.WEB,
+                    RecurrenceFrequency.MONTHLY,
+                    LocalDate.of(2026, 5, 1),
+                    LocalDate.of(2026, 12, 1),
+                    ACCOUNT_ID,
+                    CATEGORY_ID,
+                    false
+            );
+
+            mockAuthenticatedUser(user);
+            when(recurringTransactionRepository.findByIdAndUserId(RECURRING_TRANSACTION_ID, USER_ID))
+                    .thenReturn(Optional.of(recurringTransaction));
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(account));
+            when(categoryRepository.findByIdAndUserId(CATEGORY_ID, USER_ID))
+                    .thenReturn(Optional.of(category));
+            when(recurringTransactionRepository.save(recurringTransaction))
+                    .thenReturn(recurringTransaction);
+
+            RecurringTransactionResponse response = recurringTransactionService.update(
+                    RECURRING_TRANSACTION_ID,
+                    request,
+                    authentication
+            );
+
+            assertThat(response.active()).isFalse();
+            assertThat(recurringTransaction.isActive()).isFalse();
+
+            verify(recurringTransactionRepository).save(recurringTransaction);
         }
     }
 
