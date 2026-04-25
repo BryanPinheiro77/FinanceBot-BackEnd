@@ -2,8 +2,11 @@
 
 ## [Unreleased]
 
+## v1.1.3
 ### Tests
-- Adicionados testes unitários para `UserService` e `RecurringTransactionService`, ampliando a cobertura geral do projeto.
+- Adicionados testes unitários para `UserService`, cobrindo autenticação, atualização de renda base e vínculo/desvínculo do Telegram.
+- Adicionados testes unitários para `RecurringTransactionService`, cobrindo criação, consulta, atualização, ativação, desativação, exclusão e validações de regra de negócio.
+- Aumentada a cobertura geral do projeto para acima de 50%.
 
 ## v1.1.2
 - Configuração de CORS com origem permitida por propriedade
