@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- Padronizada a criação de respostas em mappers para os módulos `auth`, `user` e `recurring`.
 - Reorganizados pacotes de DTOs por domínio, separando objetos de entrada e saída em `request` e `response`.
 
 ## v1.1.3

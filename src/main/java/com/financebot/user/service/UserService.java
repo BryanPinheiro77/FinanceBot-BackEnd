@@ -6,6 +6,7 @@ import com.financebot.user.dto.request.UpdateMonthlyBaseIncomeRequest;
 import com.financebot.user.dto.response.CurrentUserResponse;
 import com.financebot.user.dto.response.TelegramLinkCodeResponse;
 import com.financebot.user.dto.response.TelegramLinkConfirmResponse;
+import com.financebot.user.mapper.UserMapper;
 import com.financebot.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -26,22 +27,13 @@ public class UserService {
     private static final int TELEGRAM_CODE_EXPIRATION_MINUTES = 10;
 
     private final UserRepository userRepository;
+    private final UserMapper userMapper;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional(readOnly = true)
     public CurrentUserResponse getMe(Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
-
-        return new CurrentUserResponse(
-                user.getId(),
-                user.getName(),
-                user.getEmail(),
-                user.getMonthlyBaseIncome(),
-                user.getTelegramId(),
-                user.getTelegramId() != null,
-                user.getTelegramLinkCode(),
-                user.getTelegramLinkCodeExpiresAt()
-        );
+        return userMapper.toCurrentUserResponse(user);
     }
 
     @Transactional
@@ -66,11 +58,7 @@ public class UserService {
 
         userRepository.save(user);
 
-        return new TelegramLinkCodeResponse(
-                code,
-                expiresAt,
-                "Send this code to the Telegram bot to link your account."
-        );
+        return userMapper.toTelegramLinkCodeResponse(code, expiresAt);
     }
 
     @Transactional
@@ -87,10 +75,7 @@ public class UserService {
             user.setTelegramLinkCodeExpiresAt(null);
             userRepository.save(user);
 
-            return new TelegramLinkConfirmResponse(
-                    true,
-                    "Sua conta já estava conectada a este Telegram."
-            );
+            return userMapper.toTelegramLinkAlreadyConnectedResponse();
         }
 
         boolean telegramAlreadyLinked = userRepository.existsByTelegramId(request.telegramId());
@@ -105,10 +90,7 @@ public class UserService {
 
         userRepository.save(user);
 
-        return new TelegramLinkConfirmResponse(
-                true,
-                "Conta conectada com sucesso ao Telegram."
-        );
+        return userMapper.toTelegramLinkConnectedResponse();
     }
 
     @Transactional
