@@ -1,4 +1,4 @@
-package com.financebot.account.dto;
+package com.financebot.account.dto.response;
 
 import com.financebot.account.domain.AccountType;
 

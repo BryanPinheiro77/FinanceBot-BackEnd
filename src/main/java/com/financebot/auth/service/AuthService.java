@@ -1,8 +1,8 @@
 package com.financebot.auth.service;
 
-import com.financebot.auth.dto.AuthResponse;
-import com.financebot.auth.dto.LoginRequest;
-import com.financebot.auth.dto.RegisterRequest;
+import com.financebot.auth.dto.response.AuthResponse;
+import com.financebot.auth.dto.request.LoginRequest;
+import com.financebot.auth.dto.request.RegisterRequest;
 import com.financebot.category.service.CategoryService;
 import com.financebot.common.exception.UnauthorizedException;
 import com.financebot.common.exception.ValidationException;

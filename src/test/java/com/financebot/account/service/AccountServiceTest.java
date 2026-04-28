@@ -1,7 +1,7 @@
 package com.financebot.account.service;
 
 import com.financebot.account.domain.AccountType;
-import com.financebot.account.dto.UpdateAccountRequest;
+import com.financebot.account.dto.request.UpdateAccountRequest;
 import com.financebot.account.mapper.AccountMapper;
 import com.financebot.account.repository.AccountRepository;
 import com.financebot.transaction.repository.TransactionRepository;

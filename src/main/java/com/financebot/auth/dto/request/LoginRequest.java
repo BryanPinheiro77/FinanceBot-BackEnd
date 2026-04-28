@@ -1,4 +1,4 @@
-package com.financebot.auth.dto;
+package com.financebot.auth.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -8,11 +8,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class RegisterRequest {
-
-    @NotBlank(message = "O nome é obrigatório")
-    @Size(max = 120, message = "O nome deve ter no máximo 120 caracteres")
-    private String name;
+public class LoginRequest {
 
     @NotBlank(message = "O email é obrigatório")
     @Email(message = "Email inválido")
@@ -20,6 +16,6 @@ public class RegisterRequest {
     private String email;
 
     @NotBlank(message = "A senha é obrigatória")
-    @Size(min = 6, max = 255, message = "A senha deve ter entre 6 e 255 caracteres")
+    @Size(max = 255, message = "A senha deve ter no máximo 255 caracteres")
     private String password;
 }
