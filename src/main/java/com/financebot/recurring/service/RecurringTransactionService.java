@@ -9,6 +9,7 @@ import com.financebot.recurring.domain.RecurringTransaction;
 import com.financebot.recurring.dto.request.CreateRecurringTransactionRequest;
 import com.financebot.recurring.dto.request.UpdateRecurringTransactionRequest;
 import com.financebot.recurring.dto.response.RecurringTransactionResponse;
+import com.financebot.recurring.mapper.RecurringTransactionMapper;
 import com.financebot.recurring.repository.RecurringTransactionRepository;
 import com.financebot.transaction.domain.TransactionType;
 import com.financebot.user.domain.User;
@@ -29,6 +30,7 @@ public class RecurringTransactionService {
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
     private final CategoryRepository categoryRepository;
+    private final RecurringTransactionMapper recurringTransactionMapper;
 
     @Transactional
     public RecurringTransactionResponse create(
@@ -58,7 +60,7 @@ public class RecurringTransactionService {
         recurringTransaction.validateDates();
 
         RecurringTransaction saved = recurringTransactionRepository.save(recurringTransaction);
-        return toResponse(saved);
+        return recurringTransactionMapper.toResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -67,7 +69,7 @@ public class RecurringTransactionService {
 
         return recurringTransactionRepository.findAllByUserIdOrderByCreatedAtDesc(user.getId())
                 .stream()
-                .map(this::toResponse)
+                .map(recurringTransactionMapper::toResponse)
                 .toList();
     }
 
@@ -76,7 +78,7 @@ public class RecurringTransactionService {
         User user = getAuthenticatedUser(authentication);
         RecurringTransaction recurringTransaction = getUserRecurringTransaction(id, user.getId());
 
-        return toResponse(recurringTransaction);
+        return recurringTransactionMapper.toResponse(recurringTransaction);
     }
 
     @Transactional
@@ -112,7 +114,7 @@ public class RecurringTransactionService {
         recurringTransaction.validateDates();
 
         RecurringTransaction updated = recurringTransactionRepository.save(recurringTransaction);
-        return toResponse(updated);
+        return recurringTransactionMapper.toResponse(updated);
     }
 
     @Transactional
@@ -135,7 +137,7 @@ public class RecurringTransactionService {
         }
 
         RecurringTransaction saved = recurringTransactionRepository.save(recurringTransaction);
-        return toResponse(saved);
+        return recurringTransactionMapper.toResponse(saved);
     }
 
     @Transactional
@@ -146,25 +148,7 @@ public class RecurringTransactionService {
         recurringTransaction.setActive(false);
 
         RecurringTransaction saved = recurringTransactionRepository.save(recurringTransaction);
-        return toResponse(saved);
-    }
-
-    private RecurringTransactionResponse toResponse(RecurringTransaction recurringTransaction) {
-        return new RecurringTransactionResponse(
-                recurringTransaction.getId(),
-                recurringTransaction.getDescription(),
-                recurringTransaction.getAmount(),
-                recurringTransaction.getType(),
-                recurringTransaction.getSourceType(),
-                recurringTransaction.getFrequency(),
-                recurringTransaction.getStartDate(),
-                recurringTransaction.getEndDate(),
-                recurringTransaction.getNextExecutionDate(),
-                recurringTransaction.isActive(),
-                recurringTransaction.getLastExecutedAt(),
-                recurringTransaction.getAccount().getId(),
-                recurringTransaction.getCategory().getId()
-        );
+        return recurringTransactionMapper.toResponse(saved);
     }
 
     private RecurringTransaction getUserRecurringTransaction(Long id, Long userId) {

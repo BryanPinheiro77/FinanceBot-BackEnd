@@ -1,8 +1,9 @@
 package com.financebot.auth.service;
 
-import com.financebot.auth.dto.response.AuthResponse;
 import com.financebot.auth.dto.request.LoginRequest;
 import com.financebot.auth.dto.request.RegisterRequest;
+import com.financebot.auth.dto.response.AuthResponse;
+import com.financebot.auth.mapper.AuthMapper;
 import com.financebot.category.service.CategoryService;
 import com.financebot.common.exception.UnauthorizedException;
 import com.financebot.common.exception.ValidationException;
@@ -21,15 +22,18 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final CategoryService categoryService;
+    private final AuthMapper authMapper;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
-                       CategoryService categoryService) {
+                       CategoryService categoryService,
+                       AuthMapper authMapper) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.categoryService = categoryService;
+        this.authMapper = authMapper;
     }
 
     @Transactional
@@ -52,14 +56,7 @@ public class AuthService {
 
         String token = jwtService.generateToken(savedUser);
 
-        return new AuthResponse(
-                token,
-                "Bearer",
-                savedUser.getId(),
-                savedUser.getName(),
-                savedUser.getEmail(),
-                savedUser.getRole().name()
-        );
+        return authMapper.toResponse(token, savedUser);
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -76,13 +73,6 @@ public class AuthService {
 
         String token = jwtService.generateToken(user);
 
-        return new AuthResponse(
-                token,
-                "Bearer",
-                user.getId(),
-                user.getName(),
-                user.getEmail(),
-                user.getRole().name()
-        );
+        return authMapper.toResponse(token, user);
     }
 }
