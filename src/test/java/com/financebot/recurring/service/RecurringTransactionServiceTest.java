@@ -11,6 +11,7 @@ import com.financebot.recurring.domain.RecurringTransaction;
 import com.financebot.recurring.dto.request.CreateRecurringTransactionRequest;
 import com.financebot.recurring.dto.request.UpdateRecurringTransactionRequest;
 import com.financebot.recurring.dto.response.RecurringTransactionResponse;
+import com.financebot.recurring.mapper.RecurringTransactionMapper;
 import com.financebot.recurring.repository.RecurringTransactionRepository;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.TransactionType;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 
@@ -50,6 +52,9 @@ class RecurringTransactionServiceTest {
 
     @Mock
     private RecurringTransactionRepository recurringTransactionRepository;
+
+    @Spy
+    private RecurringTransactionMapper recurringTransactionMapper = new RecurringTransactionMapper();
 
     @Mock
     private UserRepository userRepository;
