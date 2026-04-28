@@ -1,7 +1,7 @@
 package com.financebot.category.service;
 
 import com.financebot.category.domain.CategoryType;
-import com.financebot.category.dto.UpdateCategoryRequest;
+import com.financebot.category.dto.request.UpdateCategoryRequest;
 import com.financebot.category.mapper.CategoryMapper;
 import com.financebot.category.repository.CategoryRepository;
 import com.financebot.user.domain.User;

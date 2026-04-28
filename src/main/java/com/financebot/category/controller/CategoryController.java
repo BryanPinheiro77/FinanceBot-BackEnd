@@ -1,9 +1,9 @@
 package com.financebot.category.controller;
 
 import com.financebot.category.domain.CategoryType;
-import com.financebot.category.dto.CategoryResponse;
-import com.financebot.category.dto.CreateCategoryRequest;
-import com.financebot.category.dto.UpdateCategoryRequest;
+import com.financebot.category.dto.response.CategoryResponse;
+import com.financebot.category.dto.request.CreateCategoryRequest;
+import com.financebot.category.dto.request.UpdateCategoryRequest;
 import com.financebot.category.service.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

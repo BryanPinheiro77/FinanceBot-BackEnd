@@ -1,4 +1,4 @@
-package com.financebot.category.dto;
+package com.financebot.category.dto.response;
 
 import com.financebot.category.domain.Category;
 import com.financebot.category.domain.CategoryType;

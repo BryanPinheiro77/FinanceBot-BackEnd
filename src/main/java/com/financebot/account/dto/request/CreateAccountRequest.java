@@ -1,4 +1,4 @@
-package com.financebot.account.dto;
+package com.financebot.account.dto.request;
 
 import com.financebot.account.domain.AccountType;
 import jakarta.validation.constraints.NotBlank;
@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 
-public record UpdateAccountRequest(
+public record CreateAccountRequest(
 
         @NotBlank(message = "Name is required")
         @Size(max = 100, message = "Name must have at most 100 characters")
