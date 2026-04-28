@@ -1,4 +1,4 @@
-package com.financebot.auth.dto;
+package com.financebot.auth.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

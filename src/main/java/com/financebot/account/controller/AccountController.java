@@ -1,8 +1,8 @@
 package com.financebot.account.controller;
 
-import com.financebot.account.dto.AccountResponse;
-import com.financebot.account.dto.CreateAccountRequest;
-import com.financebot.account.dto.UpdateAccountRequest;
+import com.financebot.account.dto.response.AccountResponse;
+import com.financebot.account.dto.request.CreateAccountRequest;
+import com.financebot.account.dto.request.UpdateAccountRequest;
 import com.financebot.account.service.AccountService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

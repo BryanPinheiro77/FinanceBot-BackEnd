@@ -1,9 +1,9 @@
 package com.financebot.account.service;
 
 import com.financebot.account.domain.Account;
-import com.financebot.account.dto.AccountResponse;
-import com.financebot.account.dto.CreateAccountRequest;
-import com.financebot.account.dto.UpdateAccountRequest;
+import com.financebot.account.dto.response.AccountResponse;
+import com.financebot.account.dto.request.CreateAccountRequest;
+import com.financebot.account.dto.request.UpdateAccountRequest;
 import com.financebot.account.mapper.AccountMapper;
 import com.financebot.account.repository.AccountRepository;
 import com.financebot.transaction.domain.TransactionType;

@@ -1,9 +1,9 @@
 package com.financebot.account.mapper;
 
 import com.financebot.account.domain.Account;
-import com.financebot.account.dto.AccountResponse;
-import com.financebot.account.dto.CreateAccountRequest;
-import com.financebot.account.dto.UpdateAccountRequest;
+import com.financebot.account.dto.response.AccountResponse;
+import com.financebot.account.dto.request.CreateAccountRequest;
+import com.financebot.account.dto.request.UpdateAccountRequest;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
