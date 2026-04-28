@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Changed
+- Reorganizados pacotes de DTOs por domínio, separando objetos de entrada e saída em `request` e `response`.
+
 ## v1.1.3
 ### Tests
 - Adicionados testes unitários para `UserService`, cobrindo autenticação, atualização de renda base e vínculo/desvínculo do Telegram.
