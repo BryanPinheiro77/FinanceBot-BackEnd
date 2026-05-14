@@ -1,0 +1,23 @@
+services:
+  financebot-telegram-bot:
+    build: .
+    container_name: financebot-telegram-bot
+
+    restart: always
+
+    ports:
+      - "8081:8081"
+
+    env_file:
+      - .env
+
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      FINANCEBOT_API_URL: ${FINANCEBOT_API_URL}
+
+    networks:
+      - backend-network
+
+networks:
+  backend-network:
+    external: true
