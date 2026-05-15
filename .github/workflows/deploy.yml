@@ -7,31 +7,20 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup SSH
+      - name: Deploy backend
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
+          cd /home/bryan/FinanceBot-BackEnd
+          git pull
+          docker compose -f compose.prod.yml up -d --build
 
-      - name: Deploy application
+      - name: Deploy telegram bot
         run: |
-          ssh -o StrictHostKeyChecking=no \
-          ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
-
-            cd ${{ secrets.SERVER_PATH }}
-
-            git pull
-
-            docker compose -f compose.prod.yml up -d --build
-
-            cd financebot-telegram-bot
-
-            docker compose -f compose.prod.yml up -d --build
-
-          EOF
+          cd /home/bryan/FinanceBot-BackEnd/financebot-telegram-bot
+          git pull
+          docker compose -f compose.prod.yml up -d --build
