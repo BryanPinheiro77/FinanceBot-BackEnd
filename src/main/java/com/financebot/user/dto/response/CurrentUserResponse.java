@@ -8,6 +8,7 @@ public record CurrentUserResponse(
         String name,
         String email,
         BigDecimal monthlyBaseIncome,
+        Boolean onboardingCompleted,
         Long telegramId,
         boolean telegramLinked,
         String telegramLinkCode,

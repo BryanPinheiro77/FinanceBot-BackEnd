@@ -17,6 +17,7 @@ public class UserMapper {
                 user.getName(),
                 user.getEmail(),
                 user.getMonthlyBaseIncome(),
+                user.getOnboardingCompleted(),
                 user.getTelegramId(),
                 user.getTelegramId() != null,
                 user.getTelegramLinkCode(),
