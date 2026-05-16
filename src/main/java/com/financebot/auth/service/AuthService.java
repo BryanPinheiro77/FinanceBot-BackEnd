@@ -49,6 +49,7 @@ public class AuthService {
         user.setEmail(normalizedEmail);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(UserRole.USER);
+        user.setOnboardingCompleted(false);
 
         User savedUser = userRepository.save(user);
 

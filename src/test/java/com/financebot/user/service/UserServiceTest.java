@@ -57,6 +57,7 @@ class UserServiceTest {
         void shouldReturnCurrentUserData() {
             User user = buildUser();
             user.setMonthlyBaseIncome(new BigDecimal("3500.00"));
+            user.setOnboardingCompleted(false);
             user.setTelegramId(123456L);
             user.setTelegramLinkCode("FIN-ABC123");
             user.setTelegramLinkCodeExpiresAt(LocalDateTime.now().plusMinutes(10));
@@ -69,6 +70,7 @@ class UserServiceTest {
             assertThat(response.name()).isEqualTo(user.getName());
             assertThat(response.email()).isEqualTo(user.getEmail());
             assertThat(response.monthlyBaseIncome()).isEqualByComparingTo("3500.00");
+            assertThat(response.onboardingCompleted()).isFalse();
             assertThat(response.telegramId()).isEqualTo(123456L);
             assertThat(response.telegramLinked()).isTrue();
             assertThat(response.telegramLinkCode()).isEqualTo("FIN-ABC123");
@@ -114,6 +116,30 @@ class UserServiceTest {
 
             assertThat(savedUser).isEqualTo(user);
             assertThat(savedUser.getMonthlyBaseIncome()).isEqualByComparingTo("4200.00");
+        }
+    }
+
+    @Nested
+    @DisplayName("completeOnboarding")
+    class CompleteOnboardingTests {
+
+        @Test
+        @DisplayName("deve marcar onboarding como concluido para usuario autenticado")
+        void shouldCompleteOnboarding() {
+            User user = buildUser();
+            user.setOnboardingCompleted(false);
+
+            mockAuthenticatedUser(user);
+
+            userService.completeOnboarding(authentication);
+
+            ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).save(captor.capture());
+
+            User savedUser = captor.getValue();
+
+            assertThat(savedUser).isEqualTo(user);
+            assertThat(savedUser.getOnboardingCompleted()).isTrue();
         }
     }
 
@@ -398,6 +424,7 @@ class UserServiceTest {
         user.setName("Bryan");
         user.setEmail("bryan@email.com");
         user.setMonthlyBaseIncome(new BigDecimal("3000.00"));
+        user.setOnboardingCompleted(false);
         return user;
     }
 }

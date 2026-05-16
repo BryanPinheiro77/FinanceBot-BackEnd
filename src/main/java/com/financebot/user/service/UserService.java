@@ -113,6 +113,15 @@ public class UserService {
                 .orElseThrow(() -> new EntityNotFoundException("Authenticated user not found"));
     }
 
+    @Transactional
+    public void completeOnboarding(Authentication authentication) {
+        User user = getAuthenticatedUser(authentication);
+
+        user.setOnboardingCompleted(true);
+
+        userRepository.save(user);
+    }
+
     private String generateRandomCode() {
         StringBuilder builder = new StringBuilder();
 
