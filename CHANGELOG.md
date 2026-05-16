@@ -2,9 +2,16 @@
 
 ## [Unreleased]
 
+### Added
+- Adicionado controle de conclusão do onboarding do usuário.
+- Adicionado endpoint `PATCH /users/me/onboarding-completed` para marcar o onboarding como concluído.
+
 ### Changed
 - Padronizada a criação de respostas em mappers para os módulos `auth`, `user` e `recurring`.
 - Reorganizados pacotes de DTOs por domínio, separando objetos de entrada e saída em `request` e `response`.
+
+### Tests
+- Adicionada cobertura de teste para conclusão do onboarding no `UserService`.
 
 ## v1.1.3
 ### Tests

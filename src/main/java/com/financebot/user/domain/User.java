@@ -39,6 +39,9 @@ public class User implements UserDetails {
     @Column(name = "monthly_base_income", precision = 15, scale = 2)
     private BigDecimal monthlyBaseIncome;
 
+    @Column(name = "onboarding_completed", nullable = false)
+    private Boolean onboardingCompleted = false;
+
     @Column(name = "password", nullable = false, length = 255)
     private String password;
 
@@ -66,6 +69,10 @@ public class User implements UserDetails {
 
         if (this.role == null) {
             this.role = UserRole.USER;
+        }
+
+        if (this.onboardingCompleted == null) {
+            this.onboardingCompleted = false;
         }
     }
 

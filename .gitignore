@@ -38,3 +38,7 @@ src/main/resources/application-secret.properties
 
 .codex
 .review
+/financebot.sql
+
+
+.env

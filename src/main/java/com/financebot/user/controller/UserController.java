@@ -33,6 +33,12 @@ public class UserController {
         userService.updateMonthlyBaseIncome(request, authentication);
     }
 
+    @PatchMapping("/me/onboarding-completed")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void completeOnboarding(Authentication authentication) {
+        userService.completeOnboarding(authentication);
+    }
+
     @PostMapping("/me/telegram-link-code")
     public TelegramLinkCodeResponse generateTelegramLinkCode(Authentication authentication) {
         return userService.generateTelegramLinkCode(authentication);
