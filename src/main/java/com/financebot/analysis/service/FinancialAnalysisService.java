@@ -14,12 +14,12 @@ import com.financebot.transaction.dto.request.CreateInstallmentTransactionReques
 import com.financebot.transaction.dto.request.CreateTransactionRequest;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.user.domain.User;
-import com.financebot.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.financebot.user.service.AuthenticatedUserResolver;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -39,18 +39,16 @@ public class FinancialAnalysisService {
     private static final String CATEGORY_TYPE_MISMATCH_MESSAGE = "Category type does not match transaction type";
     private static final String ACCOUNT_NOT_FOUND_MESSAGE = "Account not found";
     private static final String CATEGORY_NOT_FOUND_MESSAGE = "Category not found";
-    private static final String AUTHENTICATED_USER_INVALID_MESSAGE = "Authenticated user is invalid";
-    private static final String AUTHENTICATED_USER_NOT_FOUND_MESSAGE = "Authenticated user not found";
 
     private final TransactionRepository transactionRepository;
     private final RecurringTransactionRepository recurringTransactionRepository;
-    private final UserRepository userRepository;
     private final AccountRepository accountRepository;
     private final CategoryRepository categoryRepository;
+    private final AuthenticatedUserResolver authenticatedUserResolver;
 
     @Transactional(readOnly = true)
     public FinancialCommitmentResponse getFinancialCommitment(Authentication authentication) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
         return buildCurrentAnalysis(user);
     }
 
@@ -113,7 +111,7 @@ public class FinancialAnalysisService {
             CreateTransactionRequest request,
             Authentication authentication
     ) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
         validateAccountAndCategoryOwnership(
                 request.accountId(),
@@ -158,7 +156,7 @@ public class FinancialAnalysisService {
             CreateInstallmentTransactionRequest request,
             Authentication authentication
     ) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
         validateInstallmentRequest(request);
 
@@ -597,15 +595,6 @@ public class FinancialAnalysisService {
     private Category getUserCategory(Long categoryId, Long userId) {
         return categoryRepository.findByIdAndUserId(categoryId, userId)
                 .orElseThrow(() -> new EntityNotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
-    }
-
-    private User getAuthenticatedUser(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
-            throw new IllegalArgumentException(AUTHENTICATED_USER_INVALID_MESSAGE);
-        }
-
-        return userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new EntityNotFoundException(AUTHENTICATED_USER_NOT_FOUND_MESSAGE));
     }
 
     private record InstallmentPurchaseAnalysisResult(

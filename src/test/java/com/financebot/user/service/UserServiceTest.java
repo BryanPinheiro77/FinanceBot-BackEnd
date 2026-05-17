@@ -30,7 +30,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,6 +40,9 @@ class UserServiceTest {
 
     @Mock
     private Authentication authentication;
+
+    @Mock
+    private AuthenticatedUserResolver authenticatedUserResolver;
 
     @Spy
     private UserMapper userMapper = new UserMapper();
@@ -75,6 +77,8 @@ class UserServiceTest {
             assertThat(response.telegramLinked()).isTrue();
             assertThat(response.telegramLinkCode()).isEqualTo("FIN-ABC123");
             assertThat(response.telegramLinkCodeExpiresAt()).isEqualTo(user.getTelegramLinkCodeExpiresAt());
+
+            verify(authenticatedUserResolver).resolve(authentication);
         }
 
         @Test
@@ -89,6 +93,8 @@ class UserServiceTest {
 
             assertThat(response.telegramLinked()).isFalse();
             assertThat(response.telegramId()).isNull();
+
+            verify(authenticatedUserResolver).resolve(authentication);
         }
     }
 
@@ -116,6 +122,8 @@ class UserServiceTest {
 
             assertThat(savedUser).isEqualTo(user);
             assertThat(savedUser.getMonthlyBaseIncome()).isEqualByComparingTo("4200.00");
+
+            verify(authenticatedUserResolver).resolve(authentication);
         }
     }
 
@@ -140,6 +148,8 @@ class UserServiceTest {
 
             assertThat(savedUser).isEqualTo(user);
             assertThat(savedUser.getOnboardingCompleted()).isTrue();
+
+            verify(authenticatedUserResolver).resolve(authentication);
         }
     }
 
@@ -168,6 +178,8 @@ class UserServiceTest {
 
             assertThat(savedUser.getTelegramLinkCode()).isEqualTo(response.telegramLinkCode());
             assertThat(savedUser.getTelegramLinkCodeExpiresAt()).isEqualTo(response.expiresAt());
+
+            verify(authenticatedUserResolver).resolve(authentication);
         }
     }
 
@@ -359,63 +371,13 @@ class UserServiceTest {
             assertThat(savedUser.getTelegramId()).isNull();
             assertThat(savedUser.getTelegramLinkCode()).isNull();
             assertThat(savedUser.getTelegramLinkCodeExpiresAt()).isNull();
-        }
-    }
 
-    @Nested
-    @DisplayName("authentication")
-    class AuthenticationTests {
-
-        @Test
-        @DisplayName("deve lancar erro quando authentication for nulo")
-        void shouldThrowWhenAuthenticationIsNull() {
-            assertThatThrownBy(() -> userService.getMe(null))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("Authenticated user is invalid");
-
-            verifyNoInteractions(userRepository);
-        }
-
-        @Test
-        @DisplayName("deve lancar erro quando authentication nao possuir nome")
-        void shouldThrowWhenAuthenticationNameIsNull() {
-            when(authentication.getName()).thenReturn(null);
-
-            assertThatThrownBy(() -> userService.getMe(authentication))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("Authenticated user is invalid");
-
-            verify(userRepository, never()).findByEmail(any());
-        }
-
-        @Test
-        @DisplayName("deve lancar erro quando authentication possuir nome em branco")
-        void shouldThrowWhenAuthenticationNameIsBlank() {
-            when(authentication.getName()).thenReturn("   ");
-
-            assertThatThrownBy(() -> userService.getMe(authentication))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("Authenticated user is invalid");
-
-            verify(userRepository, never()).findByEmail(any());
-        }
-
-        @Test
-        @DisplayName("deve lancar erro quando usuario autenticado nao for encontrado")
-        void shouldThrowWhenAuthenticatedUserIsNotFound() {
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com"))
-                    .thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> userService.getMe(authentication))
-                    .isInstanceOf(EntityNotFoundException.class)
-                    .hasMessage("Authenticated user not found");
+            verify(authenticatedUserResolver).resolve(authentication);
         }
     }
 
     private void mockAuthenticatedUser(User user) {
-        when(authentication.getName()).thenReturn(user.getEmail());
-        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
     }
 
     private User buildUser() {

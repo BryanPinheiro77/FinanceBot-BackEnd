@@ -16,7 +16,7 @@ import com.financebot.recurring.repository.RecurringTransactionRepository;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.TransactionType;
 import com.financebot.user.domain.User;
-import com.financebot.user.repository.UserRepository;
+import com.financebot.user.service.AuthenticatedUserResolver;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -39,7 +39,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -57,7 +56,7 @@ class RecurringTransactionServiceTest {
     private RecurringTransactionMapper recurringTransactionMapper = new RecurringTransactionMapper();
 
     @Mock
-    private UserRepository userRepository;
+    private AuthenticatedUserResolver authenticatedUserResolver;
 
     @Mock
     private AccountRepository accountRepository;
@@ -671,60 +670,8 @@ class RecurringTransactionServiceTest {
         }
     }
 
-    @Nested
-    @DisplayName("authentication")
-    class AuthenticationTests {
-
-        @Test
-        @DisplayName("deve lancar erro quando authentication for nulo")
-        void shouldThrowWhenAuthenticationIsNull() {
-            assertThatThrownBy(() -> recurringTransactionService.findAll(null))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("Authenticated user is invalid");
-
-            verifyNoInteractions(userRepository);
-        }
-
-        @Test
-        @DisplayName("deve lancar erro quando authentication nao possuir nome")
-        void shouldThrowWhenAuthenticationNameIsNull() {
-            when(authentication.getName()).thenReturn(null);
-
-            assertThatThrownBy(() -> recurringTransactionService.findAll(authentication))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("Authenticated user is invalid");
-
-            verify(userRepository, never()).findByEmail(any());
-        }
-
-        @Test
-        @DisplayName("deve lancar erro quando authentication possuir nome em branco")
-        void shouldThrowWhenAuthenticationNameIsBlank() {
-            when(authentication.getName()).thenReturn("   ");
-
-            assertThatThrownBy(() -> recurringTransactionService.findAll(authentication))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("Authenticated user is invalid");
-
-            verify(userRepository, never()).findByEmail(any());
-        }
-
-        @Test
-        @DisplayName("deve lancar erro quando usuario autenticado nao existir")
-        void shouldThrowWhenAuthenticatedUserDoesNotExist() {
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com"))
-                    .thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> recurringTransactionService.findAll(authentication))
-                    .isInstanceOf(EntityNotFoundException.class)
-                    .hasMessage("Authenticated user not found");
-        }
-    }
-
     private void mockAuthenticatedUser(User user) {
-        when(authentication.getName()).thenReturn(user.getEmail());
-        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
     }
 
     private CreateRecurringTransactionRequest buildCreateRequest() {

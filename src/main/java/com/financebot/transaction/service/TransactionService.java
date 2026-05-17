@@ -17,7 +17,6 @@ import com.financebot.transaction.mapper.TransactionMapper;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.transaction.specification.TransactionSpecification;
 import com.financebot.user.domain.User;
-import com.financebot.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -25,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.financebot.user.service.AuthenticatedUserResolver;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -40,8 +40,6 @@ public class TransactionService {
     private static final String TRANSACTION_NOT_FOUND_MESSAGE = "Transaction not found";
     private static final String ACCOUNT_NOT_FOUND_MESSAGE = "Account not found";
     private static final String CATEGORY_NOT_FOUND_MESSAGE = "Category not found";
-    private static final String AUTHENTICATED_USER_NOT_FOUND_MESSAGE = "Authenticated user not found";
-    private static final String AUTHENTICATED_USER_INVALID_MESSAGE = "Authenticated user is invalid";
     private static final String INSTALLMENT_ONLY_EXPENSE_MESSAGE =
             "Installment transactions are allowed only for expenses";
     private static final String TOTAL_INSTALLMENTS_MINIMUM_MESSAGE = "Total installments must be at least 2";
@@ -49,14 +47,14 @@ public class TransactionService {
     private static final String INVALID_PERIOD_MESSAGE = "Start date cannot be after end date";
 
     private final TransactionRepository transactionRepository;
-    private final UserRepository userRepository;
     private final AccountRepository accountRepository;
     private final CategoryRepository categoryRepository;
     private final TransactionMapper transactionMapper;
+    private final AuthenticatedUserResolver authenticatedUserResolver;
 
     @Transactional
     public TransactionResponse create(CreateTransactionRequest request, Authentication authentication) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
         Account account = getUserAccount(request.accountId(), user.getId());
         Category category = getUserCategory(request.categoryId(), user.getId());
@@ -81,7 +79,7 @@ public class TransactionService {
             CreateInstallmentTransactionRequest request,
             Authentication authentication
     ) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
         return createInstallmentInternal(request, user);
     }
@@ -166,7 +164,7 @@ public class TransactionService {
             Authentication authentication,
             Pageable pageable
     ) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
         validatePeriod(filter.startDate(), filter.endDate());
 
@@ -179,7 +177,7 @@ public class TransactionService {
 
     @Transactional(readOnly = true)
     public TransactionResponse findById(Long id, Authentication authentication) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
         Transaction transaction = getUserTransaction(id, user.getId());
         return transactionMapper.toResponse(transaction);
@@ -187,7 +185,7 @@ public class TransactionService {
 
     @Transactional
     public TransactionResponse update(Long id, UpdateTransactionRequest request, Authentication authentication) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
         Transaction transaction = getUserTransaction(id, user.getId());
         Account account = getUserAccount(request.accountId(), user.getId());
@@ -205,7 +203,7 @@ public class TransactionService {
 
     @Transactional
     public void delete(Long id, Authentication authentication) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
         Transaction transaction = getUserTransaction(id, user.getId());
         transactionRepository.delete(transaction);
@@ -294,15 +292,6 @@ public class TransactionService {
     private Category getUserCategory(Long categoryId, Long userId) {
         return categoryRepository.findByIdAndUserId(categoryId, userId)
                 .orElseThrow(() -> new EntityNotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
-    }
-
-    private User getAuthenticatedUser(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
-            throw new IllegalArgumentException(AUTHENTICATED_USER_INVALID_MESSAGE);
-        }
-
-        return userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new EntityNotFoundException(AUTHENTICATED_USER_NOT_FOUND_MESSAGE));
     }
 
     private record InstallmentTransactionContext(

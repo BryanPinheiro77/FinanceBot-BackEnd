@@ -17,7 +17,7 @@ import com.financebot.transaction.dto.response.TransactionResponse;
 import com.financebot.transaction.mapper.TransactionMapper;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.user.domain.User;
-import com.financebot.user.repository.UserRepository;
+import com.financebot.user.service.AuthenticatedUserResolver;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -44,7 +44,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -59,7 +58,7 @@ class TransactionServiceTest {
     private TransactionRepository transactionRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private AuthenticatedUserResolver authenticatedUserResolver;
 
     @Mock
     private AccountRepository accountRepository;
@@ -101,8 +100,7 @@ class TransactionServiceTest {
             Transaction savedTransaction = new Transaction();
             TransactionResponse response = mock(TransactionResponse.class);
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
             when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(account));
             when(categoryRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.of(category));
             when(transactionMapper.toEntity(request)).thenReturn(transaction);
@@ -126,71 +124,6 @@ class TransactionServiceTest {
         }
 
         @Test
-        @DisplayName("deve lançar erro quando authentication for nulo")
-        void shouldThrowWhenAuthenticationIsNull() {
-            CreateTransactionRequest request = new CreateTransactionRequest(
-                    new BigDecimal("150.00"),
-                    "Mercado",
-                    LocalDate.of(2026, 4, 4),
-                    TransactionType.EXPENSE,
-                    SourceType.WEB,
-                    10L,
-                    20L
-            );
-
-            assertThatThrownBy(() -> transactionService.create(request, null))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("Authenticated user is invalid");
-
-            verifyNoInteractions(userRepository, accountRepository, categoryRepository, transactionRepository, transactionMapper);
-        }
-
-        @Test
-        @DisplayName("deve lançar erro quando authentication não possuir nome")
-        void shouldThrowWhenAuthenticationNameIsNull() {
-            CreateTransactionRequest request = new CreateTransactionRequest(
-                    new BigDecimal("150.00"),
-                    "Mercado",
-                    LocalDate.of(2026, 4, 4),
-                    TransactionType.EXPENSE,
-                    SourceType.WEB,
-                    10L,
-                    20L
-            );
-
-            when(authentication.getName()).thenReturn(null);
-
-            assertThatThrownBy(() -> transactionService.create(request, authentication))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("Authenticated user is invalid");
-
-            verify(userRepository, never()).findByEmail(anyString());
-        }
-
-        @Test
-        @DisplayName("deve lançar erro quando usuário autenticado não for encontrado")
-        void shouldThrowWhenAuthenticatedUserIsNotFound() {
-            CreateTransactionRequest request = new CreateTransactionRequest(
-                    new BigDecimal("150.00"),
-                    "Mercado",
-                    LocalDate.of(2026, 4, 4),
-                    TransactionType.EXPENSE,
-                    SourceType.WEB,
-                    10L,
-                    20L
-            );
-
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> transactionService.create(request, authentication))
-                    .isInstanceOf(EntityNotFoundException.class)
-                    .hasMessage("Authenticated user not found");
-
-            verifyNoInteractions(accountRepository, categoryRepository, transactionRepository, transactionMapper);
-        }
-
-        @Test
         @DisplayName("deve lançar erro quando conta não pertencer ao usuário")
         void shouldThrowWhenAccountIsNotFoundForUser() {
             User user = buildUser(1L, "bryan@email.com");
@@ -205,8 +138,7 @@ class TransactionServiceTest {
                     20L
             );
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
             when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> transactionService.create(request, authentication))
@@ -232,8 +164,7 @@ class TransactionServiceTest {
                     20L
             );
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
             when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(account));
             when(categoryRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.empty());
 
@@ -261,8 +192,7 @@ class TransactionServiceTest {
                     20L
             );
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
             when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(account));
             when(categoryRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.of(category));
 
@@ -271,28 +201,6 @@ class TransactionServiceTest {
                     .hasMessage("Category type does not match transaction type");
 
             verifyNoInteractions(transactionRepository, transactionMapper);
-        }
-
-        @Test
-        @DisplayName("deve lançar erro quando authentication possuir nome em branco")
-        void shouldThrowWhenAuthenticationNameIsBlank() {
-            CreateTransactionRequest request = new CreateTransactionRequest(
-                    new BigDecimal("150.00"),
-                    "Mercado",
-                    LocalDate.of(2026, 4, 4),
-                    TransactionType.EXPENSE,
-                    SourceType.WEB,
-                    10L,
-                    20L
-            );
-
-            when(authentication.getName()).thenReturn("   ");
-
-            assertThatThrownBy(() -> transactionService.create(request, authentication))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("Authenticated user is invalid");
-
-            verify(userRepository, never()).findByEmail(anyString());
         }
     }
 
@@ -344,8 +252,7 @@ class TransactionServiceTest {
                     3
             );
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
 
             assertThatThrownBy(() -> transactionService.createInstallment(request, authentication))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -371,58 +278,11 @@ class TransactionServiceTest {
                     1
             );
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
 
             assertThatThrownBy(() -> transactionService.createInstallment(request, authentication))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Total installments must be at least 2");
-
-            verifyNoInteractions(accountRepository, categoryRepository, transactionMapper);
-            verify(transactionRepository, never()).saveAll(anyList());
-        }
-
-        @Test
-        @DisplayName("deve lançar erro quando authentication for nulo no parcelamento")
-        void shouldThrowWhenAuthenticationIsNullOnCreateInstallment() {
-            CreateInstallmentTransactionRequest request = new CreateInstallmentTransactionRequest(
-                    new BigDecimal("1000.00"),
-                    "Notebook",
-                    LocalDate.of(2026, 4, 10),
-                    TransactionType.EXPENSE,
-                    SourceType.WEB,
-                    10L,
-                    20L,
-                    3
-            );
-
-            assertThatThrownBy(() -> transactionService.createInstallment(request, null))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("Authenticated user is invalid");
-
-            verifyNoInteractions(userRepository, accountRepository, categoryRepository, transactionRepository, transactionMapper);
-        }
-
-        @Test
-        @DisplayName("deve lançar erro quando usuário autenticado não for encontrado no parcelamento")
-        void shouldThrowWhenAuthenticatedUserIsNotFoundOnCreateInstallment() {
-            CreateInstallmentTransactionRequest request = new CreateInstallmentTransactionRequest(
-                    new BigDecimal("1000.00"),
-                    "Notebook",
-                    LocalDate.of(2026, 4, 10),
-                    TransactionType.EXPENSE,
-                    SourceType.WEB,
-                    10L,
-                    20L,
-                    3
-            );
-
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> transactionService.createInstallment(request, authentication))
-                    .isInstanceOf(EntityNotFoundException.class)
-                    .hasMessage("Authenticated user not found");
 
             verifyNoInteractions(accountRepository, categoryRepository, transactionMapper);
             verify(transactionRepository, never()).saveAll(anyList());
@@ -444,8 +304,7 @@ class TransactionServiceTest {
                     3
             );
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
             when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> transactionService.createInstallment(request, authentication))
@@ -473,8 +332,7 @@ class TransactionServiceTest {
                     3
             );
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
             when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(account));
             when(categoryRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.empty());
 
@@ -504,8 +362,7 @@ class TransactionServiceTest {
                     3
             );
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
             when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(account));
             when(categoryRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.of(category));
 
@@ -552,7 +409,7 @@ class TransactionServiceTest {
         assertThat(result.totalInstallments()).isEqualTo(3);
         assertThat(result.transactions()).containsExactly(response1, response2, response3);
 
-        verify(userRepository, never()).findByEmail(anyString());
+        verify(authenticatedUserResolver, never()).resolve(any());
     }
 
     @Nested
@@ -580,8 +437,7 @@ class TransactionServiceTest {
 
             Page<Transaction> page = new PageImpl<>(List.of(transaction), pageable, 1);
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
             when(transactionRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(page);
             when(transactionMapper.toResponse(transaction)).thenReturn(response);
 
@@ -611,8 +467,7 @@ class TransactionServiceTest {
 
             Pageable pageable = PageRequest.of(0, 10);
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
 
             assertThatThrownBy(() -> transactionService.findAll(filter, authentication, pageable))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -634,8 +489,7 @@ class TransactionServiceTest {
             Transaction transaction = new Transaction();
             TransactionResponse response = mock(TransactionResponse.class);
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
             when(transactionRepository.findByIdAndUserId(99L, 1L)).thenReturn(Optional.of(transaction));
             when(transactionMapper.toResponse(transaction)).thenReturn(response);
 
@@ -650,8 +504,7 @@ class TransactionServiceTest {
         void shouldThrowWhenTransactionIsNotFound() {
             User user = buildUser(1L, "bryan@email.com");
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
             when(transactionRepository.findByIdAndUserId(99L, 1L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> transactionService.findById(99L, authentication))
@@ -685,8 +538,7 @@ class TransactionServiceTest {
                     20L
             );
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
             when(transactionRepository.findByIdAndUserId(77L, 1L)).thenReturn(Optional.of(transaction));
             when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(account));
             when(categoryRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.of(category));
@@ -719,8 +571,7 @@ class TransactionServiceTest {
                     20L
             );
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
             when(transactionRepository.findByIdAndUserId(77L, 1L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> transactionService.update(77L, request, authentication))
@@ -746,8 +597,7 @@ class TransactionServiceTest {
                     20L
             );
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
             when(transactionRepository.findByIdAndUserId(77L, 1L)).thenReturn(Optional.of(transaction));
             when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.empty());
 
@@ -777,8 +627,7 @@ class TransactionServiceTest {
                     20L
             );
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
             when(transactionRepository.findByIdAndUserId(77L, 1L)).thenReturn(Optional.of(transaction));
             when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(account));
             when(categoryRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.empty());
@@ -809,8 +658,7 @@ class TransactionServiceTest {
                     20L
             );
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
             when(transactionRepository.findByIdAndUserId(77L, 1L)).thenReturn(Optional.of(transaction));
             when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(account));
             when(categoryRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.of(category));
@@ -834,8 +682,7 @@ class TransactionServiceTest {
             User user = buildUser(1L, "bryan@email.com");
             Transaction transaction = new Transaction();
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
             when(transactionRepository.findByIdAndUserId(55L, 1L)).thenReturn(Optional.of(transaction));
 
             transactionService.delete(55L, authentication);
@@ -848,8 +695,7 @@ class TransactionServiceTest {
         void shouldThrowWhenTransactionToDeleteDoesNotExist() {
             User user = buildUser(1L, "bryan@email.com");
 
-            when(authentication.getName()).thenReturn("bryan@email.com");
-            when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+            mockAuthenticatedUser(user);
             when(transactionRepository.findByIdAndUserId(55L, 1L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> transactionService.delete(55L, authentication))
@@ -858,6 +704,10 @@ class TransactionServiceTest {
 
             verify(transactionRepository, never()).delete(any(Transaction.class));
         }
+    }
+
+    private void mockAuthenticatedUser(User user) {
+        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
     }
 
     private CreateInstallmentTransactionRequest buildInstallmentRequest() {
@@ -882,8 +732,7 @@ class TransactionServiceTest {
             TransactionResponse response2,
             TransactionResponse response3
     ) {
-        when(authentication.getName()).thenReturn("bryan@email.com");
-        when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
+        mockAuthenticatedUser(user);
         when(accountRepository.findByIdAndUserId(request.accountId(), user.getId())).thenReturn(Optional.of(account));
         when(categoryRepository.findByIdAndUserId(request.categoryId(), user.getId())).thenReturn(Optional.of(category));
         when(transactionRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
