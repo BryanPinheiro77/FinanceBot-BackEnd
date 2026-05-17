@@ -1,7 +1,6 @@
 package com.financebot.transaction.domain.installment;
 
 import com.financebot.transaction.domain.TransactionType;
-import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -10,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@Component
 public class InstallmentPlanFactory {
 
     private static final int MONEY_SCALE = 2;
@@ -33,19 +31,23 @@ public class InstallmentPlanFactory {
         BigDecimal installmentAmount = totalAmount.divide(
                 BigDecimal.valueOf(totalInstallments),
                 MONEY_SCALE,
-                RoundingMode.DOWN
+                RoundingMode.HALF_UP
         );
 
-        BigDecimal distributedAmount = installmentAmount.multiply(BigDecimal.valueOf(totalInstallments));
-        BigDecimal adjustment = totalAmount.subtract(distributedAmount);
-
+        BigDecimal accumulated = BigDecimal.ZERO;
         List<InstallmentPlanItem> items = new ArrayList<>();
 
         for (int installmentNumber = 1; installmentNumber <= totalInstallments; installmentNumber++) {
-            BigDecimal amount = installmentAmount;
+            BigDecimal amount = calculateCurrentInstallmentAmount(
+                    installmentNumber,
+                    totalInstallments,
+                    installmentAmount,
+                    totalAmount,
+                    accumulated
+            );
 
-            if (installmentNumber == totalInstallments) {
-                amount = amount.add(adjustment);
+            if (installmentNumber < totalInstallments) {
+                accumulated = accumulated.add(amount);
             }
 
             items.add(new InstallmentPlanItem(
@@ -75,11 +77,25 @@ public class InstallmentPlanFactory {
         }
     }
 
+    private BigDecimal calculateCurrentInstallmentAmount(
+            int currentInstallment,
+            int totalInstallments,
+            BigDecimal installmentAmount,
+            BigDecimal totalAmount,
+            BigDecimal accumulated
+    ) {
+        if (currentInstallment < totalInstallments) {
+            return installmentAmount;
+        }
+
+        return totalAmount.subtract(accumulated);
+    }
+
     private String buildInstallmentDescription(
             String description,
             int installmentNumber,
             int totalInstallments
     ) {
-        return "%s - %d/%d".formatted(description, installmentNumber, totalInstallments);
+        return "%s - %d/%d".formatted(description.trim(), installmentNumber, totalInstallments);
     }
 }

@@ -100,5 +100,22 @@ class InstallmentPlanFactoryTest {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Total installments must be at least 2");
         }
+
+        @Test
+        @DisplayName("deve preservar arredondamento half up e ajustar ultima parcela")
+        void shouldPreserveHalfUpRoundingAndAdjustLastInstallment() {
+            InstallmentPlan plan = installmentPlanFactory.create(
+                    new BigDecimal("10.01"),
+                    "Compra teste",
+                    LocalDate.of(2026, 4, 10),
+                    TransactionType.EXPENSE,
+                    2
+            );
+
+            assertThat(plan.items()).hasSize(2);
+
+            assertThat(plan.items().get(0).amount()).isEqualByComparingTo("5.01");
+            assertThat(plan.items().get(1).amount()).isEqualByComparingTo("5.00");
+        }
     }
 }

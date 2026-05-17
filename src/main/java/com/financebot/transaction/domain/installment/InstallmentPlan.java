@@ -7,4 +7,8 @@ public record InstallmentPlan(
         Integer totalInstallments,
         List<InstallmentPlanItem> items
 ) {
+
+    public InstallmentPlan {
+        items = List.copyOf(items);
+    }
 }
