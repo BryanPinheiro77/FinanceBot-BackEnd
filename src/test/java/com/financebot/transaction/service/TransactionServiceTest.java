@@ -6,6 +6,9 @@ import com.financebot.category.domain.CategoryType;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
+import com.financebot.transaction.domain.installment.InstallmentPlan;
+import com.financebot.transaction.domain.installment.InstallmentPlanFactory;
+import com.financebot.transaction.domain.installment.InstallmentPlanItem;
 import com.financebot.transaction.dto.TransactionFilter;
 import com.financebot.transaction.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.dto.request.CreateTransactionRequest;
@@ -54,6 +57,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class TransactionServiceTest {
 
+    private static final String INSTALLMENT_GROUP_ID = "installment-group-123";
+
     @Mock
     private TransactionRepository transactionRepository;
 
@@ -65,6 +70,9 @@ class TransactionServiceTest {
 
     @Mock
     private TransactionCategoryValidator transactionCategoryValidator;
+
+    @Mock
+    private InstallmentPlanFactory installmentPlanFactory;
 
     @Mock
     private TransactionMapper transactionMapper;
@@ -217,8 +225,8 @@ class TransactionServiceTest {
     class CreateInstallmentTests {
 
         @Test
-        @DisplayName("deve criar parcelamento com sucesso e ajustar a última parcela")
-        void shouldCreateInstallmentSuccessfullyWithRoundingAdjustment() {
+        @DisplayName("deve criar parcelamento com sucesso a partir do plano de dominio")
+        void shouldCreateInstallmentSuccessfullyFromDomainPlan() {
             User user = buildUser(1L, "bryan@email.com");
             Account account = buildAccount(10L);
             Category category = buildCategory(20L, CategoryType.EXPENSE);
@@ -229,6 +237,7 @@ class TransactionServiceTest {
             TransactionResponse response2 = mock(TransactionResponse.class);
             TransactionResponse response3 = mock(TransactionResponse.class);
 
+            mockAuthenticatedUser(user);
             mockInstallmentCreationDependencies(user, account, category, request, response1, response2, response3);
 
             InstallmentTransactionResponse result =
@@ -243,12 +252,19 @@ class TransactionServiceTest {
             assertInstallmentMetadata(savedTransactions, result);
             assertInstallmentResponse(result, response1, response2, response3);
 
+            verify(installmentPlanFactory).create(
+                    request.totalAmount(),
+                    request.description(),
+                    request.firstInstallmentDate(),
+                    request.type(),
+                    request.totalInstallments()
+            );
             verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
         }
 
         @Test
-        @DisplayName("deve lançar erro quando tentar parcelar uma receita")
-        void shouldThrowWhenTryingToCreateInstallmentForIncome() {
+        @DisplayName("deve lançar erro quando plano de parcelamento rejeitar receita")
+        void shouldThrowWhenInstallmentPlanRejectsIncomeTransaction() {
             User user = buildUser(1L, "bryan@email.com");
 
             CreateInstallmentTransactionRequest request = new CreateInstallmentTransactionRequest(
@@ -263,6 +279,13 @@ class TransactionServiceTest {
             );
 
             mockAuthenticatedUser(user);
+            when(installmentPlanFactory.create(
+                    request.totalAmount(),
+                    request.description(),
+                    request.firstInstallmentDate(),
+                    request.type(),
+                    request.totalInstallments()
+            )).thenThrow(new IllegalArgumentException("Installment transactions are allowed only for expenses"));
 
             assertThatThrownBy(() -> transactionService.createInstallment(request, authentication))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -273,8 +296,8 @@ class TransactionServiceTest {
         }
 
         @Test
-        @DisplayName("deve lançar erro quando total de parcelas for menor que 2")
-        void shouldThrowWhenTotalInstallmentsIsLessThanTwo() {
+        @DisplayName("deve lançar erro quando plano de parcelamento rejeitar total menor que dois")
+        void shouldThrowWhenInstallmentPlanRejectsTotalInstallmentsLessThanTwo() {
             User user = buildUser(1L, "bryan@email.com");
 
             CreateInstallmentTransactionRequest request = new CreateInstallmentTransactionRequest(
@@ -289,6 +312,13 @@ class TransactionServiceTest {
             );
 
             mockAuthenticatedUser(user);
+            when(installmentPlanFactory.create(
+                    request.totalAmount(),
+                    request.description(),
+                    request.firstInstallmentDate(),
+                    request.type(),
+                    request.totalInstallments()
+            )).thenThrow(new IllegalArgumentException("Total installments must be at least 2"));
 
             assertThatThrownBy(() -> transactionService.createInstallment(request, authentication))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -303,18 +333,17 @@ class TransactionServiceTest {
         void shouldThrowWhenAccountIsNotFoundForUserOnCreateInstallment() {
             User user = buildUser(1L, "bryan@email.com");
 
-            CreateInstallmentTransactionRequest request = new CreateInstallmentTransactionRequest(
-                    new BigDecimal("1000.00"),
-                    "Notebook",
-                    LocalDate.of(2026, 4, 10),
-                    TransactionType.EXPENSE,
-                    SourceType.WEB,
-                    10L,
-                    20L,
-                    3
-            );
+            CreateInstallmentTransactionRequest request = buildInstallmentRequest();
+            InstallmentPlan plan = buildInstallmentPlan();
 
             mockAuthenticatedUser(user);
+            when(installmentPlanFactory.create(
+                    request.totalAmount(),
+                    request.description(),
+                    request.firstInstallmentDate(),
+                    request.type(),
+                    request.totalInstallments()
+            )).thenReturn(plan);
             when(userResourceResolver.resolveAccount(10L, 1L))
                     .thenThrow(new EntityNotFoundException("Account not found"));
 
@@ -333,18 +362,17 @@ class TransactionServiceTest {
             User user = buildUser(1L, "bryan@email.com");
             Account account = buildAccount(10L);
 
-            CreateInstallmentTransactionRequest request = new CreateInstallmentTransactionRequest(
-                    new BigDecimal("1000.00"),
-                    "Notebook",
-                    LocalDate.of(2026, 4, 10),
-                    TransactionType.EXPENSE,
-                    SourceType.WEB,
-                    10L,
-                    20L,
-                    3
-            );
+            CreateInstallmentTransactionRequest request = buildInstallmentRequest();
+            InstallmentPlan plan = buildInstallmentPlan();
 
             mockAuthenticatedUser(user);
+            when(installmentPlanFactory.create(
+                    request.totalAmount(),
+                    request.description(),
+                    request.firstInstallmentDate(),
+                    request.type(),
+                    request.totalInstallments()
+            )).thenReturn(plan);
             when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
             when(userResourceResolver.resolveCategory(20L, 1L))
                     .thenThrow(new EntityNotFoundException("Category not found"));
@@ -364,18 +392,17 @@ class TransactionServiceTest {
             Account account = buildAccount(10L);
             Category category = buildCategory(20L, CategoryType.INCOME);
 
-            CreateInstallmentTransactionRequest request = new CreateInstallmentTransactionRequest(
-                    new BigDecimal("1000.00"),
-                    "Notebook",
-                    LocalDate.of(2026, 4, 10),
-                    TransactionType.EXPENSE,
-                    SourceType.WEB,
-                    10L,
-                    20L,
-                    3
-            );
+            CreateInstallmentTransactionRequest request = buildInstallmentRequest();
+            InstallmentPlan plan = buildInstallmentPlan();
 
             mockAuthenticatedUser(user);
+            when(installmentPlanFactory.create(
+                    request.totalAmount(),
+                    request.description(),
+                    request.firstInstallmentDate(),
+                    request.type(),
+                    request.totalInstallments()
+            )).thenReturn(plan);
             when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
             when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
 
@@ -405,17 +432,7 @@ class TransactionServiceTest {
         TransactionResponse response2 = mock(TransactionResponse.class);
         TransactionResponse response3 = mock(TransactionResponse.class);
 
-        when(userResourceResolver.resolveAccount(request.accountId(), user.getId()))
-                .thenReturn(account);
-
-        when(userResourceResolver.resolveCategory(request.categoryId(), user.getId()))
-                .thenReturn(category);
-
-        when(transactionRepository.saveAll(anyList()))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
-        when(transactionMapper.toResponse(any(Transaction.class)))
-                .thenReturn(response1, response2, response3);
+        mockInstallmentCreationDependencies(user, account, category, request, response1, response2, response3);
 
         InstallmentTransactionResponse result =
                 transactionService.createInstallmentForUser(request, user);
@@ -424,8 +441,16 @@ class TransactionServiceTest {
 
         assertThat(savedTransactions).hasSize(3);
         assertThat(result.totalInstallments()).isEqualTo(3);
+        assertThat(result.installmentGroupId()).isEqualTo(INSTALLMENT_GROUP_ID);
         assertThat(result.transactions()).containsExactly(response1, response2, response3);
 
+        verify(installmentPlanFactory).create(
+                request.totalAmount(),
+                request.description(),
+                request.firstInstallmentDate(),
+                request.type(),
+                request.totalInstallments()
+        );
         verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
         verify(authenticatedUserResolver, never()).resolve(any());
     }
@@ -759,13 +784,58 @@ class TransactionServiceTest {
             TransactionResponse response2,
             TransactionResponse response3
     ) {
-        mockAuthenticatedUser(user);
+        InstallmentPlan plan = buildInstallmentPlan();
+
+        when(installmentPlanFactory.create(
+                request.totalAmount(),
+                request.description(),
+                request.firstInstallmentDate(),
+                request.type(),
+                request.totalInstallments()
+        )).thenReturn(plan);
+
         when(userResourceResolver.resolveAccount(request.accountId(), user.getId())).thenReturn(account);
         when(userResourceResolver.resolveCategory(request.categoryId(), user.getId())).thenReturn(category);
+
         when(transactionRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
         when(transactionMapper.toResponse(any(Transaction.class)))
                 .thenReturn(response1, response2, response3);
+    }
+
+    private InstallmentPlan buildInstallmentPlan() {
+        List<InstallmentPlanItem> items = List.of(
+                new InstallmentPlanItem(
+                        new BigDecimal("333.33"),
+                        "Notebook - 1/3",
+                        LocalDate.of(2026, 4, 10),
+                        1,
+                        3,
+                        INSTALLMENT_GROUP_ID
+                ),
+                new InstallmentPlanItem(
+                        new BigDecimal("333.33"),
+                        "Notebook - 2/3",
+                        LocalDate.of(2026, 5, 10),
+                        2,
+                        3,
+                        INSTALLMENT_GROUP_ID
+                ),
+                new InstallmentPlanItem(
+                        new BigDecimal("333.34"),
+                        "Notebook - 3/3",
+                        LocalDate.of(2026, 6, 10),
+                        3,
+                        3,
+                        INSTALLMENT_GROUP_ID
+                )
+        );
+
+        return new InstallmentPlan(
+                INSTALLMENT_GROUP_ID,
+                3,
+                items
+        );
     }
 
     private List<Transaction> captureSavedInstallments() {
@@ -830,11 +900,11 @@ class TransactionServiceTest {
         assertThat(second.getTotalInstallments()).isEqualTo(3);
         assertThat(third.getTotalInstallments()).isEqualTo(3);
 
-        assertThat(first.getInstallmentGroupId()).isNotBlank();
-        assertThat(second.getInstallmentGroupId()).isEqualTo(first.getInstallmentGroupId());
-        assertThat(third.getInstallmentGroupId()).isEqualTo(first.getInstallmentGroupId());
+        assertThat(first.getInstallmentGroupId()).isEqualTo(INSTALLMENT_GROUP_ID);
+        assertThat(second.getInstallmentGroupId()).isEqualTo(INSTALLMENT_GROUP_ID);
+        assertThat(third.getInstallmentGroupId()).isEqualTo(INSTALLMENT_GROUP_ID);
 
-        assertThat(result.installmentGroupId()).isEqualTo(first.getInstallmentGroupId());
+        assertThat(result.installmentGroupId()).isEqualTo(INSTALLMENT_GROUP_ID);
     }
 
     private void assertInstallmentResponse(
@@ -843,6 +913,7 @@ class TransactionServiceTest {
             TransactionResponse response2,
             TransactionResponse response3
     ) {
+        assertThat(result.installmentGroupId()).isEqualTo(INSTALLMENT_GROUP_ID);
         assertThat(result.totalInstallments()).isEqualTo(3);
         assertThat(result.transactions()).containsExactly(response1, response2, response3);
     }
