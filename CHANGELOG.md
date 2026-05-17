@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [1.1.4] - 2026-05-17
+## [1.1.4] 
 
 ### Changed
 - Centralizada a resolução do usuário autenticado com `AuthenticatedUserResolver`.
