@@ -29,10 +29,11 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final SecureRandom secureRandom = new SecureRandom();
+    private final AuthenticatedUserResolver authenticatedUserResolver;
 
     @Transactional(readOnly = true)
     public CurrentUserResponse getMe(Authentication authentication) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
         return userMapper.toCurrentUserResponse(user);
     }
 
@@ -41,14 +42,14 @@ public class UserService {
             UpdateMonthlyBaseIncomeRequest request,
             Authentication authentication
     ) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
         user.setMonthlyBaseIncome(request.monthlyBaseIncome());
         userRepository.save(user);
     }
 
     @Transactional
     public TelegramLinkCodeResponse generateTelegramLinkCode(Authentication authentication) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
         String code = TELEGRAM_CODE_PREFIX + generateRandomCode();
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(TELEGRAM_CODE_EXPIRATION_MINUTES);
@@ -95,7 +96,7 @@ public class UserService {
 
     @Transactional
     public void disconnectTelegram(Authentication authentication) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
         user.setTelegramId(null);
         user.setTelegramLinkCode(null);
@@ -104,18 +105,9 @@ public class UserService {
         userRepository.save(user);
     }
 
-    private User getAuthenticatedUser(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
-            throw new IllegalArgumentException("Authenticated user is invalid");
-        }
-
-        return userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new EntityNotFoundException("Authenticated user not found"));
-    }
-
     @Transactional
     public void completeOnboarding(Authentication authentication) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
         user.setOnboardingCompleted(true);
 

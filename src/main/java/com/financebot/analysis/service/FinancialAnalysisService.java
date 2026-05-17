@@ -1,12 +1,8 @@
 package com.financebot.analysis.service;
 
-import com.financebot.account.domain.Account;
-import com.financebot.account.repository.AccountRepository;
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.category.domain.Category;
-import com.financebot.category.domain.CategoryType;
-import com.financebot.category.repository.CategoryRepository;
 import com.financebot.recurring.domain.RecurringTransaction;
 import com.financebot.recurring.repository.RecurringTransactionRepository;
 import com.financebot.transaction.domain.TransactionType;
@@ -14,12 +10,13 @@ import com.financebot.transaction.dto.request.CreateInstallmentTransactionReques
 import com.financebot.transaction.dto.request.CreateTransactionRequest;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.user.domain.User;
-import com.financebot.user.repository.UserRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.financebot.user.service.UserResourceResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.financebot.user.service.AuthenticatedUserResolver;
+import com.financebot.transaction.validation.TransactionCategoryValidator;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -36,21 +33,16 @@ public class FinancialAnalysisService {
     private static final String TOTAL_INSTALLMENTS_INVALID_MESSAGE = "Total installments must be at least 2";
     private static final String INSTALLMENT_ONLY_EXPENSE_MESSAGE =
             "Installment transactions are allowed only for expenses";
-    private static final String CATEGORY_TYPE_MISMATCH_MESSAGE = "Category type does not match transaction type";
-    private static final String ACCOUNT_NOT_FOUND_MESSAGE = "Account not found";
-    private static final String CATEGORY_NOT_FOUND_MESSAGE = "Category not found";
-    private static final String AUTHENTICATED_USER_INVALID_MESSAGE = "Authenticated user is invalid";
-    private static final String AUTHENTICATED_USER_NOT_FOUND_MESSAGE = "Authenticated user not found";
 
     private final TransactionRepository transactionRepository;
     private final RecurringTransactionRepository recurringTransactionRepository;
-    private final UserRepository userRepository;
-    private final AccountRepository accountRepository;
-    private final CategoryRepository categoryRepository;
+    private final UserResourceResolver userResourceResolver;
+    private final AuthenticatedUserResolver authenticatedUserResolver;
+    private final TransactionCategoryValidator transactionCategoryValidator;
 
     @Transactional(readOnly = true)
     public FinancialCommitmentResponse getFinancialCommitment(Authentication authentication) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
         return buildCurrentAnalysis(user);
     }
 
@@ -113,7 +105,7 @@ public class FinancialAnalysisService {
             CreateTransactionRequest request,
             Authentication authentication
     ) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
         validateAccountAndCategoryOwnership(
                 request.accountId(),
@@ -158,7 +150,7 @@ public class FinancialAnalysisService {
             CreateInstallmentTransactionRequest request,
             Authentication authentication
     ) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
         validateInstallmentRequest(request);
 
@@ -232,11 +224,11 @@ public class FinancialAnalysisService {
             Long userId,
             TransactionType transactionType
     ) {
-        getUserAccount(accountId, userId);
+        userResourceResolver.resolveAccount(accountId, userId);
 
-        Category category = getUserCategory(categoryId, userId);
+        Category category = userResourceResolver.resolveCategory(categoryId, userId);
 
-        validateCategoryMatchesTransactionType(category, transactionType);
+        transactionCategoryValidator.validate(category, transactionType);
     }
 
     private BigDecimal calculatePercentage(BigDecimal value, BigDecimal reference) {
@@ -575,37 +567,6 @@ public class FinancialAnalysisService {
                 riskLevel,
                 message
         );
-    }
-
-    private void validateCategoryMatchesTransactionType(Category category, TransactionType transactionType) {
-        boolean isIncomeMatch =
-                category.getType() == CategoryType.INCOME && transactionType == TransactionType.INCOME;
-
-        boolean isExpenseMatch =
-                category.getType() == CategoryType.EXPENSE && transactionType == TransactionType.EXPENSE;
-
-        if (!isIncomeMatch && !isExpenseMatch) {
-            throw new IllegalArgumentException(CATEGORY_TYPE_MISMATCH_MESSAGE);
-        }
-    }
-
-    private Account getUserAccount(Long accountId, Long userId) {
-        return accountRepository.findByIdAndUserId(accountId, userId)
-                .orElseThrow(() -> new EntityNotFoundException(ACCOUNT_NOT_FOUND_MESSAGE));
-    }
-
-    private Category getUserCategory(Long categoryId, Long userId) {
-        return categoryRepository.findByIdAndUserId(categoryId, userId)
-                .orElseThrow(() -> new EntityNotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
-    }
-
-    private User getAuthenticatedUser(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
-            throw new IllegalArgumentException(AUTHENTICATED_USER_INVALID_MESSAGE);
-        }
-
-        return userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new EntityNotFoundException(AUTHENTICATED_USER_NOT_FOUND_MESSAGE));
     }
 
     private record InstallmentPurchaseAnalysisResult(

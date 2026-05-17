@@ -2,16 +2,25 @@
 
 ## [Unreleased]
 
-### Added
-- Adicionado controle de conclusão do onboarding do usuário.
-- Adicionado endpoint `PATCH /users/me/onboarding-completed` para marcar o onboarding como concluído.
+## [1.1.4] - 2026-05-17
 
 ### Changed
-- Padronizada a criação de respostas em mappers para os módulos `auth`, `user` e `recurring`.
-- Reorganizados pacotes de DTOs por domínio, separando objetos de entrada e saída em `request` e `response`.
+- Centralizada a resolução do usuário autenticado com `AuthenticatedUserResolver`.
+- Centralizada a resolução de recursos pertencentes ao usuário com `UserResourceResolver`.
+- Centralizada a validação entre categoria e tipo de transação com `TransactionCategoryValidator`.
+- Extraída a lógica de parcelamento do `TransactionService` para o domínio de transações.
+- Adicionado modelo de domínio para plano de parcelamento com `InstallmentPlan`, `InstallmentPlanItem` e `InstallmentPlanFactory`.
+- Reduzida a responsabilidade do `TransactionService`, mantendo-o mais focado na orquestração do caso de uso.
+- Melhorada a separação entre regras de domínio e lógica de aplicação.
+- Reduzido o acoplamento entre services.
 
 ### Tests
-- Adicionada cobertura de teste para conclusão do onboarding no `UserService`.
+- Adicionados testes para `AuthenticatedUserResolver`.
+- Adicionados testes para `UserResourceResolver`.
+- Adicionados testes para `TransactionCategoryValidator`.
+- Adicionados testes para `InstallmentPlanFactory`.
+- Atualizados testes de `TransactionService`, `RecurringTransactionService` e `FinancialAnalysisService` após extrações de responsabilidades.
+- Mantida a suíte de testes automatizados passando após as refatorações.
 
 ## v1.1.3
 ### Tests
