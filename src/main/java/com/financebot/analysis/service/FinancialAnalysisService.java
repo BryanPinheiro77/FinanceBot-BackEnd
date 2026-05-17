@@ -1,12 +1,10 @@
 package com.financebot.analysis.service;
 
 import com.financebot.account.domain.Account;
-import com.financebot.account.repository.AccountRepository;
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.category.domain.Category;
 import com.financebot.category.domain.CategoryType;
-import com.financebot.category.repository.CategoryRepository;
 import com.financebot.recurring.domain.RecurringTransaction;
 import com.financebot.recurring.repository.RecurringTransactionRepository;
 import com.financebot.transaction.domain.TransactionType;
@@ -14,7 +12,7 @@ import com.financebot.transaction.dto.request.CreateInstallmentTransactionReques
 import com.financebot.transaction.dto.request.CreateTransactionRequest;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.user.domain.User;
-import jakarta.persistence.EntityNotFoundException;
+import com.financebot.user.service.UserResourceResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -37,13 +35,10 @@ public class FinancialAnalysisService {
     private static final String INSTALLMENT_ONLY_EXPENSE_MESSAGE =
             "Installment transactions are allowed only for expenses";
     private static final String CATEGORY_TYPE_MISMATCH_MESSAGE = "Category type does not match transaction type";
-    private static final String ACCOUNT_NOT_FOUND_MESSAGE = "Account not found";
-    private static final String CATEGORY_NOT_FOUND_MESSAGE = "Category not found";
 
     private final TransactionRepository transactionRepository;
     private final RecurringTransactionRepository recurringTransactionRepository;
-    private final AccountRepository accountRepository;
-    private final CategoryRepository categoryRepository;
+    private final UserResourceResolver userResourceResolver;
     private final AuthenticatedUserResolver authenticatedUserResolver;
 
     @Transactional(readOnly = true)
@@ -230,9 +225,9 @@ public class FinancialAnalysisService {
             Long userId,
             TransactionType transactionType
     ) {
-        getUserAccount(accountId, userId);
+        userResourceResolver.resolveAccount(accountId, userId);
 
-        Category category = getUserCategory(categoryId, userId);
+        Category category = userResourceResolver.resolveCategory(categoryId, userId);
 
         validateCategoryMatchesTransactionType(category, transactionType);
     }
@@ -585,16 +580,6 @@ public class FinancialAnalysisService {
         if (!isIncomeMatch && !isExpenseMatch) {
             throw new IllegalArgumentException(CATEGORY_TYPE_MISMATCH_MESSAGE);
         }
-    }
-
-    private Account getUserAccount(Long accountId, Long userId) {
-        return accountRepository.findByIdAndUserId(accountId, userId)
-                .orElseThrow(() -> new EntityNotFoundException(ACCOUNT_NOT_FOUND_MESSAGE));
-    }
-
-    private Category getUserCategory(Long categoryId, Long userId) {
-        return categoryRepository.findByIdAndUserId(categoryId, userId)
-                .orElseThrow(() -> new EntityNotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
     }
 
     private record InstallmentPurchaseAnalysisResult(

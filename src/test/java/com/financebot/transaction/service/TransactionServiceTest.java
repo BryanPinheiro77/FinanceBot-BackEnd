@@ -1,10 +1,8 @@
 package com.financebot.transaction.service;
 
 import com.financebot.account.domain.Account;
-import com.financebot.account.repository.AccountRepository;
 import com.financebot.category.domain.Category;
 import com.financebot.category.domain.CategoryType;
-import com.financebot.category.repository.CategoryRepository;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
@@ -18,6 +16,7 @@ import com.financebot.transaction.mapper.TransactionMapper;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.user.domain.User;
 import com.financebot.user.service.AuthenticatedUserResolver;
+import com.financebot.user.service.UserResourceResolver;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -38,7 +37,6 @@ import org.springframework.security.core.Authentication;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -61,10 +59,7 @@ class TransactionServiceTest {
     private AuthenticatedUserResolver authenticatedUserResolver;
 
     @Mock
-    private AccountRepository accountRepository;
-
-    @Mock
-    private CategoryRepository categoryRepository;
+    private UserResourceResolver userResourceResolver;
 
     @Mock
     private TransactionMapper transactionMapper;
@@ -101,8 +96,8 @@ class TransactionServiceTest {
             TransactionResponse response = mock(TransactionResponse.class);
 
             mockAuthenticatedUser(user);
-            when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.of(category));
+            when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
             when(transactionMapper.toEntity(request)).thenReturn(transaction);
             when(transactionRepository.save(transaction)).thenReturn(savedTransaction);
             when(transactionMapper.toResponse(savedTransaction)).thenReturn(response);
@@ -139,13 +134,15 @@ class TransactionServiceTest {
             );
 
             mockAuthenticatedUser(user);
-            when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.empty());
+            when(userResourceResolver.resolveAccount(10L, 1L))
+                    .thenThrow(new EntityNotFoundException("Account not found"));
 
             assertThatThrownBy(() -> transactionService.create(request, authentication))
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessage("Account not found");
 
-            verifyNoInteractions(categoryRepository, transactionRepository, transactionMapper);
+            verify(userResourceResolver, never()).resolveCategory(any(), any());
+            verifyNoInteractions(transactionRepository, transactionMapper);
         }
 
         @Test
@@ -165,8 +162,9 @@ class TransactionServiceTest {
             );
 
             mockAuthenticatedUser(user);
-            when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.empty());
+            when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(20L, 1L))
+                    .thenThrow(new EntityNotFoundException("Category not found"));
 
             assertThatThrownBy(() -> transactionService.create(request, authentication))
                     .isInstanceOf(EntityNotFoundException.class)
@@ -193,8 +191,8 @@ class TransactionServiceTest {
             );
 
             mockAuthenticatedUser(user);
-            when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.of(category));
+            when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
 
             assertThatThrownBy(() -> transactionService.create(request, authentication))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -258,7 +256,7 @@ class TransactionServiceTest {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Installment transactions are allowed only for expenses");
 
-            verifyNoInteractions(accountRepository, categoryRepository, transactionMapper);
+            verifyNoInteractions(userResourceResolver, transactionMapper);
             verify(transactionRepository, never()).saveAll(anyList());
         }
 
@@ -284,7 +282,7 @@ class TransactionServiceTest {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Total installments must be at least 2");
 
-            verifyNoInteractions(accountRepository, categoryRepository, transactionMapper);
+            verifyNoInteractions(userResourceResolver, transactionMapper);
             verify(transactionRepository, never()).saveAll(anyList());
         }
 
@@ -305,13 +303,15 @@ class TransactionServiceTest {
             );
 
             mockAuthenticatedUser(user);
-            when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.empty());
+            when(userResourceResolver.resolveAccount(10L, 1L))
+                    .thenThrow(new EntityNotFoundException("Account not found"));
 
             assertThatThrownBy(() -> transactionService.createInstallment(request, authentication))
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessage("Account not found");
 
-            verifyNoInteractions(categoryRepository, transactionMapper);
+            verify(userResourceResolver, never()).resolveCategory(any(), any());
+            verifyNoInteractions(transactionMapper);
             verify(transactionRepository, never()).saveAll(anyList());
         }
 
@@ -333,8 +333,9 @@ class TransactionServiceTest {
             );
 
             mockAuthenticatedUser(user);
-            when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.empty());
+            when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(20L, 1L))
+                    .thenThrow(new EntityNotFoundException("Category not found"));
 
             assertThatThrownBy(() -> transactionService.createInstallment(request, authentication))
                     .isInstanceOf(EntityNotFoundException.class)
@@ -363,8 +364,8 @@ class TransactionServiceTest {
             );
 
             mockAuthenticatedUser(user);
-            when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.of(category));
+            when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
 
             assertThatThrownBy(() -> transactionService.createInstallment(request, authentication))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -388,11 +389,11 @@ class TransactionServiceTest {
         TransactionResponse response2 = mock(TransactionResponse.class);
         TransactionResponse response3 = mock(TransactionResponse.class);
 
-        when(accountRepository.findByIdAndUserId(request.accountId(), user.getId()))
-                .thenReturn(Optional.of(account));
+        when(userResourceResolver.resolveAccount(request.accountId(), user.getId()))
+                .thenReturn(account);
 
-        when(categoryRepository.findByIdAndUserId(request.categoryId(), user.getId()))
-                .thenReturn(Optional.of(category));
+        when(userResourceResolver.resolveCategory(request.categoryId(), user.getId()))
+                .thenReturn(category);
 
         when(transactionRepository.saveAll(anyList()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -490,7 +491,7 @@ class TransactionServiceTest {
             TransactionResponse response = mock(TransactionResponse.class);
 
             mockAuthenticatedUser(user);
-            when(transactionRepository.findByIdAndUserId(99L, 1L)).thenReturn(Optional.of(transaction));
+            when(transactionRepository.findByIdAndUserId(99L, 1L)).thenReturn(java.util.Optional.of(transaction));
             when(transactionMapper.toResponse(transaction)).thenReturn(response);
 
             TransactionResponse result = transactionService.findById(99L, authentication);
@@ -505,7 +506,7 @@ class TransactionServiceTest {
             User user = buildUser(1L, "bryan@email.com");
 
             mockAuthenticatedUser(user);
-            when(transactionRepository.findByIdAndUserId(99L, 1L)).thenReturn(Optional.empty());
+            when(transactionRepository.findByIdAndUserId(99L, 1L)).thenReturn(java.util.Optional.empty());
 
             assertThatThrownBy(() -> transactionService.findById(99L, authentication))
                     .isInstanceOf(EntityNotFoundException.class)
@@ -539,9 +540,9 @@ class TransactionServiceTest {
             );
 
             mockAuthenticatedUser(user);
-            when(transactionRepository.findByIdAndUserId(77L, 1L)).thenReturn(Optional.of(transaction));
-            when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.of(category));
+            when(transactionRepository.findByIdAndUserId(77L, 1L)).thenReturn(java.util.Optional.of(transaction));
+            when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
             when(transactionRepository.save(transaction)).thenReturn(transaction);
             when(transactionMapper.toResponse(transaction)).thenReturn(response);
 
@@ -572,13 +573,13 @@ class TransactionServiceTest {
             );
 
             mockAuthenticatedUser(user);
-            when(transactionRepository.findByIdAndUserId(77L, 1L)).thenReturn(Optional.empty());
+            when(transactionRepository.findByIdAndUserId(77L, 1L)).thenReturn(java.util.Optional.empty());
 
             assertThatThrownBy(() -> transactionService.update(77L, request, authentication))
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessage("Transaction not found");
 
-            verifyNoInteractions(accountRepository, categoryRepository, transactionMapper);
+            verifyNoInteractions(userResourceResolver, transactionMapper);
         }
 
         @Test
@@ -598,14 +599,15 @@ class TransactionServiceTest {
             );
 
             mockAuthenticatedUser(user);
-            when(transactionRepository.findByIdAndUserId(77L, 1L)).thenReturn(Optional.of(transaction));
-            when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.empty());
+            when(transactionRepository.findByIdAndUserId(77L, 1L)).thenReturn(java.util.Optional.of(transaction));
+            when(userResourceResolver.resolveAccount(10L, 1L))
+                    .thenThrow(new EntityNotFoundException("Account not found"));
 
             assertThatThrownBy(() -> transactionService.update(77L, request, authentication))
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessage("Account not found");
 
-            verifyNoInteractions(categoryRepository);
+            verify(userResourceResolver, never()).resolveCategory(any(), any());
             verify(transactionMapper, never()).updateEntity(any(), any());
             verify(transactionRepository, never()).save(any());
         }
@@ -628,9 +630,10 @@ class TransactionServiceTest {
             );
 
             mockAuthenticatedUser(user);
-            when(transactionRepository.findByIdAndUserId(77L, 1L)).thenReturn(Optional.of(transaction));
-            when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.empty());
+            when(transactionRepository.findByIdAndUserId(77L, 1L)).thenReturn(java.util.Optional.of(transaction));
+            when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(20L, 1L))
+                    .thenThrow(new EntityNotFoundException("Category not found"));
 
             assertThatThrownBy(() -> transactionService.update(77L, request, authentication))
                     .isInstanceOf(EntityNotFoundException.class)
@@ -659,9 +662,9 @@ class TransactionServiceTest {
             );
 
             mockAuthenticatedUser(user);
-            when(transactionRepository.findByIdAndUserId(77L, 1L)).thenReturn(Optional.of(transaction));
-            when(accountRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.of(category));
+            when(transactionRepository.findByIdAndUserId(77L, 1L)).thenReturn(java.util.Optional.of(transaction));
+            when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
 
             assertThatThrownBy(() -> transactionService.update(77L, request, authentication))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -683,7 +686,7 @@ class TransactionServiceTest {
             Transaction transaction = new Transaction();
 
             mockAuthenticatedUser(user);
-            when(transactionRepository.findByIdAndUserId(55L, 1L)).thenReturn(Optional.of(transaction));
+            when(transactionRepository.findByIdAndUserId(55L, 1L)).thenReturn(java.util.Optional.of(transaction));
 
             transactionService.delete(55L, authentication);
 
@@ -696,7 +699,7 @@ class TransactionServiceTest {
             User user = buildUser(1L, "bryan@email.com");
 
             mockAuthenticatedUser(user);
-            when(transactionRepository.findByIdAndUserId(55L, 1L)).thenReturn(Optional.empty());
+            when(transactionRepository.findByIdAndUserId(55L, 1L)).thenReturn(java.util.Optional.empty());
 
             assertThatThrownBy(() -> transactionService.delete(55L, authentication))
                     .isInstanceOf(EntityNotFoundException.class)
@@ -733,8 +736,8 @@ class TransactionServiceTest {
             TransactionResponse response3
     ) {
         mockAuthenticatedUser(user);
-        when(accountRepository.findByIdAndUserId(request.accountId(), user.getId())).thenReturn(Optional.of(account));
-        when(categoryRepository.findByIdAndUserId(request.categoryId(), user.getId())).thenReturn(Optional.of(category));
+        when(userResourceResolver.resolveAccount(request.accountId(), user.getId())).thenReturn(account);
+        when(userResourceResolver.resolveCategory(request.categoryId(), user.getId())).thenReturn(category);
         when(transactionRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
         when(transactionMapper.toResponse(any(Transaction.class)))

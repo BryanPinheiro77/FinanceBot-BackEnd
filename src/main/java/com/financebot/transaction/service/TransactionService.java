@@ -1,10 +1,8 @@
 package com.financebot.transaction.service;
 
 import com.financebot.account.domain.Account;
-import com.financebot.account.repository.AccountRepository;
 import com.financebot.category.domain.Category;
 import com.financebot.category.domain.CategoryType;
-import com.financebot.category.repository.CategoryRepository;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
 import com.financebot.transaction.dto.TransactionFilter;
@@ -17,6 +15,7 @@ import com.financebot.transaction.mapper.TransactionMapper;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.transaction.specification.TransactionSpecification;
 import com.financebot.user.domain.User;
+import com.financebot.user.service.UserResourceResolver;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -38,8 +37,6 @@ import java.util.UUID;
 public class TransactionService {
 
     private static final String TRANSACTION_NOT_FOUND_MESSAGE = "Transaction not found";
-    private static final String ACCOUNT_NOT_FOUND_MESSAGE = "Account not found";
-    private static final String CATEGORY_NOT_FOUND_MESSAGE = "Category not found";
     private static final String INSTALLMENT_ONLY_EXPENSE_MESSAGE =
             "Installment transactions are allowed only for expenses";
     private static final String TOTAL_INSTALLMENTS_MINIMUM_MESSAGE = "Total installments must be at least 2";
@@ -47,8 +44,7 @@ public class TransactionService {
     private static final String INVALID_PERIOD_MESSAGE = "Start date cannot be after end date";
 
     private final TransactionRepository transactionRepository;
-    private final AccountRepository accountRepository;
-    private final CategoryRepository categoryRepository;
+    private final UserResourceResolver userResourceResolver;
     private final TransactionMapper transactionMapper;
     private final AuthenticatedUserResolver authenticatedUserResolver;
 
@@ -56,8 +52,8 @@ public class TransactionService {
     public TransactionResponse create(CreateTransactionRequest request, Authentication authentication) {
         User user = authenticatedUserResolver.resolve(authentication);
 
-        Account account = getUserAccount(request.accountId(), user.getId());
-        Category category = getUserCategory(request.categoryId(), user.getId());
+        Account account = userResourceResolver.resolveAccount(request.accountId(), user.getId());
+        Category category = userResourceResolver.resolveCategory(request.categoryId(), user.getId());
 
         validateCategoryMatchesTransactionType(category, request.type());
 
@@ -98,8 +94,8 @@ public class TransactionService {
     ) {
         validateInstallmentRequest(request);
 
-        Account account = getUserAccount(request.accountId(), user.getId());
-        Category category = getUserCategory(request.categoryId(), user.getId());
+        Account account = userResourceResolver.resolveAccount(request.accountId(), user.getId());
+        Category category = userResourceResolver.resolveCategory(request.categoryId(), user.getId());
 
         validateCategoryMatchesTransactionType(category, request.type());
 
@@ -188,8 +184,8 @@ public class TransactionService {
         User user = authenticatedUserResolver.resolve(authentication);
 
         Transaction transaction = getUserTransaction(id, user.getId());
-        Account account = getUserAccount(request.accountId(), user.getId());
-        Category category = getUserCategory(request.categoryId(), user.getId());
+        Account account = userResourceResolver.resolveAccount(request.accountId(), user.getId());
+        Category category = userResourceResolver.resolveCategory(request.categoryId(), user.getId());
 
         validateCategoryMatchesTransactionType(category, request.type());
 
@@ -282,16 +278,6 @@ public class TransactionService {
     private Transaction getUserTransaction(Long transactionId, Long userId) {
         return transactionRepository.findByIdAndUserId(transactionId, userId)
                 .orElseThrow(() -> new EntityNotFoundException(TRANSACTION_NOT_FOUND_MESSAGE));
-    }
-
-    private Account getUserAccount(Long accountId, Long userId) {
-        return accountRepository.findByIdAndUserId(accountId, userId)
-                .orElseThrow(() -> new EntityNotFoundException(ACCOUNT_NOT_FOUND_MESSAGE));
-    }
-
-    private Category getUserCategory(Long categoryId, Long userId) {
-        return categoryRepository.findByIdAndUserId(categoryId, userId)
-                .orElseThrow(() -> new EntityNotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
     }
 
     private record InstallmentTransactionContext(

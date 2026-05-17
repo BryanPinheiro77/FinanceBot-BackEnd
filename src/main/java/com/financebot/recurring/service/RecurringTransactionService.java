@@ -1,10 +1,8 @@
 package com.financebot.recurring.service;
 
 import com.financebot.account.domain.Account;
-import com.financebot.account.repository.AccountRepository;
 import com.financebot.category.domain.Category;
 import com.financebot.category.domain.CategoryType;
-import com.financebot.category.repository.CategoryRepository;
 import com.financebot.recurring.domain.RecurringTransaction;
 import com.financebot.recurring.dto.request.CreateRecurringTransactionRequest;
 import com.financebot.recurring.dto.request.UpdateRecurringTransactionRequest;
@@ -13,6 +11,7 @@ import com.financebot.recurring.mapper.RecurringTransactionMapper;
 import com.financebot.recurring.repository.RecurringTransactionRepository;
 import com.financebot.transaction.domain.TransactionType;
 import com.financebot.user.domain.User;
+import com.financebot.user.service.UserResourceResolver;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -27,8 +26,7 @@ import java.util.List;
 public class RecurringTransactionService {
 
     private final RecurringTransactionRepository recurringTransactionRepository;
-    private final AccountRepository accountRepository;
-    private final CategoryRepository categoryRepository;
+    private final UserResourceResolver userResourceResolver;
     private final RecurringTransactionMapper recurringTransactionMapper;
     private final AuthenticatedUserResolver authenticatedUserResolver;
 
@@ -38,8 +36,8 @@ public class RecurringTransactionService {
             Authentication authentication
     ) {
         User user = authenticatedUserResolver.resolve(authentication);
-        Account account = getUserAccount(request.accountId(), user.getId());
-        Category category = getUserCategory(request.categoryId(), user.getId());
+        Account account = userResourceResolver.resolveAccount(request.accountId(), user.getId());
+        Category category = userResourceResolver.resolveCategory(request.categoryId(), user.getId());
 
         validateCategoryMatchesTransactionType(category, request.type());
 
@@ -90,8 +88,8 @@ public class RecurringTransactionService {
         User user = authenticatedUserResolver.resolve(authentication);
         RecurringTransaction recurringTransaction = getUserRecurringTransaction(id, user.getId());
 
-        Account account = getUserAccount(request.accountId(), user.getId());
-        Category category = getUserCategory(request.categoryId(), user.getId());
+        Account account = userResourceResolver.resolveAccount(request.accountId(), user.getId());
+        Category category = userResourceResolver.resolveCategory(request.categoryId(), user.getId());
 
         validateCategoryMatchesTransactionType(category, request.type());
 
@@ -154,16 +152,6 @@ public class RecurringTransactionService {
     private RecurringTransaction getUserRecurringTransaction(Long id, Long userId) {
         return recurringTransactionRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new EntityNotFoundException("Recurring transaction not found"));
-    }
-
-    private Account getUserAccount(Long accountId, Long userId) {
-        return accountRepository.findByIdAndUserId(accountId, userId)
-                .orElseThrow(() -> new EntityNotFoundException("Account not found"));
-    }
-
-    private Category getUserCategory(Long categoryId, Long userId) {
-        return categoryRepository.findByIdAndUserId(categoryId, userId)
-                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
     }
 
     private void validateCategoryMatchesTransactionType(Category category, TransactionType transactionType) {

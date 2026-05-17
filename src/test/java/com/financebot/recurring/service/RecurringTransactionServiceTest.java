@@ -2,10 +2,8 @@ package com.financebot.recurring.service;
 
 import com.financebot.account.domain.Account;
 import com.financebot.account.domain.AccountType;
-import com.financebot.account.repository.AccountRepository;
 import com.financebot.category.domain.Category;
 import com.financebot.category.domain.CategoryType;
-import com.financebot.category.repository.CategoryRepository;
 import com.financebot.recurring.domain.RecurrenceFrequency;
 import com.financebot.recurring.domain.RecurringTransaction;
 import com.financebot.recurring.dto.request.CreateRecurringTransactionRequest;
@@ -17,6 +15,7 @@ import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.TransactionType;
 import com.financebot.user.domain.User;
 import com.financebot.user.service.AuthenticatedUserResolver;
+import com.financebot.user.service.UserResourceResolver;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -32,7 +31,6 @@ import org.springframework.security.core.Authentication;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -59,10 +57,7 @@ class RecurringTransactionServiceTest {
     private AuthenticatedUserResolver authenticatedUserResolver;
 
     @Mock
-    private AccountRepository accountRepository;
-
-    @Mock
-    private CategoryRepository categoryRepository;
+    private UserResourceResolver userResourceResolver;
 
     @Mock
     private Authentication authentication;
@@ -84,10 +79,8 @@ class RecurringTransactionServiceTest {
             CreateRecurringTransactionRequest request = buildCreateRequest();
 
             mockAuthenticatedUser(user);
-            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID))
-                    .thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(CATEGORY_ID, USER_ID))
-                    .thenReturn(Optional.of(category));
+            when(userResourceResolver.resolveAccount(ACCOUNT_ID, USER_ID)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(CATEGORY_ID, USER_ID)).thenReturn(category);
             when(recurringTransactionRepository.save(any(RecurringTransaction.class)))
                     .thenAnswer(invocation -> {
                         RecurringTransaction recurringTransaction = invocation.getArgument(0);
@@ -149,10 +142,8 @@ class RecurringTransactionServiceTest {
             );
 
             mockAuthenticatedUser(user);
-            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID))
-                    .thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(CATEGORY_ID, USER_ID))
-                    .thenReturn(Optional.of(category));
+            when(userResourceResolver.resolveAccount(ACCOUNT_ID, USER_ID)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(CATEGORY_ID, USER_ID)).thenReturn(category);
             when(recurringTransactionRepository.save(any(RecurringTransaction.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -171,10 +162,8 @@ class RecurringTransactionServiceTest {
             CreateRecurringTransactionRequest request = buildCreateRequest();
 
             mockAuthenticatedUser(user);
-            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID))
-                    .thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(CATEGORY_ID, USER_ID))
-                    .thenReturn(Optional.of(category));
+            when(userResourceResolver.resolveAccount(ACCOUNT_ID, USER_ID)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(CATEGORY_ID, USER_ID)).thenReturn(category);
 
             assertThatThrownBy(() -> recurringTransactionService.create(request, authentication))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -191,14 +180,14 @@ class RecurringTransactionServiceTest {
             CreateRecurringTransactionRequest request = buildCreateRequest();
 
             mockAuthenticatedUser(user);
-            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID))
-                    .thenReturn(Optional.empty());
+            when(userResourceResolver.resolveAccount(ACCOUNT_ID, USER_ID))
+                    .thenThrow(new EntityNotFoundException("Account not found"));
 
             assertThatThrownBy(() -> recurringTransactionService.create(request, authentication))
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessage("Account not found");
 
-            verify(categoryRepository, never()).findByIdAndUserId(any(), any());
+            verify(userResourceResolver, never()).resolveCategory(any(), any());
             verify(recurringTransactionRepository, never()).save(any(RecurringTransaction.class));
         }
 
@@ -211,10 +200,9 @@ class RecurringTransactionServiceTest {
             CreateRecurringTransactionRequest request = buildCreateRequest();
 
             mockAuthenticatedUser(user);
-            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID))
-                    .thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(CATEGORY_ID, USER_ID))
-                    .thenReturn(Optional.empty());
+            when(userResourceResolver.resolveAccount(ACCOUNT_ID, USER_ID)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(CATEGORY_ID, USER_ID))
+                    .thenThrow(new EntityNotFoundException("Category not found"));
 
             assertThatThrownBy(() -> recurringTransactionService.create(request, authentication))
                     .isInstanceOf(EntityNotFoundException.class)
@@ -243,10 +231,8 @@ class RecurringTransactionServiceTest {
             );
 
             mockAuthenticatedUser(user);
-            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID))
-                    .thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(CATEGORY_ID, USER_ID))
-                    .thenReturn(Optional.of(category));
+            when(userResourceResolver.resolveAccount(ACCOUNT_ID, USER_ID)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(CATEGORY_ID, USER_ID)).thenReturn(category);
 
             assertThatThrownBy(() -> recurringTransactionService.create(request, authentication))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -310,7 +296,7 @@ class RecurringTransactionServiceTest {
 
             mockAuthenticatedUser(user);
             when(recurringTransactionRepository.findByIdAndUserId(RECURRING_TRANSACTION_ID, USER_ID))
-                    .thenReturn(Optional.of(recurringTransaction));
+                    .thenReturn(java.util.Optional.of(recurringTransaction));
 
             RecurringTransactionResponse response = recurringTransactionService.findById(
                     RECURRING_TRANSACTION_ID,
@@ -330,7 +316,7 @@ class RecurringTransactionServiceTest {
 
             mockAuthenticatedUser(user);
             when(recurringTransactionRepository.findByIdAndUserId(RECURRING_TRANSACTION_ID, USER_ID))
-                    .thenReturn(Optional.empty());
+                    .thenReturn(java.util.Optional.empty());
 
             assertThatThrownBy(() -> recurringTransactionService.findById(RECURRING_TRANSACTION_ID, authentication))
                     .isInstanceOf(EntityNotFoundException.class)
@@ -364,11 +350,9 @@ class RecurringTransactionServiceTest {
 
             mockAuthenticatedUser(user);
             when(recurringTransactionRepository.findByIdAndUserId(RECURRING_TRANSACTION_ID, USER_ID))
-                    .thenReturn(Optional.of(recurringTransaction));
-            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID))
-                    .thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(CATEGORY_ID, USER_ID))
-                    .thenReturn(Optional.of(category));
+                    .thenReturn(java.util.Optional.of(recurringTransaction));
+            when(userResourceResolver.resolveAccount(ACCOUNT_ID, USER_ID)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(CATEGORY_ID, USER_ID)).thenReturn(category);
             when(recurringTransactionRepository.save(recurringTransaction))
                     .thenReturn(recurringTransaction);
 
@@ -409,11 +393,9 @@ class RecurringTransactionServiceTest {
 
             mockAuthenticatedUser(user);
             when(recurringTransactionRepository.findByIdAndUserId(RECURRING_TRANSACTION_ID, USER_ID))
-                    .thenReturn(Optional.of(recurringTransaction));
-            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID))
-                    .thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(CATEGORY_ID, USER_ID))
-                    .thenReturn(Optional.of(category));
+                    .thenReturn(java.util.Optional.of(recurringTransaction));
+            when(userResourceResolver.resolveAccount(ACCOUNT_ID, USER_ID)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(CATEGORY_ID, USER_ID)).thenReturn(category);
             when(recurringTransactionRepository.save(recurringTransaction))
                     .thenReturn(recurringTransaction);
 
@@ -447,11 +429,9 @@ class RecurringTransactionServiceTest {
 
             mockAuthenticatedUser(user);
             when(recurringTransactionRepository.findByIdAndUserId(RECURRING_TRANSACTION_ID, USER_ID))
-                    .thenReturn(Optional.of(recurringTransaction));
-            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID))
-                    .thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(CATEGORY_ID, USER_ID))
-                    .thenReturn(Optional.of(category));
+                    .thenReturn(java.util.Optional.of(recurringTransaction));
+            when(userResourceResolver.resolveAccount(ACCOUNT_ID, USER_ID)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(CATEGORY_ID, USER_ID)).thenReturn(category);
 
             assertThatThrownBy(() -> recurringTransactionService.update(RECURRING_TRANSACTION_ID, request, authentication))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -489,11 +469,9 @@ class RecurringTransactionServiceTest {
 
             mockAuthenticatedUser(user);
             when(recurringTransactionRepository.findByIdAndUserId(RECURRING_TRANSACTION_ID, USER_ID))
-                    .thenReturn(Optional.of(recurringTransaction));
-            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID))
-                    .thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(CATEGORY_ID, USER_ID))
-                    .thenReturn(Optional.of(category));
+                    .thenReturn(java.util.Optional.of(recurringTransaction));
+            when(userResourceResolver.resolveAccount(ACCOUNT_ID, USER_ID)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(CATEGORY_ID, USER_ID)).thenReturn(category);
 
             assertThatThrownBy(() -> recurringTransactionService.update(RECURRING_TRANSACTION_ID, request, authentication))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -532,11 +510,9 @@ class RecurringTransactionServiceTest {
 
             mockAuthenticatedUser(user);
             when(recurringTransactionRepository.findByIdAndUserId(RECURRING_TRANSACTION_ID, USER_ID))
-                    .thenReturn(Optional.of(recurringTransaction));
-            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID))
-                    .thenReturn(Optional.of(account));
-            when(categoryRepository.findByIdAndUserId(CATEGORY_ID, USER_ID))
-                    .thenReturn(Optional.of(category));
+                    .thenReturn(java.util.Optional.of(recurringTransaction));
+            when(userResourceResolver.resolveAccount(ACCOUNT_ID, USER_ID)).thenReturn(account);
+            when(userResourceResolver.resolveCategory(CATEGORY_ID, USER_ID)).thenReturn(category);
             when(recurringTransactionRepository.save(recurringTransaction))
                     .thenReturn(recurringTransaction);
 
@@ -570,7 +546,7 @@ class RecurringTransactionServiceTest {
 
             mockAuthenticatedUser(user);
             when(recurringTransactionRepository.findByIdAndUserId(RECURRING_TRANSACTION_ID, USER_ID))
-                    .thenReturn(Optional.of(recurringTransaction));
+                    .thenReturn(java.util.Optional.of(recurringTransaction));
 
             recurringTransactionService.delete(RECURRING_TRANSACTION_ID, authentication);
 
@@ -597,7 +573,7 @@ class RecurringTransactionServiceTest {
 
             mockAuthenticatedUser(user);
             when(recurringTransactionRepository.findByIdAndUserId(RECURRING_TRANSACTION_ID, USER_ID))
-                    .thenReturn(Optional.of(recurringTransaction));
+                    .thenReturn(java.util.Optional.of(recurringTransaction));
             when(recurringTransactionRepository.save(recurringTransaction))
                     .thenReturn(recurringTransaction);
 
@@ -625,7 +601,7 @@ class RecurringTransactionServiceTest {
 
             mockAuthenticatedUser(user);
             when(recurringTransactionRepository.findByIdAndUserId(RECURRING_TRANSACTION_ID, USER_ID))
-                    .thenReturn(Optional.of(recurringTransaction));
+                    .thenReturn(java.util.Optional.of(recurringTransaction));
             when(recurringTransactionRepository.save(recurringTransaction))
                     .thenReturn(recurringTransaction);
 
@@ -657,7 +633,7 @@ class RecurringTransactionServiceTest {
 
             mockAuthenticatedUser(user);
             when(recurringTransactionRepository.findByIdAndUserId(RECURRING_TRANSACTION_ID, USER_ID))
-                    .thenReturn(Optional.of(recurringTransaction));
+                    .thenReturn(java.util.Optional.of(recurringTransaction));
             when(recurringTransactionRepository.save(recurringTransaction))
                     .thenReturn(recurringTransaction);
 

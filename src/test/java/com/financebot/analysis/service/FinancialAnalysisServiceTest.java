@@ -1,13 +1,12 @@
 package com.financebot.analysis.service;
 
-import com.financebot.account.repository.AccountRepository;
 import com.financebot.analysis.dto.response.InstallmentPurchaseCapacityResponse;
-import com.financebot.category.repository.CategoryRepository;
 import com.financebot.recurring.domain.RecurringTransaction;
 import com.financebot.recurring.repository.RecurringTransactionRepository;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.user.domain.User;
-import com.financebot.user.repository.UserRepository;
+import com.financebot.user.service.AuthenticatedUserResolver;
+import com.financebot.user.service.UserResourceResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,13 +34,10 @@ class FinancialAnalysisServiceTest {
     private RecurringTransactionRepository recurringTransactionRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private AuthenticatedUserResolver authenticatedUserResolver;
 
     @Mock
-    private AccountRepository accountRepository;
-
-    @Mock
-    private CategoryRepository categoryRepository;
+    private UserResourceResolver userResourceResolver;
 
     @InjectMocks
     private FinancialAnalysisService financialAnalysisService;
@@ -120,12 +116,14 @@ class FinancialAnalysisServiceTest {
     @DisplayName("deve classificar como desfavoravel quando nao houver renda de referencia")
     void shouldClassifyAsDesfavoravelWhenIncomeReferenceIsZero() {
         user.setMonthlyBaseIncome(BigDecimal.ZERO);
+
         mockCurrentAnalysisData(
                 BigDecimal.ZERO,
                 new BigDecimal("500"),
                 1L,
                 List.of()
         );
+
         when(transactionRepository.sumIncomeBetweenDatesByUser(eq(1L), any(), any()))
                 .thenReturn(BigDecimal.ZERO);
 
@@ -185,7 +183,8 @@ class FinancialAnalysisServiceTest {
                 user,
                 BigDecimal.ZERO,
                 12
-        )).isInstanceOf(IllegalArgumentException.class)
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Total amount must be greater than zero");
     }
 
@@ -198,7 +197,8 @@ class FinancialAnalysisServiceTest {
                 user,
                 totalAmount,
                 1
-        )).isInstanceOf(IllegalArgumentException.class)
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Total installments must be at least 2");
     }
 
@@ -210,10 +210,13 @@ class FinancialAnalysisServiceTest {
     ) {
         when(transactionRepository.sumFutureInstallmentsByUser(eq(1L), any()))
                 .thenReturn(futureInstallments);
+
         when(transactionRepository.sumProjectedExpensesBetweenDatesByUser(eq(1L), any(), any()))
                 .thenReturn(projectedExpensesNextMonth);
+
         when(transactionRepository.countDistinctActiveInstallmentGroupsByUser(eq(1L), any()))
                 .thenReturn(activeInstallmentCount);
+
         when(recurringTransactionRepository.findAllByUserIdAndActiveTrue(1L))
                 .thenReturn(recurringTransactions);
     }
