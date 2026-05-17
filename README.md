@@ -19,7 +19,7 @@ Em vez de depender apenas de formulários tradicionais, o projeto permite regist
 
 O repositório é dividido em dois módulos principais:
 
-- **financebot-api**: backend REST com regras de negócio, autenticação, persistência e endpoints da aplicação
+- **financebot-backend**: backend REST com regras de negócio, autenticação, persistência e endpoints da aplicação
 - **financebot-telegram-bot**: módulo responsável pela interação com o usuário no Telegram e consumo da API
 
 ---
@@ -130,57 +130,103 @@ O projeto está evoluindo para reduzir acoplamento entre domínio, aplicação, 
 - Docker / Docker Compose
 - token de bot do Telegram
 
-### Subindo a infraestrutura
+### Variáveis de ambiente da API
+Crie um arquivo `.env` na raiz do projeto ou exporte as variáveis no terminal:
+
+```env
+DB_URL=jdbc:postgresql://localhost:5432/financebot
+DB_USER=postgres
+DB_PASSWORD=sua-senha
+
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+RABBITMQ_HOST=localhost
+RABBITMQ_PORT=5672
+RABBITMQ_USER=guest
+RABBITMQ_PASSWORD=sua-senha
+
+JWT_SECRET=sua_chave_secreta
+JWT_EXPIRATION=86400000
+
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+```
+
+### Subindo a API com Docker
 ```bash
-docker compose up -d
+docker compose -f compose.local.yml up -d --build
 ```
 
-Serviços disponíveis:
-- PostgreSQL em `localhost:5432`
-- RabbitMQ em `localhost:5672` e painel em `localhost:15672`
-- Redis em `localhost:6379`
+Esse compose sobe a aplicação `financebot-backend` na porta `8080`.
 
-### Configuração da API
-Crie, se necessário:
+> O PostgreSQL, Redis e RabbitMQ precisam estar disponíveis no ambiente local ou em containers próprios apontados pelas variáveis acima.
 
-```properties
-src/main/resources/application-secret.properties
-```
+### Subindo a API sem Docker
+Com PostgreSQL, Redis e RabbitMQ já disponíveis:
 
-A API aceita por padrão a origem local:
-
-```properties
-app.cors.allowed-origins=http://localhost:5173
-```
-
-### Subindo a API
 ```bash
 ./mvnw spring-boot:run
 ```
 
-### Configuração do bot
-Defina a variável:
+### Variáveis de ambiente do bot
+Crie um arquivo `.env` em `financebot-telegram-bot/` ou exporte as variáveis no terminal:
 
-```bash
-export TELEGRAM_BOT_TOKEN=seu_token_aqui
+```env
+TELEGRAM_BOT_TOKEN=seu_token_aqui
+FINANCEBOT_API_URL=http://localhost:8080
 ```
 
-Se necessário, ajuste:
-
-```properties
-financebot-telegram-bot/src/main/resources/application.properties
-```
-
-Principalmente:
-
-```properties
-financebot.api.base-url=http://localhost:8080
-```
-
-### Subindo o bot
+### Subindo o bot com Docker
 ```bash
 cd financebot-telegram-bot
-../mvnw spring-boot:run
+docker compose -f compose.local.yml up -d --build
+```
+
+O bot fica disponível na porta `8081` e consome a API configurada em `FINANCEBOT_API_URL`.
+
+### Subindo o bot sem Docker
+
+```bash
+cd financebot-telegram-bot
+./mvnw spring-boot:run
+```
+
+### Serviços úteis
+
+- API: `http://localhost:8080`
+- Health check da API: `http://localhost:8080/api/health`
+- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- Bot: `http://localhost:8081`
+
+---
+
+## Deploy
+
+O deploy automatizado está configurado via GitHub Actions em `.github/workflows/deploy.yml`.
+
+O fluxo atual executa em push para a branch `main`, usando um runner `self-hosted`:
+
+```bash
+docker compose -f compose.prod.yml up -d --build
+```
+
+O backend e o bot são implantados separadamente:
+
+- backend: raiz do repositório, usando `compose.prod.yml`
+- bot: diretório `financebot-telegram-bot`, usando `compose.prod.yml`
+
+### Requisitos do ambiente de produção
+
+- runner self-hosted com acesso ao repositório
+- Docker e Docker Compose instalados
+- rede Docker externa `backend-network` criada previamente
+- arquivos `.env` configurados na raiz do projeto e em `financebot-telegram-bot/`
+- PostgreSQL, Redis e RabbitMQ acessíveis pelas variáveis de ambiente
+
+Exemplo de criação da rede externa:
+
+```bash
+docker network create backend-network
 ```
 
 ---
