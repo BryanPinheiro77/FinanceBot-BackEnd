@@ -2,7 +2,6 @@ package com.financebot.transaction.service;
 
 import com.financebot.account.domain.Account;
 import com.financebot.category.domain.Category;
-import com.financebot.category.domain.CategoryType;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
 import com.financebot.transaction.dto.TransactionFilter;
@@ -24,6 +23,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.financebot.user.service.AuthenticatedUserResolver;
+import com.financebot.transaction.validation.TransactionCategoryValidator;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -40,13 +40,13 @@ public class TransactionService {
     private static final String INSTALLMENT_ONLY_EXPENSE_MESSAGE =
             "Installment transactions are allowed only for expenses";
     private static final String TOTAL_INSTALLMENTS_MINIMUM_MESSAGE = "Total installments must be at least 2";
-    private static final String CATEGORY_TYPE_MISMATCH_MESSAGE = "Category type does not match transaction type";
     private static final String INVALID_PERIOD_MESSAGE = "Start date cannot be after end date";
 
     private final TransactionRepository transactionRepository;
     private final UserResourceResolver userResourceResolver;
     private final TransactionMapper transactionMapper;
     private final AuthenticatedUserResolver authenticatedUserResolver;
+    private final TransactionCategoryValidator transactionCategoryValidator;
 
     @Transactional
     public TransactionResponse create(CreateTransactionRequest request, Authentication authentication) {
@@ -55,7 +55,7 @@ public class TransactionService {
         Account account = userResourceResolver.resolveAccount(request.accountId(), user.getId());
         Category category = userResourceResolver.resolveCategory(request.categoryId(), user.getId());
 
-        validateCategoryMatchesTransactionType(category, request.type());
+        transactionCategoryValidator.validate(category, request.type());
 
         Transaction transaction = transactionMapper.toEntity(request);
         transaction.setUser(user);
@@ -97,7 +97,7 @@ public class TransactionService {
         Account account = userResourceResolver.resolveAccount(request.accountId(), user.getId());
         Category category = userResourceResolver.resolveCategory(request.categoryId(), user.getId());
 
-        validateCategoryMatchesTransactionType(category, request.type());
+        transactionCategoryValidator.validate(category, request.type());
 
         String installmentGroupId = UUID.randomUUID().toString();
         int totalInstallments = request.totalInstallments();
@@ -187,7 +187,7 @@ public class TransactionService {
         Account account = userResourceResolver.resolveAccount(request.accountId(), user.getId());
         Category category = userResourceResolver.resolveCategory(request.categoryId(), user.getId());
 
-        validateCategoryMatchesTransactionType(category, request.type());
+        transactionCategoryValidator.validate(category, request.type());
 
         transactionMapper.updateEntity(request, transaction);
         transaction.setAccount(account);
@@ -255,18 +255,6 @@ public class TransactionService {
         transaction.setInstallmentGroupId(context.installmentGroupId());
 
         return transaction;
-    }
-
-    private void validateCategoryMatchesTransactionType(Category category, TransactionType transactionType) {
-        boolean isIncomeMatch =
-                category.getType() == CategoryType.INCOME && transactionType == TransactionType.INCOME;
-
-        boolean isExpenseMatch =
-                category.getType() == CategoryType.EXPENSE && transactionType == TransactionType.EXPENSE;
-
-        if (!isIncomeMatch && !isExpenseMatch) {
-            throw new IllegalArgumentException(CATEGORY_TYPE_MISMATCH_MESSAGE);
-        }
     }
 
     private void validatePeriod(LocalDate startDate, LocalDate endDate) {

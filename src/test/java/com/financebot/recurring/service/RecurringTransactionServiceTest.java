@@ -13,6 +13,7 @@ import com.financebot.recurring.mapper.RecurringTransactionMapper;
 import com.financebot.recurring.repository.RecurringTransactionRepository;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.TransactionType;
+import com.financebot.transaction.validation.TransactionCategoryValidator;
 import com.financebot.user.domain.User;
 import com.financebot.user.service.AuthenticatedUserResolver;
 import com.financebot.user.service.UserResourceResolver;
@@ -35,8 +36,10 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -58,6 +61,9 @@ class RecurringTransactionServiceTest {
 
     @Mock
     private UserResourceResolver userResourceResolver;
+
+    @Mock
+    private TransactionCategoryValidator transactionCategoryValidator;
 
     @Mock
     private Authentication authentication;
@@ -120,6 +126,8 @@ class RecurringTransactionServiceTest {
             assertThat(saved.getUser()).isEqualTo(user);
             assertThat(saved.getAccount()).isEqualTo(account);
             assertThat(saved.getCategory()).isEqualTo(category);
+
+            verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
         }
 
         @Test
@@ -150,6 +158,8 @@ class RecurringTransactionServiceTest {
             RecurringTransactionResponse response = recurringTransactionService.create(request, authentication);
 
             assertThat(response.description()).isEqualTo("Academia");
+
+            verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
         }
 
         @Test
@@ -164,6 +174,10 @@ class RecurringTransactionServiceTest {
             mockAuthenticatedUser(user);
             when(userResourceResolver.resolveAccount(ACCOUNT_ID, USER_ID)).thenReturn(account);
             when(userResourceResolver.resolveCategory(CATEGORY_ID, USER_ID)).thenReturn(category);
+
+            doThrow(new IllegalArgumentException("Category type does not match transaction type"))
+                    .when(transactionCategoryValidator)
+                    .validate(category, TransactionType.EXPENSE);
 
             assertThatThrownBy(() -> recurringTransactionService.create(request, authentication))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -188,6 +202,7 @@ class RecurringTransactionServiceTest {
                     .hasMessage("Account not found");
 
             verify(userResourceResolver, never()).resolveCategory(any(), any());
+            verifyNoInteractions(transactionCategoryValidator);
             verify(recurringTransactionRepository, never()).save(any(RecurringTransaction.class));
         }
 
@@ -208,6 +223,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessage("Category not found");
 
+            verifyNoInteractions(transactionCategoryValidator);
             verify(recurringTransactionRepository, never()).save(any(RecurringTransaction.class));
         }
 
@@ -238,6 +254,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("End date cannot be before start date");
 
+            verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
             verify(recurringTransactionRepository, never()).save(any(RecurringTransaction.class));
         }
     }
@@ -368,6 +385,7 @@ class RecurringTransactionServiceTest {
             assertThat(response.startDate()).isEqualTo(LocalDate.of(2026, 5, 1));
             assertThat(response.nextExecutionDate()).isEqualTo(LocalDate.of(2026, 5, 1));
 
+            verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
             verify(recurringTransactionRepository).save(recurringTransaction);
         }
 
@@ -406,6 +424,8 @@ class RecurringTransactionServiceTest {
             );
 
             assertThat(response.nextExecutionDate()).isEqualTo(LocalDate.of(2026, 6, 1));
+
+            verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
         }
 
         @Test
@@ -432,6 +452,10 @@ class RecurringTransactionServiceTest {
                     .thenReturn(java.util.Optional.of(recurringTransaction));
             when(userResourceResolver.resolveAccount(ACCOUNT_ID, USER_ID)).thenReturn(account);
             when(userResourceResolver.resolveCategory(CATEGORY_ID, USER_ID)).thenReturn(category);
+
+            doThrow(new IllegalArgumentException("Category type does not match transaction type"))
+                    .when(transactionCategoryValidator)
+                    .validate(category, TransactionType.EXPENSE);
 
             assertThatThrownBy(() -> recurringTransactionService.update(RECURRING_TRANSACTION_ID, request, authentication))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -477,6 +501,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("End date cannot be before start date");
 
+            verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
             verify(recurringTransactionRepository, never()).save(any(RecurringTransaction.class));
         }
 
@@ -525,6 +550,7 @@ class RecurringTransactionServiceTest {
             assertThat(response.active()).isFalse();
             assertThat(recurringTransaction.isActive()).isFalse();
 
+            verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
             verify(recurringTransactionRepository).save(recurringTransaction);
         }
     }

@@ -14,6 +14,7 @@ import com.financebot.transaction.dto.response.InstallmentTransactionResponse;
 import com.financebot.transaction.dto.response.TransactionResponse;
 import com.financebot.transaction.mapper.TransactionMapper;
 import com.financebot.transaction.repository.TransactionRepository;
+import com.financebot.transaction.validation.TransactionCategoryValidator;
 import com.financebot.user.domain.User;
 import com.financebot.user.service.AuthenticatedUserResolver;
 import com.financebot.user.service.UserResourceResolver;
@@ -43,6 +44,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -60,6 +62,9 @@ class TransactionServiceTest {
 
     @Mock
     private UserResourceResolver userResourceResolver;
+
+    @Mock
+    private TransactionCategoryValidator transactionCategoryValidator;
 
     @Mock
     private TransactionMapper transactionMapper;
@@ -113,6 +118,7 @@ class TransactionServiceTest {
             assertThat(transaction.getTotalInstallments()).isNull();
             assertThat(transaction.getInstallmentGroupId()).isNull();
 
+            verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
             verify(transactionMapper).toEntity(request);
             verify(transactionRepository).save(transaction);
             verify(transactionMapper).toResponse(savedTransaction);
@@ -142,7 +148,7 @@ class TransactionServiceTest {
                     .hasMessage("Account not found");
 
             verify(userResourceResolver, never()).resolveCategory(any(), any());
-            verifyNoInteractions(transactionRepository, transactionMapper);
+            verifyNoInteractions(transactionCategoryValidator, transactionRepository, transactionMapper);
         }
 
         @Test
@@ -170,7 +176,7 @@ class TransactionServiceTest {
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessage("Category not found");
 
-            verifyNoInteractions(transactionRepository, transactionMapper);
+            verifyNoInteractions(transactionCategoryValidator, transactionRepository, transactionMapper);
         }
 
         @Test
@@ -193,6 +199,10 @@ class TransactionServiceTest {
             mockAuthenticatedUser(user);
             when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
             when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
+
+            doThrow(new IllegalArgumentException("Category type does not match transaction type"))
+                    .when(transactionCategoryValidator)
+                    .validate(category, TransactionType.EXPENSE);
 
             assertThatThrownBy(() -> transactionService.create(request, authentication))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -232,6 +242,8 @@ class TransactionServiceTest {
             assertInstallmentCommonData(savedTransactions, user, account, category);
             assertInstallmentMetadata(savedTransactions, result);
             assertInstallmentResponse(result, response1, response2, response3);
+
+            verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
         }
 
         @Test
@@ -256,7 +268,7 @@ class TransactionServiceTest {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Installment transactions are allowed only for expenses");
 
-            verifyNoInteractions(userResourceResolver, transactionMapper);
+            verifyNoInteractions(userResourceResolver, transactionCategoryValidator, transactionMapper);
             verify(transactionRepository, never()).saveAll(anyList());
         }
 
@@ -282,7 +294,7 @@ class TransactionServiceTest {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Total installments must be at least 2");
 
-            verifyNoInteractions(userResourceResolver, transactionMapper);
+            verifyNoInteractions(userResourceResolver, transactionCategoryValidator, transactionMapper);
             verify(transactionRepository, never()).saveAll(anyList());
         }
 
@@ -311,7 +323,7 @@ class TransactionServiceTest {
                     .hasMessage("Account not found");
 
             verify(userResourceResolver, never()).resolveCategory(any(), any());
-            verifyNoInteractions(transactionMapper);
+            verifyNoInteractions(transactionCategoryValidator, transactionMapper);
             verify(transactionRepository, never()).saveAll(anyList());
         }
 
@@ -341,7 +353,7 @@ class TransactionServiceTest {
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessage("Category not found");
 
-            verifyNoInteractions(transactionMapper);
+            verifyNoInteractions(transactionCategoryValidator, transactionMapper);
             verify(transactionRepository, never()).saveAll(anyList());
         }
 
@@ -366,6 +378,10 @@ class TransactionServiceTest {
             mockAuthenticatedUser(user);
             when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
             when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
+
+            doThrow(new IllegalArgumentException("Category type does not match transaction type"))
+                    .when(transactionCategoryValidator)
+                    .validate(category, TransactionType.EXPENSE);
 
             assertThatThrownBy(() -> transactionService.createInstallment(request, authentication))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -410,6 +426,7 @@ class TransactionServiceTest {
         assertThat(result.totalInstallments()).isEqualTo(3);
         assertThat(result.transactions()).containsExactly(response1, response2, response3);
 
+        verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
         verify(authenticatedUserResolver, never()).resolve(any());
     }
 
@@ -552,6 +569,7 @@ class TransactionServiceTest {
             assertThat(transaction.getAccount()).isEqualTo(account);
             assertThat(transaction.getCategory()).isEqualTo(category);
 
+            verify(transactionCategoryValidator).validate(category, TransactionType.INCOME);
             verify(transactionMapper).updateEntity(request, transaction);
             verify(transactionRepository).save(transaction);
             verify(transactionMapper).toResponse(transaction);
@@ -579,7 +597,7 @@ class TransactionServiceTest {
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessage("Transaction not found");
 
-            verifyNoInteractions(userResourceResolver, transactionMapper);
+            verifyNoInteractions(userResourceResolver, transactionCategoryValidator, transactionMapper);
         }
 
         @Test
@@ -608,6 +626,7 @@ class TransactionServiceTest {
                     .hasMessage("Account not found");
 
             verify(userResourceResolver, never()).resolveCategory(any(), any());
+            verifyNoInteractions(transactionCategoryValidator);
             verify(transactionMapper, never()).updateEntity(any(), any());
             verify(transactionRepository, never()).save(any());
         }
@@ -639,6 +658,7 @@ class TransactionServiceTest {
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessage("Category not found");
 
+            verifyNoInteractions(transactionCategoryValidator);
             verify(transactionMapper, never()).updateEntity(any(), any());
             verify(transactionRepository, never()).save(any());
         }
@@ -665,6 +685,10 @@ class TransactionServiceTest {
             when(transactionRepository.findByIdAndUserId(77L, 1L)).thenReturn(java.util.Optional.of(transaction));
             when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
             when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
+
+            doThrow(new IllegalArgumentException("Category type does not match transaction type"))
+                    .when(transactionCategoryValidator)
+                    .validate(category, TransactionType.INCOME);
 
             assertThatThrownBy(() -> transactionService.update(77L, request, authentication))
                     .isInstanceOf(IllegalArgumentException.class)

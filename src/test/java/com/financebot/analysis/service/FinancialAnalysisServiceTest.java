@@ -4,6 +4,7 @@ import com.financebot.analysis.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.recurring.domain.RecurringTransaction;
 import com.financebot.recurring.repository.RecurringTransactionRepository;
 import com.financebot.transaction.repository.TransactionRepository;
+import com.financebot.transaction.validation.TransactionCategoryValidator;
 import com.financebot.user.domain.User;
 import com.financebot.user.service.AuthenticatedUserResolver;
 import com.financebot.user.service.UserResourceResolver;
@@ -38,6 +39,9 @@ class FinancialAnalysisServiceTest {
 
     @Mock
     private UserResourceResolver userResourceResolver;
+
+    @Mock
+    private TransactionCategoryValidator transactionCategoryValidator;
 
     @InjectMocks
     private FinancialAnalysisService financialAnalysisService;

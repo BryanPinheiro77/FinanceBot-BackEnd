@@ -2,7 +2,6 @@ package com.financebot.recurring.service;
 
 import com.financebot.account.domain.Account;
 import com.financebot.category.domain.Category;
-import com.financebot.category.domain.CategoryType;
 import com.financebot.recurring.domain.RecurringTransaction;
 import com.financebot.recurring.dto.request.CreateRecurringTransactionRequest;
 import com.financebot.recurring.dto.request.UpdateRecurringTransactionRequest;
@@ -18,6 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.financebot.user.service.AuthenticatedUserResolver;
+import com.financebot.transaction.validation.TransactionCategoryValidator;
 
 import java.util.List;
 
@@ -29,6 +29,7 @@ public class RecurringTransactionService {
     private final UserResourceResolver userResourceResolver;
     private final RecurringTransactionMapper recurringTransactionMapper;
     private final AuthenticatedUserResolver authenticatedUserResolver;
+    private final TransactionCategoryValidator transactionCategoryValidator;
 
     @Transactional
     public RecurringTransactionResponse create(
@@ -36,10 +37,11 @@ public class RecurringTransactionService {
             Authentication authentication
     ) {
         User user = authenticatedUserResolver.resolve(authentication);
+
         Account account = userResourceResolver.resolveAccount(request.accountId(), user.getId());
         Category category = userResourceResolver.resolveCategory(request.categoryId(), user.getId());
 
-        validateCategoryMatchesTransactionType(category, request.type());
+        transactionCategoryValidator.validate(category, request.type());
 
         RecurringTransaction recurringTransaction = new RecurringTransaction();
         recurringTransaction.setDescription(request.description().trim());
@@ -91,7 +93,7 @@ public class RecurringTransactionService {
         Account account = userResourceResolver.resolveAccount(request.accountId(), user.getId());
         Category category = userResourceResolver.resolveCategory(request.categoryId(), user.getId());
 
-        validateCategoryMatchesTransactionType(category, request.type());
+        transactionCategoryValidator.validate(category, request.type());
 
         recurringTransaction.setDescription(request.description().trim());
         recurringTransaction.setAmount(request.amount());
@@ -152,17 +154,5 @@ public class RecurringTransactionService {
     private RecurringTransaction getUserRecurringTransaction(Long id, Long userId) {
         return recurringTransactionRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new EntityNotFoundException("Recurring transaction not found"));
-    }
-
-    private void validateCategoryMatchesTransactionType(Category category, TransactionType transactionType) {
-        boolean isIncomeMatch =
-                category.getType() == CategoryType.INCOME && transactionType == TransactionType.INCOME;
-
-        boolean isExpenseMatch =
-                category.getType() == CategoryType.EXPENSE && transactionType == TransactionType.EXPENSE;
-
-        if (!isIncomeMatch && !isExpenseMatch) {
-            throw new IllegalArgumentException("Category type does not match transaction type");
-        }
     }
 }

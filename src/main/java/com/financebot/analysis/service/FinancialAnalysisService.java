@@ -1,10 +1,8 @@
 package com.financebot.analysis.service;
 
-import com.financebot.account.domain.Account;
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.category.domain.Category;
-import com.financebot.category.domain.CategoryType;
 import com.financebot.recurring.domain.RecurringTransaction;
 import com.financebot.recurring.repository.RecurringTransactionRepository;
 import com.financebot.transaction.domain.TransactionType;
@@ -18,6 +16,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.financebot.user.service.AuthenticatedUserResolver;
+import com.financebot.transaction.validation.TransactionCategoryValidator;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -34,12 +33,12 @@ public class FinancialAnalysisService {
     private static final String TOTAL_INSTALLMENTS_INVALID_MESSAGE = "Total installments must be at least 2";
     private static final String INSTALLMENT_ONLY_EXPENSE_MESSAGE =
             "Installment transactions are allowed only for expenses";
-    private static final String CATEGORY_TYPE_MISMATCH_MESSAGE = "Category type does not match transaction type";
 
     private final TransactionRepository transactionRepository;
     private final RecurringTransactionRepository recurringTransactionRepository;
     private final UserResourceResolver userResourceResolver;
     private final AuthenticatedUserResolver authenticatedUserResolver;
+    private final TransactionCategoryValidator transactionCategoryValidator;
 
     @Transactional(readOnly = true)
     public FinancialCommitmentResponse getFinancialCommitment(Authentication authentication) {
@@ -229,7 +228,7 @@ public class FinancialAnalysisService {
 
         Category category = userResourceResolver.resolveCategory(categoryId, userId);
 
-        validateCategoryMatchesTransactionType(category, transactionType);
+        transactionCategoryValidator.validate(category, transactionType);
     }
 
     private BigDecimal calculatePercentage(BigDecimal value, BigDecimal reference) {
@@ -568,18 +567,6 @@ public class FinancialAnalysisService {
                 riskLevel,
                 message
         );
-    }
-
-    private void validateCategoryMatchesTransactionType(Category category, TransactionType transactionType) {
-        boolean isIncomeMatch =
-                category.getType() == CategoryType.INCOME && transactionType == TransactionType.INCOME;
-
-        boolean isExpenseMatch =
-                category.getType() == CategoryType.EXPENSE && transactionType == TransactionType.EXPENSE;
-
-        if (!isIncomeMatch && !isExpenseMatch) {
-            throw new IllegalArgumentException(CATEGORY_TYPE_MISMATCH_MESSAGE);
-        }
     }
 
     private record InstallmentPurchaseAnalysisResult(
