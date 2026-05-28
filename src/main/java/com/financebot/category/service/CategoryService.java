@@ -8,12 +8,12 @@ import com.financebot.category.dto.request.UpdateCategoryRequest;
 import com.financebot.category.mapper.CategoryMapper;
 import com.financebot.category.repository.CategoryRepository;
 import com.financebot.user.domain.User;
+import com.financebot.user.service.AuthenticatedUserResolver;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.financebot.user.service.AuthenticatedUserResolver;
 
 import java.util.List;
 
@@ -83,7 +83,7 @@ public class CategoryService {
     public CategoryResponse findById(Long id, Authentication authentication) {
         User user = authenticatedUserResolver.resolve(authentication);
 
-        Category category = categoryRepository.findByIdAndUserId(id, user.getId())
+        Category category = categoryRepository.findByIdAndUserIdAndActiveTrue(id, user.getId())
                 .orElseThrow(() -> new EntityNotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
 
         return categoryMapper.toResponse(category);
@@ -93,7 +93,7 @@ public class CategoryService {
     public CategoryResponse update(Long id, UpdateCategoryRequest request, Authentication authentication) {
         User user = authenticatedUserResolver.resolve(authentication);
 
-        Category category = categoryRepository.findByIdAndUserId(id, user.getId())
+        Category category = categoryRepository.findByIdAndUserIdAndActiveTrue(id, user.getId())
                 .orElseThrow(() -> new EntityNotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
 
         boolean changedName = !category.getName().equalsIgnoreCase(request.name().trim());
@@ -115,6 +115,10 @@ public class CategoryService {
 
         Category category = categoryRepository.findByIdAndUserId(id, user.getId())
                 .orElseThrow(() -> new EntityNotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
+
+        if (Boolean.FALSE.equals(category.getActive())) {
+            return;
+        }
 
         category.setActive(false);
         categoryRepository.save(category);

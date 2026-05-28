@@ -9,19 +9,26 @@ import java.util.Optional;
 
 public interface CategoryRepository extends JpaRepository<Category, Long> {
 
-    List<Category> findAllByUserIdOrderByNameAsc(Long userId);
+    List<Category> findAllByUserIdAndActiveTrueOrderByNameAsc(Long userId);
 
-    List<Category> findAllByUserIdAndTypeOrderByNameAsc(Long userId, CategoryType type);
+    List<Category> findAllByUserIdAndTypeAndActiveTrueOrderByNameAsc(Long userId, CategoryType type);
 
     Optional<Category> findByIdAndUserId(Long id, Long userId);
+
+    Optional<Category> findByIdAndUserIdAndActiveTrue(Long id, Long userId);
 
     boolean existsByNameIgnoreCaseAndTypeAndUserId(String name, CategoryType type, Long userId);
 
     Optional<Category> findByUserIdAndTypeAndNameIgnoreCase(Long userId, CategoryType type, String name);
 
-    List<Category> findAllByUserIdAndActiveTrueOrderByNameAsc(Long userId);
+    Optional<Category> findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
+            Long userId,
+            CategoryType type,
+            String name
+    );
 
-    List<Category> findAllByUserIdAndTypeAndActiveTrueOrderByNameAsc(Long userId, CategoryType type);
-
-    Optional<Category> findFirstByUserIdAndTypeOrderByNameAsc(Long userId, CategoryType type);
+    Optional<Category> findFirstByUserIdAndTypeAndActiveTrueOrderByNameAsc(
+            Long userId,
+            CategoryType type
+    );
 }
