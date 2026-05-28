@@ -26,6 +26,8 @@ public class CategoryMapper {
                 category.getId(),
                 category.getName(),
                 category.getType(),
+                category.getActive(),
+                category.getDefaultCategory(),
                 category.getCreatedAt()
         );
     }
