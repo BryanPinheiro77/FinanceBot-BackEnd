@@ -2,23 +2,41 @@
 
 ## [Unreleased]
 
+## v1.2.0
+
 ### Added
 
 - Adicionado suporte para desativar e reativar categorias do usuário sem apagar referências históricas.
 - Adicionados os campos `active` e `defaultCategory` em categorias.
+- Adicionada migration para incluir as colunas `active` e `default_category` na tabela `categories`.
 
 ### Changed
 
 - A listagem de categorias passa a retornar apenas categorias ativas por padrão.
 - A remoção de categorias passa a realizar soft delete com `active = false`.
-- A resolução de categorias em transações e no Telegram passa a ignorar categorias inativas.
+- `GET /categories/{id}` passa a retornar apenas categorias ativas.
+- `PUT /categories/{id}` passa a permitir alteração apenas de categorias ativas.
+- O delete de categorias passa a ser idempotente quando a categoria já está inativa.
+- A resolução de categorias em transações, recorrências e Telegram passa a tratar categorias inativas de forma segura.
+- Ajustado o perfil de testes para configurar JWT, Redis e RabbitMQ no ambiente `test`.
+
+### Fixed
+
+- Corrigido risco de categorias desativadas continuarem sendo usadas em novas transações por envio direto do `categoryId`.
+- Corrigido risco de categorias inativas serem resolvidas automaticamente pelo fluxo do Telegram.
+- Corrigida inconsistência entre categorias ocultas na listagem e categorias ainda acessíveis por busca direta de ID.
 
 ### Tests
 
-- Atualizados testes do serviço de categorias para cobrir soft delete.
-- Adicionada cobertura para tratamento de categorias inativas.
+- Atualizados testes unitários de `CategoryService`.
+- Atualizados testes unitários de `UserResourceResolver`.
+- Atualizados testes unitários de `TelegramCategoryResolverService`.
+- Adicionada cobertura para soft delete de categorias.
+- Adicionada cobertura para reativação de categorias inativas.
+- Adicionada cobertura para impedir uso de categorias inativas em novos fluxos.
+- Adicionada cobertura para comportamento idempotente ao remover categoria já inativa.
 
-## 1.1.4
+## v1.1.4
 
 ### Changed
 - Centralizada a resolução do usuário autenticado com `AuthenticatedUserResolver`.
