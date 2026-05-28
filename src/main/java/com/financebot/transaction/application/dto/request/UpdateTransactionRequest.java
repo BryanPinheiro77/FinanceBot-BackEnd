@@ -1,4 +1,4 @@
-package com.financebot.transaction.dto.request;
+package com.financebot.transaction.application.dto.request;
 
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.TransactionType;
@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public record CreateTransactionRequest(
+public record UpdateTransactionRequest(
 
         @NotNull(message = "Amount is required")
         @DecimalMin(value = "0.01", message = "Amount must be greater than zero")

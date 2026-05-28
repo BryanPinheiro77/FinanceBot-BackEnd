@@ -11,7 +11,7 @@ import com.financebot.telegram.exception.TelegramUserNotFoundException;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
-import com.financebot.transaction.dto.request.CreateInstallmentTransactionRequest;
+import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.transaction.service.TransactionService;
 import com.financebot.user.domain.User;

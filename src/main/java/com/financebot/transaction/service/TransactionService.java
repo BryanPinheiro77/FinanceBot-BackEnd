@@ -2,16 +2,17 @@ package com.financebot.transaction.service;
 
 import com.financebot.account.domain.Account;
 import com.financebot.category.domain.Category;
+import com.financebot.transaction.application.usecase.CreateTransactionUseCase;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.installment.InstallmentPlan;
 import com.financebot.transaction.domain.installment.InstallmentPlanFactory;
 import com.financebot.transaction.domain.installment.InstallmentPlanItem;
 import com.financebot.transaction.dto.TransactionFilter;
-import com.financebot.transaction.dto.request.CreateInstallmentTransactionRequest;
-import com.financebot.transaction.dto.request.CreateTransactionRequest;
-import com.financebot.transaction.dto.request.UpdateTransactionRequest;
-import com.financebot.transaction.dto.response.InstallmentTransactionResponse;
-import com.financebot.transaction.dto.response.TransactionResponse;
+import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
+import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
+import com.financebot.transaction.application.dto.request.UpdateTransactionRequest;
+import com.financebot.transaction.application.dto.response.InstallmentTransactionResponse;
+import com.financebot.transaction.application.dto.response.TransactionResponse;
 import com.financebot.transaction.mapper.TransactionMapper;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.transaction.specification.TransactionSpecification;
@@ -44,27 +45,11 @@ public class TransactionService {
     private final TransactionCategoryValidator transactionCategoryValidator;
     private final InstallmentPlanFactory installmentPlanFactory;
 
+    private final CreateTransactionUseCase createTransactionUseCase;
+
     @Transactional
     public TransactionResponse create(CreateTransactionRequest request, Authentication authentication) {
-        User user = authenticatedUserResolver.resolve(authentication);
-
-        Account account = userResourceResolver.resolveAccount(request.accountId(), user.getId());
-        Category category = userResourceResolver.resolveCategory(request.categoryId(), user.getId());
-
-        transactionCategoryValidator.validate(category, request.type());
-
-        Transaction transaction = transactionMapper.toEntity(request);
-        transaction.setUser(user);
-        transaction.setAccount(account);
-        transaction.setCategory(category);
-        transaction.setInstallment(false);
-        transaction.setInstallmentNumber(null);
-        transaction.setTotalInstallments(null);
-        transaction.setInstallmentGroupId(null);
-
-        Transaction savedTransaction = transactionRepository.save(transaction);
-
-        return transactionMapper.toResponse(savedTransaction);
+        return createTransactionUseCase.execute(request, authentication);
     }
 
     @Transactional

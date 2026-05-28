@@ -1,4 +1,4 @@
-package com.financebot.transaction.dto.request;
+package com.financebot.transaction.application.dto.request;
 
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.TransactionType;

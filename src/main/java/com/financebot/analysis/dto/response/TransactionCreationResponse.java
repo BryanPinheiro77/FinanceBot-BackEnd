@@ -1,6 +1,6 @@
 package com.financebot.analysis.dto.response;
 
-import com.financebot.transaction.dto.response.TransactionResponse;
+import com.financebot.transaction.application.dto.response.TransactionResponse;
 
 public record TransactionCreationResponse(
         TransactionResponse transaction,
