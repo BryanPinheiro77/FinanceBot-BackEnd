@@ -17,6 +17,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,6 +48,8 @@ class UserResourceResolverTest {
             Account result = userResourceResolver.resolveAccount(10L, 1L);
 
             assertThat(result).isEqualTo(account);
+
+            verify(accountRepository).findByIdAndUserId(10L, 1L);
         }
 
         @Test
@@ -58,6 +61,8 @@ class UserResourceResolverTest {
             assertThatThrownBy(() -> userResourceResolver.resolveAccount(10L, 1L))
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessage("Account not found");
+
+            verify(accountRepository).findByIdAndUserId(10L, 1L);
         }
     }
 
@@ -66,28 +71,33 @@ class UserResourceResolverTest {
     class ResolveCategoryTests {
 
         @Test
-        @DisplayName("deve retornar categoria quando ela pertencer ao usuario")
-        void shouldResolveCategory() {
+        @DisplayName("deve retornar categoria ativa quando ela pertencer ao usuario")
+        void shouldResolveActiveCategory() {
             Category category = new Category();
             category.setId(20L);
+            category.setActive(true);
 
-            when(categoryRepository.findByIdAndUserId(20L, 1L))
+            when(categoryRepository.findByIdAndUserIdAndActiveTrue(20L, 1L))
                     .thenReturn(Optional.of(category));
 
             Category result = userResourceResolver.resolveCategory(20L, 1L);
 
             assertThat(result).isEqualTo(category);
+
+            verify(categoryRepository).findByIdAndUserIdAndActiveTrue(20L, 1L);
         }
 
         @Test
-        @DisplayName("deve lancar erro quando categoria nao pertencer ao usuario")
-        void shouldThrowWhenCategoryDoesNotBelongToUser() {
-            when(categoryRepository.findByIdAndUserId(20L, 1L))
+        @DisplayName("deve lancar erro quando categoria nao pertencer ao usuario ou estiver inativa")
+        void shouldThrowWhenCategoryDoesNotBelongToUserOrIsInactive() {
+            when(categoryRepository.findByIdAndUserIdAndActiveTrue(20L, 1L))
                     .thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> userResourceResolver.resolveCategory(20L, 1L))
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessage("Category not found");
+
+            verify(categoryRepository).findByIdAndUserIdAndActiveTrue(20L, 1L);
         }
     }
 }

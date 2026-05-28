@@ -36,18 +36,7 @@ public class TelegramCategoryResolverService {
             return resolveSuggestedCategory(user, transactionType, null);
         }
 
-        Optional<Category> existingCategory =
-                categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
-                        user.getId(),
-                        categoryType,
-                        normalizedCategoryName
-                );
-
-        if (existingCategory.isPresent()) {
-            return existingCategory.get();
-        }
-
-        return createCategory(user, categoryType, normalizedCategoryName);
+        return resolveOrCreateCategory(user, categoryType, normalizedCategoryName);
     }
 
     private Category resolveSuggestedCategory(User user, TransactionType transactionType, String description) {
@@ -55,7 +44,7 @@ public class TelegramCategoryResolverService {
         String suggestedCategoryName = suggestCategoryName(transactionType, description);
 
         Optional<Category> existingSuggestedCategory =
-                categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
+                categoryRepository.findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
                         user.getId(),
                         categoryType,
                         suggestedCategoryName
@@ -67,18 +56,29 @@ public class TelegramCategoryResolverService {
 
         String fallbackCategoryName = getFallbackCategoryName(transactionType);
 
-        Optional<Category> existingFallbackCategory =
+        return resolveOrCreateCategory(user, categoryType, fallbackCategoryName);
+    }
+
+    private Category resolveOrCreateCategory(User user, CategoryType categoryType, String categoryName) {
+        Optional<Category> existingCategory =
                 categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
                         user.getId(),
                         categoryType,
-                        fallbackCategoryName
+                        categoryName
                 );
 
-        if (existingFallbackCategory.isPresent()) {
-            return existingFallbackCategory.get();
+        if (existingCategory.isPresent()) {
+            Category category = existingCategory.get();
+
+            if (Boolean.FALSE.equals(category.getActive())) {
+                category.setActive(true);
+                return categoryRepository.save(category);
+            }
+
+            return category;
         }
 
-        return createCategory(user, categoryType, fallbackCategoryName);
+        return createCategory(user, categoryType, categoryName);
     }
 
     private CategoryType mapTransactionTypeToCategoryType(TransactionType transactionType) {
@@ -188,6 +188,8 @@ public class TelegramCategoryResolverService {
         category.setUser(user);
         category.setType(categoryType);
         category.setName(name);
+        category.setActive(true);
+        category.setDefaultCategory(false);
         return categoryRepository.save(category);
     }
 

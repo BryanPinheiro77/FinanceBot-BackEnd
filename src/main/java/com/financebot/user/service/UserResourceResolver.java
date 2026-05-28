@@ -24,7 +24,7 @@ public class UserResourceResolver {
     }
 
     public Category resolveCategory(Long categoryId, Long userId) {
-        return categoryRepository.findByIdAndUserId(categoryId, userId)
+        return categoryRepository.findByIdAndUserIdAndActiveTrue(categoryId, userId)
                 .orElseThrow(() -> new EntityNotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
     }
 }

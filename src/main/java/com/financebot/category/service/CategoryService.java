@@ -8,7 +8,7 @@ import com.financebot.category.dto.request.UpdateCategoryRequest;
 import com.financebot.category.mapper.CategoryMapper;
 import com.financebot.category.repository.CategoryRepository;
 import com.financebot.user.domain.User;
-import com.financebot.user.repository.UserRepository;
+import com.financebot.user.service.AuthenticatedUserResolver;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -22,20 +22,38 @@ import java.util.List;
 public class CategoryService {
 
     private static final String CATEGORY_NOT_FOUND_MESSAGE = "Category not found";
-    private static final String AUTHENTICATED_USER_NOT_FOUND_MESSAGE = "Authenticated user not found";
 
     private final CategoryRepository categoryRepository;
-    private final UserRepository userRepository;
+    private final AuthenticatedUserResolver authenticatedUserResolver;
     private final CategoryMapper categoryMapper;
 
     @Transactional
     public CategoryResponse create(CreateCategoryRequest request, Authentication authentication) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
-        validateDuplicateCategory(request.name(), request.type(), user.getId());
+        var existingCategory = categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
+                user.getId(),
+                request.type(),
+                request.name().trim()
+        );
+
+        if (existingCategory.isPresent()) {
+            Category category = existingCategory.get();
+
+            if (Boolean.TRUE.equals(category.getActive())) {
+                throw new IllegalArgumentException("Category already exists for this user and type");
+            }
+
+            category.setActive(true);
+            Category reactivated = categoryRepository.save(category);
+            return categoryMapper.toResponse(reactivated);
+        }
 
         Category category = categoryMapper.toEntity(request);
+        category.setName(request.name().trim());
         category.setUser(user);
+        category.setActive(true);
+        category.setDefaultCategory(false);
 
         Category saved = categoryRepository.save(category);
         return categoryMapper.toResponse(saved);
@@ -43,9 +61,9 @@ public class CategoryService {
 
     @Transactional(readOnly = true)
     public List<CategoryResponse> findAll(Authentication authentication) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
-        return categoryRepository.findAllByUserIdOrderByNameAsc(user.getId())
+        return categoryRepository.findAllByUserIdAndActiveTrueOrderByNameAsc(user.getId())
                 .stream()
                 .map(categoryMapper::toResponse)
                 .toList();
@@ -53,9 +71,9 @@ public class CategoryService {
 
     @Transactional(readOnly = true)
     public List<CategoryResponse> findByType(CategoryType type, Authentication authentication) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
-        return categoryRepository.findAllByUserIdAndTypeOrderByNameAsc(user.getId(), type)
+        return categoryRepository.findAllByUserIdAndTypeAndActiveTrueOrderByNameAsc(user.getId(), type)
                 .stream()
                 .map(categoryMapper::toResponse)
                 .toList();
@@ -63,9 +81,9 @@ public class CategoryService {
 
     @Transactional(readOnly = true)
     public CategoryResponse findById(Long id, Authentication authentication) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
-        Category category = categoryRepository.findByIdAndUserId(id, user.getId())
+        Category category = categoryRepository.findByIdAndUserIdAndActiveTrue(id, user.getId())
                 .orElseThrow(() -> new EntityNotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
 
         return categoryMapper.toResponse(category);
@@ -73,9 +91,9 @@ public class CategoryService {
 
     @Transactional
     public CategoryResponse update(Long id, UpdateCategoryRequest request, Authentication authentication) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
-        Category category = categoryRepository.findByIdAndUserId(id, user.getId())
+        Category category = categoryRepository.findByIdAndUserIdAndActiveTrue(id, user.getId())
                 .orElseThrow(() -> new EntityNotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
 
         boolean changedName = !category.getName().equalsIgnoreCase(request.name().trim());
@@ -93,12 +111,17 @@ public class CategoryService {
 
     @Transactional
     public void delete(Long id, Authentication authentication) {
-        User user = getAuthenticatedUser(authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
 
         Category category = categoryRepository.findByIdAndUserId(id, user.getId())
                 .orElseThrow(() -> new EntityNotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
 
-        categoryRepository.delete(category);
+        if (Boolean.FALSE.equals(category.getActive())) {
+            return;
+        }
+
+        category.setActive(false);
+        categoryRepository.save(category);
     }
 
     @Transactional
@@ -130,6 +153,8 @@ public class CategoryService {
             category.setName(name);
             category.setType(type);
             category.setUser(user);
+            category.setActive(true);
+            category.setDefaultCategory(true);
             categoryRepository.save(category);
         }
     }
@@ -144,12 +169,5 @@ public class CategoryService {
         if (alreadyExists) {
             throw new IllegalArgumentException("Category already exists for this user and type");
         }
-    }
-
-    private User getAuthenticatedUser(Authentication authentication) {
-        String email = authentication.getName();
-
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException(AUTHENTICATED_USER_NOT_FOUND_MESSAGE));
     }
 }

@@ -2,7 +2,23 @@
 
 ## [Unreleased]
 
-## [1.1.4] 
+### Added
+
+- Adicionado suporte para desativar e reativar categorias do usuário sem apagar referências históricas.
+- Adicionados os campos `active` e `defaultCategory` em categorias.
+
+### Changed
+
+- A listagem de categorias passa a retornar apenas categorias ativas por padrão.
+- A remoção de categorias passa a realizar soft delete com `active = false`.
+- A resolução de categorias em transações e no Telegram passa a ignorar categorias inativas.
+
+### Tests
+
+- Atualizados testes do serviço de categorias para cobrir soft delete.
+- Adicionada cobertura para tratamento de categorias inativas.
+
+## 1.1.4
 
 ### Changed
 - Centralizada a resolução do usuário autenticado com `AuthenticatedUserResolver`.
