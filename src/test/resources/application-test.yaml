@@ -13,7 +13,33 @@ spring:
   flyway:
     enabled: false
 
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+
 telegram:
   bot:
     token: test-token
     username: test-bot
+
+app:
+  cors:
+    allowed-origins: http://localhost:5173
+  jwt:
+    secret: 1234567890123456789012345678901234567890123456789012345678901234
+    expiration: 86400000
+
+management:
+  health:
+    rabbit:
+      enabled: false
+    redis:
+      enabled: false

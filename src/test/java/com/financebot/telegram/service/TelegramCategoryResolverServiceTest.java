@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -43,12 +44,12 @@ class TelegramCategoryResolverServiceTest {
                 "Transporte|corrida de uber",
                 "Saúde|remedio na farmacia"
         }, delimiter = '|')
-        @DisplayName("deve sugerir categoria correta para despesas")
-        void shouldSuggestCorrectExpenseCategory(String expectedCategoryName, String description) {
+        @DisplayName("deve sugerir categoria ativa correta para despesas")
+        void shouldSuggestCorrectActiveExpenseCategory(String expectedCategoryName, String description) {
             User user = buildUser(1L);
-            Category expectedCategory = buildCategory(expectedCategoryName, CategoryType.EXPENSE);
+            Category expectedCategory = buildCategory(expectedCategoryName, CategoryType.EXPENSE, true, false);
 
-            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
+            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
                     user.getId(),
                     CategoryType.EXPENSE,
                     expectedCategoryName
@@ -61,6 +62,13 @@ class TelegramCategoryResolverServiceTest {
             );
 
             assertThat(result).isEqualTo(expectedCategory);
+
+            verify(categoryRepository).findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
+                    user.getId(),
+                    CategoryType.EXPENSE,
+                    expectedCategoryName
+            );
+            verify(categoryRepository, never()).save(any(Category.class));
         }
 
         @ParameterizedTest
@@ -69,12 +77,12 @@ class TelegramCategoryResolverServiceTest {
                 "Freelance|freela de sistema",
                 "Transferências|pix recebido"
         }, delimiter = '|')
-        @DisplayName("deve sugerir categoria correta para receitas")
-        void shouldSuggestCorrectIncomeCategory(String expectedCategoryName, String description) {
+        @DisplayName("deve sugerir categoria ativa correta para receitas")
+        void shouldSuggestCorrectActiveIncomeCategory(String expectedCategoryName, String description) {
             User user = buildUser(1L);
-            Category expectedCategory = buildCategory(expectedCategoryName, CategoryType.INCOME);
+            Category expectedCategory = buildCategory(expectedCategoryName, CategoryType.INCOME, true, false);
 
-            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
+            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
                     user.getId(),
                     CategoryType.INCOME,
                     expectedCategoryName
@@ -87,15 +95,22 @@ class TelegramCategoryResolverServiceTest {
             );
 
             assertThat(result).isEqualTo(expectedCategory);
+
+            verify(categoryRepository).findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
+                    user.getId(),
+                    CategoryType.INCOME,
+                    expectedCategoryName
+            );
+            verify(categoryRepository, never()).save(any(Category.class));
         }
 
         @Test
-        @DisplayName("deve retornar categoria fallback existente quando sugestao nao existir")
-        void shouldReturnExistingFallbackExpenseCategoryWhenSuggestedCategoryDoesNotExist() {
+        @DisplayName("deve retornar categoria fallback existente quando sugestao ativa nao existir")
+        void shouldReturnExistingFallbackExpenseCategoryWhenActiveSuggestedCategoryDoesNotExist() {
             User user = buildUser(1L);
-            Category fallbackCategory = buildCategory("Outros", CategoryType.EXPENSE);
+            Category fallbackCategory = buildCategory("Outros", CategoryType.EXPENSE, true, false);
 
-            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
+            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
                     user.getId(),
                     CategoryType.EXPENSE,
                     "Combustível"
@@ -115,16 +130,68 @@ class TelegramCategoryResolverServiceTest {
 
             assertThat(result).isEqualTo(fallbackCategory);
 
-            verify(categoryRepository, never()).save(org.mockito.ArgumentMatchers.any(Category.class));
+            verify(categoryRepository).findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
+                    user.getId(),
+                    CategoryType.EXPENSE,
+                    "Combustível"
+            );
+            verify(categoryRepository).findByUserIdAndTypeAndNameIgnoreCase(
+                    user.getId(),
+                    CategoryType.EXPENSE,
+                    "Outros"
+            );
+            verify(categoryRepository, never()).save(any(Category.class));
         }
 
         @Test
-        @DisplayName("deve criar categoria fallback de despesa quando sugestao e fallback nao existirem")
-        void shouldCreateFallbackExpenseCategoryWhenSuggestedAndFallbackDoNotExist() {
+        @DisplayName("deve reativar categoria fallback inativa quando sugestao ativa nao existir")
+        void shouldReactivateInactiveFallbackCategoryWhenActiveSuggestedCategoryDoesNotExist() {
             User user = buildUser(1L);
-            Category savedCategory = buildCategory("Outros", CategoryType.EXPENSE);
+            Category inactiveFallbackCategory = buildCategory("Outros", CategoryType.EXPENSE, false, false);
+
+            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
+                    user.getId(),
+                    CategoryType.EXPENSE,
+                    "Combustível"
+            )).thenReturn(Optional.empty());
 
             when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
+                    user.getId(),
+                    CategoryType.EXPENSE,
+                    "Outros"
+            )).thenReturn(Optional.of(inactiveFallbackCategory));
+
+            when(categoryRepository.save(inactiveFallbackCategory)).thenReturn(inactiveFallbackCategory);
+
+            Category result = telegramCategoryResolverService.resolveCategory(
+                    user,
+                    TransactionType.EXPENSE,
+                    "gasolina no posto"
+            );
+
+            assertThat(result).isEqualTo(inactiveFallbackCategory);
+            assertThat(inactiveFallbackCategory.getActive()).isTrue();
+
+            verify(categoryRepository).findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
+                    user.getId(),
+                    CategoryType.EXPENSE,
+                    "Combustível"
+            );
+            verify(categoryRepository).findByUserIdAndTypeAndNameIgnoreCase(
+                    user.getId(),
+                    CategoryType.EXPENSE,
+                    "Outros"
+            );
+            verify(categoryRepository).save(inactiveFallbackCategory);
+        }
+
+        @Test
+        @DisplayName("deve criar categoria fallback de despesa quando sugestao ativa e fallback nao existirem")
+        void shouldCreateFallbackExpenseCategoryWhenActiveSuggestedAndFallbackDoNotExist() {
+            User user = buildUser(1L);
+            Category savedCategory = buildCategory("Outros", CategoryType.EXPENSE, true, false);
+
+            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
                     user.getId(),
                     CategoryType.EXPENSE,
                     "Alimentação"
@@ -136,8 +203,7 @@ class TelegramCategoryResolverServiceTest {
                     "Outros"
             )).thenReturn(Optional.empty());
 
-            when(categoryRepository.save(org.mockito.ArgumentMatchers.any(Category.class)))
-                    .thenReturn(savedCategory);
+            when(categoryRepository.save(any(Category.class))).thenReturn(savedCategory);
 
             Category result = telegramCategoryResolverService.resolveCategory(
                     user,
@@ -155,22 +221,29 @@ class TelegramCategoryResolverServiceTest {
             assertThat(categoryToSave.getUser()).isEqualTo(user);
             assertThat(categoryToSave.getType()).isEqualTo(CategoryType.EXPENSE);
             assertThat(categoryToSave.getName()).isEqualTo("Outros");
+            assertThat(categoryToSave.getActive()).isTrue();
+            assertThat(categoryToSave.getDefaultCategory()).isFalse();
         }
 
         @Test
         @DisplayName("deve criar categoria fallback de receita quando nenhuma categoria existir")
         void shouldCreateFallbackIncomeCategoryWhenNoCategoryExists() {
             User user = buildUser(1L);
-            Category savedCategory = buildCategory("Receitas Gerais", CategoryType.INCOME);
+            Category savedCategory = buildCategory("Receitas Gerais", CategoryType.INCOME, true, false);
+
+            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
+                    user.getId(),
+                    CategoryType.INCOME,
+                    "Receitas Gerais"
+            )).thenReturn(Optional.empty());
 
             when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
                     user.getId(),
                     CategoryType.INCOME,
                     "Receitas Gerais"
-            )).thenReturn(Optional.empty(), Optional.empty());
+            )).thenReturn(Optional.empty());
 
-            when(categoryRepository.save(org.mockito.ArgumentMatchers.any(Category.class)))
-                    .thenReturn(savedCategory);
+            when(categoryRepository.save(any(Category.class))).thenReturn(savedCategory);
 
             Category result = telegramCategoryResolverService.resolveCategory(
                     user,
@@ -188,15 +261,17 @@ class TelegramCategoryResolverServiceTest {
             assertThat(categoryToSave.getUser()).isEqualTo(user);
             assertThat(categoryToSave.getType()).isEqualTo(CategoryType.INCOME);
             assertThat(categoryToSave.getName()).isEqualTo("Receitas Gerais");
+            assertThat(categoryToSave.getActive()).isTrue();
+            assertThat(categoryToSave.getDefaultCategory()).isFalse();
         }
 
         @Test
         @DisplayName("deve normalizar descricao removendo acentos e ignorando maiusculas")
         void shouldNormalizeDescriptionRemovingAccentsAndIgnoringCase() {
             User user = buildUser(1L);
-            Category expectedCategory = buildCategory("Combustível", CategoryType.EXPENSE);
+            Category expectedCategory = buildCategory("Combustível", CategoryType.EXPENSE, true, false);
 
-            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
+            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
                     user.getId(),
                     CategoryType.EXPENSE,
                     "Combustível"
@@ -209,15 +284,22 @@ class TelegramCategoryResolverServiceTest {
             );
 
             assertThat(result).isEqualTo(expectedCategory);
+
+            verify(categoryRepository).findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
+                    user.getId(),
+                    CategoryType.EXPENSE,
+                    "Combustível"
+            );
+            verify(categoryRepository, never()).save(any(Category.class));
         }
 
         @Test
-        @DisplayName("deve usar fallback quando descricao for nula")
-        void shouldUseFallbackWhenDescriptionIsNull() {
+        @DisplayName("deve usar fallback ativo quando descricao for nula")
+        void shouldUseActiveFallbackWhenDescriptionIsNull() {
             User user = buildUser(1L);
-            Category fallbackCategory = buildCategory("Outros", CategoryType.EXPENSE);
+            Category fallbackCategory = buildCategory("Outros", CategoryType.EXPENSE, true, false);
 
-            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
+            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
                     user.getId(),
                     CategoryType.EXPENSE,
                     "Outros"
@@ -230,6 +312,13 @@ class TelegramCategoryResolverServiceTest {
             );
 
             assertThat(result).isEqualTo(fallbackCategory);
+
+            verify(categoryRepository).findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
+                    user.getId(),
+                    CategoryType.EXPENSE,
+                    "Outros"
+            );
+            verify(categoryRepository, never()).save(any(Category.class));
         }
     }
 
@@ -238,10 +327,10 @@ class TelegramCategoryResolverServiceTest {
     class ResolveExplicitCategoryTests {
 
         @Test
-        @DisplayName("deve retornar categoria explicita existente")
-        void shouldReturnExistingExplicitCategory() {
+        @DisplayName("deve retornar categoria explicita existente e ativa")
+        void shouldReturnExistingActiveExplicitCategory() {
             User user = buildUser(1L);
-            Category existingCategory = buildCategory("Cartão", CategoryType.EXPENSE);
+            Category existingCategory = buildCategory("Cartão", CategoryType.EXPENSE, true, false);
 
             when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
                     user.getId(),
@@ -257,14 +346,50 @@ class TelegramCategoryResolverServiceTest {
 
             assertThat(result).isEqualTo(existingCategory);
 
-            verify(categoryRepository, never()).save(org.mockito.ArgumentMatchers.any(Category.class));
+            verify(categoryRepository).findByUserIdAndTypeAndNameIgnoreCase(
+                    user.getId(),
+                    CategoryType.EXPENSE,
+                    "Cartão"
+            );
+            verify(categoryRepository, never()).save(any(Category.class));
+        }
+
+        @Test
+        @DisplayName("deve reativar categoria explicita existente e inativa")
+        void shouldReactivateExistingInactiveExplicitCategory() {
+            User user = buildUser(1L);
+            Category inactiveCategory = buildCategory("Cartão", CategoryType.EXPENSE, false, false);
+
+            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
+                    user.getId(),
+                    CategoryType.EXPENSE,
+                    "Cartão"
+            )).thenReturn(Optional.of(inactiveCategory));
+
+            when(categoryRepository.save(inactiveCategory)).thenReturn(inactiveCategory);
+
+            Category result = telegramCategoryResolverService.resolveExplicitCategory(
+                    user,
+                    TransactionType.EXPENSE,
+                    " Cartão "
+            );
+
+            assertThat(result).isEqualTo(inactiveCategory);
+            assertThat(inactiveCategory.getActive()).isTrue();
+
+            verify(categoryRepository).findByUserIdAndTypeAndNameIgnoreCase(
+                    user.getId(),
+                    CategoryType.EXPENSE,
+                    "Cartão"
+            );
+            verify(categoryRepository).save(inactiveCategory);
         }
 
         @Test
         @DisplayName("deve criar categoria explicita quando nao existir")
         void shouldCreateExplicitCategoryWhenItDoesNotExist() {
             User user = buildUser(1L);
-            Category savedCategory = buildCategory("Viagem", CategoryType.EXPENSE);
+            Category savedCategory = buildCategory("Viagem", CategoryType.EXPENSE, true, false);
 
             when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
                     user.getId(),
@@ -272,8 +397,7 @@ class TelegramCategoryResolverServiceTest {
                     "Viagem"
             )).thenReturn(Optional.empty());
 
-            when(categoryRepository.save(org.mockito.ArgumentMatchers.any(Category.class)))
-                    .thenReturn(savedCategory);
+            when(categoryRepository.save(any(Category.class))).thenReturn(savedCategory);
 
             Category result = telegramCategoryResolverService.resolveExplicitCategory(
                     user,
@@ -291,15 +415,17 @@ class TelegramCategoryResolverServiceTest {
             assertThat(categoryToSave.getUser()).isEqualTo(user);
             assertThat(categoryToSave.getType()).isEqualTo(CategoryType.EXPENSE);
             assertThat(categoryToSave.getName()).isEqualTo("Viagem");
+            assertThat(categoryToSave.getActive()).isTrue();
+            assertThat(categoryToSave.getDefaultCategory()).isFalse();
         }
 
         @Test
         @DisplayName("deve usar categoria sugerida quando categoria explicita for nula")
         void shouldUseSuggestedCategoryWhenExplicitCategoryIsNull() {
             User user = buildUser(1L);
-            Category fallbackCategory = buildCategory("Outros", CategoryType.EXPENSE);
+            Category fallbackCategory = buildCategory("Outros", CategoryType.EXPENSE, true, false);
 
-            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
+            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
                     user.getId(),
                     CategoryType.EXPENSE,
                     "Outros"
@@ -312,15 +438,22 @@ class TelegramCategoryResolverServiceTest {
             );
 
             assertThat(result).isEqualTo(fallbackCategory);
+
+            verify(categoryRepository).findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
+                    user.getId(),
+                    CategoryType.EXPENSE,
+                    "Outros"
+            );
+            verify(categoryRepository, never()).save(any(Category.class));
         }
 
         @Test
         @DisplayName("deve usar categoria sugerida quando categoria explicita estiver em branco")
         void shouldUseSuggestedCategoryWhenExplicitCategoryIsBlank() {
             User user = buildUser(1L);
-            Category fallbackCategory = buildCategory("Receitas Gerais", CategoryType.INCOME);
+            Category fallbackCategory = buildCategory("Receitas Gerais", CategoryType.INCOME, true, false);
 
-            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCase(
+            when(categoryRepository.findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
                     user.getId(),
                     CategoryType.INCOME,
                     "Receitas Gerais"
@@ -333,6 +466,13 @@ class TelegramCategoryResolverServiceTest {
             );
 
             assertThat(result).isEqualTo(fallbackCategory);
+
+            verify(categoryRepository).findByUserIdAndTypeAndNameIgnoreCaseAndActiveTrue(
+                    user.getId(),
+                    CategoryType.INCOME,
+                    "Receitas Gerais"
+            );
+            verify(categoryRepository, never()).save(any(Category.class));
         }
     }
 
@@ -342,10 +482,12 @@ class TelegramCategoryResolverServiceTest {
         return user;
     }
 
-    private Category buildCategory(String name, CategoryType type) {
+    private Category buildCategory(String name, CategoryType type, Boolean active, Boolean defaultCategory) {
         Category category = new Category();
         category.setName(name);
         category.setType(type);
+        category.setActive(active);
+        category.setDefaultCategory(defaultCategory);
         return category;
     }
 }

@@ -9,6 +9,8 @@ public record CategoryResponse(
         Long id,
         String name,
         CategoryType type,
+        Boolean active,
+        Boolean defaultCategory,
         LocalDateTime createdAt
 ) {
     public static CategoryResponse fromEntity(Category category) {
@@ -16,6 +18,8 @@ public record CategoryResponse(
                 category.getId(),
                 category.getName(),
                 category.getType(),
+                category.getActive(),
+                category.getDefaultCategory(),
                 category.getCreatedAt()
         );
     }
