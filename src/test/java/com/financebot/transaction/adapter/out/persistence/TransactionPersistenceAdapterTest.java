@@ -76,8 +76,7 @@ class TransactionPersistenceAdapterTest {
 
         Optional<Transaction> result = transactionPersistenceAdapter.findByIdAndUserId(99L, 1L);
 
-        assertThat(result).isPresent();
-        assertThat(result.get()).isEqualTo(transaction);
+        assertThat(result).contains(transaction);
 
         verify(transactionRepository).findByIdAndUserId(99L, 1L);
     }

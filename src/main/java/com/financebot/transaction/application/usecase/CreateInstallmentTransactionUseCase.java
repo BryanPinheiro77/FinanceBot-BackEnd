@@ -34,16 +34,24 @@ public class CreateInstallmentTransactionUseCase {
     private final InstallmentPlanFactory installmentPlanFactory;
 
     @Transactional
-    public InstallmentTransactionResponse execute (
+    public InstallmentTransactionResponse execute(
             CreateInstallmentTransactionRequest request,
             Authentication authentication
     ) {
         User user = authenticatedUserResolver.resolve(authentication);
-        return executeForUser(request, user);
+
+        return createInstallment(request, user);
     }
 
     @Transactional
     public InstallmentTransactionResponse executeForUser(
+            CreateInstallmentTransactionRequest request,
+            User user
+    ) {
+        return createInstallment(request, user);
+    }
+
+    private InstallmentTransactionResponse createInstallment(
             CreateInstallmentTransactionRequest request,
             User user
     ) {
@@ -69,6 +77,7 @@ public class CreateInstallmentTransactionUseCase {
                         category
                 ))
                 .toList();
+
         List<Transaction> savedTransactions = saveTransactionPort.saveAll(transactions);
 
         List<TransactionResponse> responses = savedTransactions.stream()
