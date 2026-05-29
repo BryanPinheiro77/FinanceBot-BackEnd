@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Changed
+- Refatorado o módulo de transações para uma estrutura mais próxima da arquitetura hexagonal.
+- Extraídos casos de uso para criação, listagem, busca, atualização, remoção e parcelamento de transações.
+- Removido o `TransactionService`, substituindo o fluxo por use cases e ports/adapters.
+- Movido `TransactionController` para `adapter/in/web`.
+- Isolado o acesso a `TransactionRepository` e `TransactionSpecification` no adapter de persistência.
+
+### Added
+- Adicionados ports de saída para persistência de transações.
+- Adicionado `TransactionPersistenceAdapter`.
+- Adicionados testes unitários para use cases, controller e adapter de persistência de transações.
+
 ## v1.2.0
 
 ### Added
