@@ -4,8 +4,8 @@ import com.financebot.analysis.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
 import com.financebot.telegram.dto.request.InstallmentPurchaseCapacityRequest;
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
+import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
 import com.financebot.transaction.repository.TransactionRepository;
-import com.financebot.transaction.service.TransactionService;
 import com.financebot.user.domain.User;
 import com.financebot.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -39,7 +39,7 @@ class TelegramIntegrationServiceTest {
     private TransactionRepository transactionRepository;
 
     @Mock
-    private TransactionService transactionService;
+    private CreateInstallmentTransactionUseCase createInstallmentTransactionUseCase;
 
     @Mock
     private TelegramAccountResolverService telegramAccountResolverService;

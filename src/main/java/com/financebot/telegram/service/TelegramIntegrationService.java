@@ -8,12 +8,12 @@ import com.financebot.category.domain.Category;
 import com.financebot.telegram.dto.request.*;
 import com.financebot.telegram.dto.response.*;
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
+import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
-import com.financebot.transaction.dto.request.CreateInstallmentTransactionRequest;
+import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.repository.TransactionRepository;
-import com.financebot.transaction.service.TransactionService;
 import com.financebot.user.domain.User;
 import com.financebot.user.dto.request.UpdateMonthlyBaseIncomeRequest;
 import com.financebot.user.dto.response.TelegramUserProfileResponse;
@@ -39,7 +39,7 @@ public class TelegramIntegrationService {
     private final UserRepository userRepository;
     private final FinancialAnalysisService financialAnalysisService;
     private final TransactionRepository transactionRepository;
-    private final TransactionService transactionService;
+    private final CreateInstallmentTransactionUseCase createInstallmentTransactionUseCase;
     private final TelegramAccountResolverService telegramAccountResolverService;
     private final TelegramCategoryResolverService telegramCategoryResolverService;
 
@@ -189,7 +189,7 @@ public class TelegramIntegrationService {
                 request.totalInstallments()
         );
 
-        transactionService.createInstallmentForUser(installmentRequest, user);
+        createInstallmentTransactionUseCase.executeForUser(installmentRequest, user);
     }
 
     @Transactional(readOnly = true)
