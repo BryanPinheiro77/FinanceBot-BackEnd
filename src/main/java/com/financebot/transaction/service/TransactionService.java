@@ -2,10 +2,7 @@ package com.financebot.transaction.service;
 
 import com.financebot.account.domain.Account;
 import com.financebot.category.domain.Category;
-import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
-import com.financebot.transaction.application.usecase.CreateTransactionUseCase;
-import com.financebot.transaction.application.usecase.FindTransactionByIdUseCase;
-import com.financebot.transaction.application.usecase.ListTransactionsUseCase;
+import com.financebot.transaction.application.usecase.*;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.dto.TransactionFilter;
 import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
@@ -43,6 +40,7 @@ public class TransactionService {
     private final CreateInstallmentTransactionUseCase createInstallmentTransactionUseCase;
     private final ListTransactionsUseCase listTransactionsUseCase;
     private final FindTransactionByIdUseCase findTransactionByIdUseCase;
+    private final DeleteTransactionUseCase deleteTransactionUseCase;
 
     @Transactional
     public TransactionResponse create(CreateTransactionRequest request, Authentication authentication) {
@@ -101,11 +99,7 @@ public class TransactionService {
 
     @Transactional
     public void delete(Long id, Authentication authentication) {
-        User user = authenticatedUserResolver.resolve(authentication);
-
-        Transaction transaction = getUserTransaction(id, user.getId());
-
-        transactionRepository.delete(transaction);
+        deleteTransactionUseCase.execute(id, authentication);
     }
 
     private Transaction getUserTransaction(Long transactionId, Long userId) {
