@@ -4,8 +4,8 @@ import com.financebot.account.domain.Account;
 import com.financebot.category.domain.Category;
 import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
 import com.financebot.transaction.application.usecase.CreateTransactionUseCase;
+import com.financebot.transaction.application.usecase.ListTransactionsUseCase;
 import com.financebot.transaction.domain.Transaction;
-import com.financebot.transaction.domain.installment.InstallmentPlanItem;
 import com.financebot.transaction.dto.TransactionFilter;
 import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
@@ -14,7 +14,6 @@ import com.financebot.transaction.application.dto.response.InstallmentTransactio
 import com.financebot.transaction.application.dto.response.TransactionResponse;
 import com.financebot.transaction.mapper.TransactionMapper;
 import com.financebot.transaction.repository.TransactionRepository;
-import com.financebot.transaction.specification.TransactionSpecification;
 import com.financebot.transaction.validation.TransactionCategoryValidator;
 import com.financebot.user.domain.User;
 import com.financebot.user.service.AuthenticatedUserResolver;
@@ -27,14 +26,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-
 @Service
 @RequiredArgsConstructor
 public class TransactionService {
 
     private static final String TRANSACTION_NOT_FOUND_MESSAGE = "Transaction not found";
-    private static final String INVALID_PERIOD_MESSAGE = "Start date cannot be after end date";
 
     private final TransactionRepository transactionRepository;
     private final UserResourceResolver userResourceResolver;
@@ -44,6 +40,7 @@ public class TransactionService {
 
     private final CreateTransactionUseCase createTransactionUseCase;
     private final CreateInstallmentTransactionUseCase createInstallmentTransactionUseCase;
+    private final ListTransactionsUseCase listTransactionsUseCase;
 
     @Transactional
     public TransactionResponse create(CreateTransactionRequest request, Authentication authentication) {
@@ -74,15 +71,7 @@ public class TransactionService {
             Authentication authentication,
             Pageable pageable
     ) {
-        User user = authenticatedUserResolver.resolve(authentication);
-
-        validatePeriod(filter.startDate(), filter.endDate());
-
-        return transactionRepository.findAll(
-                        TransactionSpecification.withFilters(user.getId(), filter),
-                        pageable
-                )
-                .map(transactionMapper::toResponse);
+        return listTransactionsUseCase.execute(filter, authentication, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -120,12 +109,6 @@ public class TransactionService {
         Transaction transaction = getUserTransaction(id, user.getId());
 
         transactionRepository.delete(transaction);
-    }
-
-    private void validatePeriod(LocalDate startDate, LocalDate endDate) {
-        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-            throw new IllegalArgumentException(INVALID_PERIOD_MESSAGE);
-        }
     }
 
     private Transaction getUserTransaction(Long transactionId, Long userId) {
