@@ -5,12 +5,12 @@ import com.financebot.category.domain.Category;
 import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.application.dto.response.InstallmentTransactionResponse;
 import com.financebot.transaction.application.dto.response.TransactionResponse;
+import com.financebot.transaction.application.port.out.SaveTransactionPort;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.installment.InstallmentPlan;
 import com.financebot.transaction.domain.installment.InstallmentPlanFactory;
 import com.financebot.transaction.domain.installment.InstallmentPlanItem;
 import com.financebot.transaction.mapper.TransactionMapper;
-import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.transaction.validation.TransactionCategoryValidator;
 import com.financebot.user.domain.User;
 import com.financebot.user.service.AuthenticatedUserResolver;
@@ -26,7 +26,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CreateInstallmentTransactionUseCase {
 
-    private final TransactionRepository transactionRepository;
+    private final SaveTransactionPort saveTransactionPort;
     private final UserResourceResolver userResourceResolver;
     private final TransactionMapper transactionMapper;
     private final AuthenticatedUserResolver authenticatedUserResolver;
@@ -69,7 +69,7 @@ public class CreateInstallmentTransactionUseCase {
                         category
                 ))
                 .toList();
-        List<Transaction> savedTransactions = transactionRepository.saveAll(transactions);
+        List<Transaction> savedTransactions = saveTransactionPort.saveAll(transactions);
 
         List<TransactionResponse> responses = savedTransactions.stream()
                 .map(transactionMapper::toResponse)

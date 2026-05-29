@@ -4,9 +4,10 @@ import com.financebot.account.domain.Account;
 import com.financebot.category.domain.Category;
 import com.financebot.transaction.application.dto.request.UpdateTransactionRequest;
 import com.financebot.transaction.application.dto.response.TransactionResponse;
+import com.financebot.transaction.application.port.out.FindTransactionPort;
+import com.financebot.transaction.application.port.out.SaveTransactionPort;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.mapper.TransactionMapper;
-import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.transaction.validation.TransactionCategoryValidator;
 import com.financebot.user.domain.User;
 import com.financebot.user.service.AuthenticatedUserResolver;
@@ -23,7 +24,8 @@ public class UpdateTransactionUseCase {
 
     private static final String TRANSACTION_NOT_FOUND_MESSAGE = "Transaction not found";
 
-    private final TransactionRepository transactionRepository;
+    private final FindTransactionPort findTransactionPort;
+    private final SaveTransactionPort saveTransactionPort;
     private final UserResourceResolver userResourceResolver;
     private final TransactionMapper transactionMapper;
     private final AuthenticatedUserResolver authenticatedUserResolver;
@@ -37,7 +39,7 @@ public class UpdateTransactionUseCase {
     ) {
         User user = authenticatedUserResolver.resolve(authentication);
 
-        Transaction transaction = transactionRepository.findByIdAndUserId(id, user.getId())
+        Transaction transaction = findTransactionPort.findByIdAndUserId(id, user.getId())
                 .orElseThrow(() -> new EntityNotFoundException(TRANSACTION_NOT_FOUND_MESSAGE));
 
         Account account = userResourceResolver.resolveAccount(request.accountId(), user.getId());
@@ -49,7 +51,7 @@ public class UpdateTransactionUseCase {
         transaction.setAccount(account);
         transaction.setCategory(category);
 
-        Transaction updatedTransaction = transactionRepository.save(transaction);
+        Transaction updatedTransaction = saveTransactionPort.save(transaction);
 
         return transactionMapper.toResponse(updatedTransaction);
     }

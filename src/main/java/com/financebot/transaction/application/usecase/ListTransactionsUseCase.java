@@ -1,10 +1,9 @@
 package com.financebot.transaction.application.usecase;
 
 import com.financebot.transaction.application.dto.response.TransactionResponse;
+import com.financebot.transaction.application.port.out.FindTransactionPort;
 import com.financebot.transaction.dto.TransactionFilter;
 import com.financebot.transaction.mapper.TransactionMapper;
-import com.financebot.transaction.repository.TransactionRepository;
-import com.financebot.transaction.specification.TransactionSpecification;
 import com.financebot.user.domain.User;
 import com.financebot.user.service.AuthenticatedUserResolver;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,7 @@ public class ListTransactionsUseCase {
 
     private static final String INVALID_PERIOD_MESSAGE = "Start date cannot be after end date";
 
-    private final TransactionRepository transactionRepository;
+    private final FindTransactionPort findTransactionPort;
     private final TransactionMapper transactionMapper;
     private final AuthenticatedUserResolver authenticatedUserResolver;
 
@@ -36,10 +35,7 @@ public class ListTransactionsUseCase {
 
         validatePeriod(filter.startDate(), filter.endDate());
 
-        return transactionRepository.findAll(
-                        TransactionSpecification.withFilters(user.getId(), filter),
-                        pageable
-                )
+        return findTransactionPort.findAllByFilter(user.getId(), filter, pageable)
                 .map(transactionMapper::toResponse);
     }
 

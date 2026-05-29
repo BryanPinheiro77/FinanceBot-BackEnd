@@ -1,9 +1,9 @@
 package com.financebot.transaction.application.usecase;
 
 import com.financebot.transaction.application.dto.response.TransactionResponse;
+import com.financebot.transaction.application.port.out.FindTransactionPort;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.mapper.TransactionMapper;
-import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.user.domain.User;
 import com.financebot.user.service.AuthenticatedUserResolver;
 import jakarta.persistence.EntityNotFoundException;
@@ -18,7 +18,7 @@ public class FindTransactionByIdUseCase {
 
     private static final String TRANSACTION_NOT_FOUND_MESSAGE = "Transaction not found";
 
-    private final TransactionRepository transactionRepository;
+    private final FindTransactionPort findTransactionPort;
     private final TransactionMapper transactionMapper;
     private final AuthenticatedUserResolver authenticatedUserResolver;
 
@@ -26,7 +26,7 @@ public class FindTransactionByIdUseCase {
     public TransactionResponse execute(Long id, Authentication authentication) {
         User user = authenticatedUserResolver.resolve(authentication);
 
-        Transaction transaction = transactionRepository.findByIdAndUserId(id, user.getId())
+        Transaction transaction = findTransactionPort.findByIdAndUserId(id, user.getId())
                 .orElseThrow(() -> new EntityNotFoundException(TRANSACTION_NOT_FOUND_MESSAGE));
 
         return transactionMapper.toResponse(transaction);

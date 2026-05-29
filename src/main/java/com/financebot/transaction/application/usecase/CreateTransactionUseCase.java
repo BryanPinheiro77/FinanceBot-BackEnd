@@ -4,9 +4,9 @@ import com.financebot.account.domain.Account;
 import com.financebot.category.domain.Category;
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
 import com.financebot.transaction.application.dto.response.TransactionResponse;
+import com.financebot.transaction.application.port.out.SaveTransactionPort;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.mapper.TransactionMapper;
-import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.transaction.validation.TransactionCategoryValidator;
 import com.financebot.user.domain.User;
 import com.financebot.user.service.AuthenticatedUserResolver;
@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CreateTransactionUseCase {
 
-    private final TransactionRepository transactionRepository;
+    private final SaveTransactionPort saveTransactionPort;
     private final UserResourceResolver userResourceResolver;
     private final TransactionMapper transactionMapper;
     private final AuthenticatedUserResolver authenticatedUserResolver;
@@ -44,7 +44,7 @@ public class CreateTransactionUseCase {
         transaction.setTotalInstallments(null);
         transaction.setInstallmentGroupId(null);
 
-        Transaction savedTransaction = transactionRepository.save(transaction);
+        Transaction savedTransaction = saveTransactionPort.save(transaction);
 
         return transactionMapper.toResponse(savedTransaction);
     }
