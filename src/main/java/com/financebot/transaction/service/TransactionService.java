@@ -2,10 +2,9 @@ package com.financebot.transaction.service;
 
 import com.financebot.account.domain.Account;
 import com.financebot.category.domain.Category;
+import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
 import com.financebot.transaction.application.usecase.CreateTransactionUseCase;
 import com.financebot.transaction.domain.Transaction;
-import com.financebot.transaction.domain.installment.InstallmentPlan;
-import com.financebot.transaction.domain.installment.InstallmentPlanFactory;
 import com.financebot.transaction.domain.installment.InstallmentPlanItem;
 import com.financebot.transaction.dto.TransactionFilter;
 import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
@@ -29,7 +28,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -43,9 +41,9 @@ public class TransactionService {
     private final TransactionMapper transactionMapper;
     private final AuthenticatedUserResolver authenticatedUserResolver;
     private final TransactionCategoryValidator transactionCategoryValidator;
-    private final InstallmentPlanFactory installmentPlanFactory;
 
     private final CreateTransactionUseCase createTransactionUseCase;
+    private final CreateInstallmentTransactionUseCase createInstallmentTransactionUseCase;
 
     @Transactional
     public TransactionResponse create(CreateTransactionRequest request, Authentication authentication) {
@@ -59,7 +57,7 @@ public class TransactionService {
     ) {
         User user = authenticatedUserResolver.resolve(authentication);
 
-        return createInstallmentInternal(request, user);
+        return createInstallmentTransactionUseCase.execute(request, authentication);
     }
 
     @Transactional
@@ -67,47 +65,7 @@ public class TransactionService {
             CreateInstallmentTransactionRequest request,
             User user
     ) {
-        return createInstallmentInternal(request, user);
-    }
-
-    private InstallmentTransactionResponse createInstallmentInternal(
-            CreateInstallmentTransactionRequest request,
-            User user
-    ) {
-        InstallmentPlan plan = installmentPlanFactory.create(
-                request.totalAmount(),
-                request.description(),
-                request.firstInstallmentDate(),
-                request.type(),
-                request.totalInstallments()
-        );
-
-        Account account = userResourceResolver.resolveAccount(request.accountId(), user.getId());
-        Category category = userResourceResolver.resolveCategory(request.categoryId(), user.getId());
-
-        transactionCategoryValidator.validate(category, request.type());
-
-        List<Transaction> transactions = plan.items().stream()
-                .map(item -> buildInstallmentTransaction(
-                        item,
-                        request,
-                        user,
-                        account,
-                        category
-                ))
-                .toList();
-
-        List<Transaction> savedTransactions = transactionRepository.saveAll(transactions);
-
-        List<TransactionResponse> responses = savedTransactions.stream()
-                .map(transactionMapper::toResponse)
-                .toList();
-
-        return new InstallmentTransactionResponse(
-                plan.installmentGroupId(),
-                plan.totalInstallments(),
-                responses
-        );
+        return createInstallmentTransactionUseCase.executeForUser(request, user);
     }
 
     @Transactional(readOnly = true)
@@ -162,31 +120,6 @@ public class TransactionService {
         Transaction transaction = getUserTransaction(id, user.getId());
 
         transactionRepository.delete(transaction);
-    }
-
-    private Transaction buildInstallmentTransaction(
-            InstallmentPlanItem item,
-            CreateInstallmentTransactionRequest request,
-            User user,
-            Account account,
-            Category category
-    ) {
-        Transaction transaction = new Transaction();
-
-        transaction.setAmount(item.amount());
-        transaction.setDescription(item.description());
-        transaction.setDate(item.date());
-        transaction.setType(request.type());
-        transaction.setSourceType(request.sourceType());
-        transaction.setUser(user);
-        transaction.setAccount(account);
-        transaction.setCategory(category);
-        transaction.setInstallment(true);
-        transaction.setInstallmentNumber(item.installmentNumber());
-        transaction.setTotalInstallments(item.totalInstallments());
-        transaction.setInstallmentGroupId(item.installmentGroupId());
-
-        return transaction;
     }
 
     private void validatePeriod(LocalDate startDate, LocalDate endDate) {
