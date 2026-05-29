@@ -1,9 +1,9 @@
 package com.financebot.transaction.mapper;
 
 import com.financebot.transaction.domain.Transaction;
-import com.financebot.transaction.dto.request.CreateTransactionRequest;
-import com.financebot.transaction.dto.response.TransactionResponse;
-import com.financebot.transaction.dto.request.UpdateTransactionRequest;
+import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
+import com.financebot.transaction.application.dto.response.TransactionResponse;
+import com.financebot.transaction.application.dto.request.UpdateTransactionRequest;
 import org.springframework.stereotype.Component;
 
 @Component

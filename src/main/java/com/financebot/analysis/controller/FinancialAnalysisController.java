@@ -2,8 +2,8 @@ package com.financebot.analysis.controller;
 
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
-import com.financebot.transaction.dto.request.CreateInstallmentTransactionRequest;
-import com.financebot.transaction.dto.request.CreateTransactionRequest;
+import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
+import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;

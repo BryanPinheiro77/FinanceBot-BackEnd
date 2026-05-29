@@ -1,18 +1,23 @@
-package com.financebot.transaction.controller;
+package com.financebot.transaction.adapter.in.web;
 
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.dto.response.InstallmentTransactionCreationResponse;
 import com.financebot.analysis.dto.response.TransactionCreationResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
+import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
+import com.financebot.transaction.application.usecase.CreateTransactionUseCase;
+import com.financebot.transaction.application.usecase.DeleteTransactionUseCase;
+import com.financebot.transaction.application.usecase.FindTransactionByIdUseCase;
+import com.financebot.transaction.application.usecase.ListTransactionsUseCase;
+import com.financebot.transaction.application.usecase.UpdateTransactionUseCase;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.TransactionType;
-import com.financebot.transaction.dto.request.CreateInstallmentTransactionRequest;
-import com.financebot.transaction.dto.request.CreateTransactionRequest;
-import com.financebot.transaction.dto.response.InstallmentTransactionResponse;
+import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
+import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
+import com.financebot.transaction.application.dto.response.InstallmentTransactionResponse;
 import com.financebot.transaction.dto.TransactionFilter;
-import com.financebot.transaction.dto.response.TransactionResponse;
-import com.financebot.transaction.dto.request.UpdateTransactionRequest;
-import com.financebot.transaction.service.TransactionService;
+import com.financebot.transaction.application.dto.response.TransactionResponse;
+import com.financebot.transaction.application.dto.request.UpdateTransactionRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,9 +33,14 @@ import java.time.LocalDate;
 @RequestMapping("/transactions")
 @RequiredArgsConstructor
 public class TransactionController {
-
-    private final TransactionService transactionService;
     private final FinancialAnalysisService financialAnalysisService;
+
+    private final CreateTransactionUseCase createTransactionUseCase;
+    private final CreateInstallmentTransactionUseCase createInstallmentTransactionUseCase;
+    private final ListTransactionsUseCase listTransactionsUseCase;
+    private final FindTransactionByIdUseCase findTransactionByIdUseCase;
+    private final UpdateTransactionUseCase updateTransactionUseCase;
+    private final DeleteTransactionUseCase deleteTransactionUseCase;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -38,7 +48,7 @@ public class TransactionController {
             @RequestBody @Valid CreateTransactionRequest request,
             Authentication authentication
     ) {
-        TransactionResponse transaction = transactionService.create(request, authentication);
+        TransactionResponse transaction = createTransactionUseCase.execute(request, authentication);
         FinancialCommitmentResponse analysis = financialAnalysisService.getFinancialCommitment(authentication);
 
         return new TransactionCreationResponse(transaction, analysis);
@@ -51,7 +61,7 @@ public class TransactionController {
             Authentication authentication
     ) {
         InstallmentTransactionResponse installment =
-                transactionService.createInstallment(request, authentication);
+                createInstallmentTransactionUseCase.execute(request, authentication);
 
         FinancialCommitmentResponse analysis = financialAnalysisService.getFinancialCommitment(authentication);
 
@@ -84,7 +94,7 @@ public class TransactionController {
                 description
         );
 
-        return transactionService.findAll(filter, authentication, pageable);
+        return listTransactionsUseCase.execute(filter, authentication, pageable);
     }
 
     @GetMapping("/{id}")
@@ -92,7 +102,7 @@ public class TransactionController {
             @PathVariable Long id,
             Authentication authentication
     ) {
-        return transactionService.findById(id, authentication);
+        return findTransactionByIdUseCase.execute(id, authentication);
     }
 
     @PutMapping("/{id}")
@@ -101,7 +111,7 @@ public class TransactionController {
             @RequestBody @Valid UpdateTransactionRequest request,
             Authentication authentication
     ) {
-        return transactionService.update(id, request, authentication);
+        return updateTransactionUseCase.execute(id, request, authentication);
     }
 
     @DeleteMapping("/{id}")
@@ -110,6 +120,6 @@ public class TransactionController {
             @PathVariable Long id,
             Authentication authentication
     ) {
-        transactionService.delete(id, authentication);
+        deleteTransactionUseCase.execute(id, authentication);
     }
 }
