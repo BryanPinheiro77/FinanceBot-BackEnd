@@ -4,6 +4,7 @@ import com.financebot.account.domain.Account;
 import com.financebot.category.domain.Category;
 import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
 import com.financebot.transaction.application.usecase.CreateTransactionUseCase;
+import com.financebot.transaction.application.usecase.FindTransactionByIdUseCase;
 import com.financebot.transaction.application.usecase.ListTransactionsUseCase;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.dto.TransactionFilter;
@@ -41,6 +42,7 @@ public class TransactionService {
     private final CreateTransactionUseCase createTransactionUseCase;
     private final CreateInstallmentTransactionUseCase createInstallmentTransactionUseCase;
     private final ListTransactionsUseCase listTransactionsUseCase;
+    private final FindTransactionByIdUseCase findTransactionByIdUseCase;
 
     @Transactional
     public TransactionResponse create(CreateTransactionRequest request, Authentication authentication) {
@@ -52,7 +54,6 @@ public class TransactionService {
             CreateInstallmentTransactionRequest request,
             Authentication authentication
     ) {
-        User user = authenticatedUserResolver.resolve(authentication);
 
         return createInstallmentTransactionUseCase.execute(request, authentication);
     }
@@ -76,11 +77,7 @@ public class TransactionService {
 
     @Transactional(readOnly = true)
     public TransactionResponse findById(Long id, Authentication authentication) {
-        User user = authenticatedUserResolver.resolve(authentication);
-
-        Transaction transaction = getUserTransaction(id, user.getId());
-
-        return transactionMapper.toResponse(transaction);
+        return findTransactionByIdUseCase.execute(id, authentication);
     }
 
     @Transactional
