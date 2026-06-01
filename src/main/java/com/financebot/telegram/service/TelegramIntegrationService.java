@@ -9,7 +9,6 @@ import com.financebot.telegram.dto.request.*;
 import com.financebot.telegram.dto.response.*;
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
-import com.financebot.transaction.application.dto.response.TransactionResponse;
 import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
 import com.financebot.transaction.application.usecase.CreateTransactionUseCase;
 import com.financebot.transaction.domain.SourceType;
