@@ -3,7 +3,7 @@ package com.financebot.transaction.application.usecase;
 import com.financebot.account.domain.Account;
 import com.financebot.category.domain.Category;
 import com.financebot.category.domain.CategoryType;
-import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
+import com.financebot.transaction.application.command.CreateTransactionCommand;
 import com.financebot.transaction.application.dto.response.TransactionResponse;
 import com.financebot.transaction.application.port.out.SaveTransactionPort;
 import com.financebot.transaction.domain.SourceType;
@@ -12,7 +12,6 @@ import com.financebot.transaction.domain.TransactionType;
 import com.financebot.transaction.mapper.TransactionMapper;
 import com.financebot.transaction.validation.TransactionCategoryValidator;
 import com.financebot.user.domain.User;
-import com.financebot.user.service.AuthenticatedUserResolver;
 import com.financebot.user.service.UserResourceResolver;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;
@@ -21,7 +20,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.Authentication;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -43,9 +41,6 @@ class CreateTransactionUseCaseTest {
     private SaveTransactionPort saveTransactionPort;
 
     @Mock
-    private AuthenticatedUserResolver authenticatedUserResolver;
-
-    @Mock
     private UserResourceResolver userResourceResolver;
 
     @Mock
@@ -53,9 +48,6 @@ class CreateTransactionUseCaseTest {
 
     @Mock
     private TransactionMapper transactionMapper;
-
-    @Mock
-    private Authentication authentication;
 
     @InjectMocks
     private CreateTransactionUseCase createTransactionUseCase;
@@ -67,39 +59,7 @@ class CreateTransactionUseCaseTest {
         Account account = buildAccount(10L);
         Category category = buildCategory(20L, CategoryType.EXPENSE);
 
-        CreateTransactionRequest request = buildCreateTransactionRequest();
-
-        Transaction transaction = new Transaction();
-        Transaction savedTransaction = new Transaction();
-        TransactionResponse response = mock(TransactionResponse.class);
-
-        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
-        when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
-        when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
-        when(transactionMapper.toEntity(request)).thenReturn(transaction);
-        when(saveTransactionPort.save(transaction)).thenReturn(savedTransaction);
-        when(transactionMapper.toResponse(savedTransaction)).thenReturn(response);
-
-        TransactionResponse result = createTransactionUseCase.execute(request, authentication);
-
-        assertThat(result).isEqualTo(response);
-        assertTransactionLinkedToUserResources(transaction, user, account, category);
-        assertTransactionMarkedAsNonInstallment(transaction);
-
-        verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
-        verify(transactionMapper).toEntity(request);
-        verify(saveTransactionPort).save(transaction);
-        verify(transactionMapper).toResponse(savedTransaction);
-    }
-
-    @Test
-    @DisplayName("deve criar transação usando usuário já resolvido")
-    void shouldCreateTransactionForResolvedUser() {
-        User user = buildUser(1L, "bryan@email.com");
-        Account account = buildAccount(10L);
-        Category category = buildCategory(20L, CategoryType.EXPENSE);
-
-        CreateTransactionRequest request = buildCreateTransactionRequest();
+        CreateTransactionCommand command = buildCreateTransactionCommand(user);
 
         Transaction transaction = new Transaction();
         Transaction savedTransaction = new Transaction();
@@ -107,19 +67,18 @@ class CreateTransactionUseCaseTest {
 
         when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
         when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
-        when(transactionMapper.toEntity(request)).thenReturn(transaction);
+        when(transactionMapper.toEntity(command)).thenReturn(transaction);
         when(saveTransactionPort.save(transaction)).thenReturn(savedTransaction);
         when(transactionMapper.toResponse(savedTransaction)).thenReturn(response);
 
-        TransactionResponse result = createTransactionUseCase.executeForUser(request, user);
+        TransactionResponse result = createTransactionUseCase.execute(command);
 
         assertThat(result).isEqualTo(response);
         assertTransactionLinkedToUserResources(transaction, user, account, category);
         assertTransactionMarkedAsNonInstallment(transaction);
 
-        verifyNoInteractions(authenticatedUserResolver);
         verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
-        verify(transactionMapper).toEntity(request);
+        verify(transactionMapper).toEntity(command);
         verify(saveTransactionPort).save(transaction);
         verify(transactionMapper).toResponse(savedTransaction);
     }
@@ -128,13 +87,12 @@ class CreateTransactionUseCaseTest {
     @DisplayName("deve lançar erro quando conta não pertencer ao usuário")
     void shouldThrowWhenAccountIsNotFoundForUser() {
         User user = buildUser(1L, "bryan@email.com");
-        CreateTransactionRequest request = buildCreateTransactionRequest();
+        CreateTransactionCommand command = buildCreateTransactionCommand(user);
 
-        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
         when(userResourceResolver.resolveAccount(10L, 1L))
                 .thenThrow(new EntityNotFoundException("Account not found"));
 
-        assertThatThrownBy(() -> createTransactionUseCase.execute(request, authentication))
+        assertThatThrownBy(() -> createTransactionUseCase.execute(command))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Account not found");
 
@@ -147,14 +105,13 @@ class CreateTransactionUseCaseTest {
     void shouldThrowWhenCategoryIsNotFoundForUser() {
         User user = buildUser(1L, "bryan@email.com");
         Account account = buildAccount(10L);
-        CreateTransactionRequest request = buildCreateTransactionRequest();
+        CreateTransactionCommand command = buildCreateTransactionCommand(user);
 
-        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
         when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
         when(userResourceResolver.resolveCategory(20L, 1L))
                 .thenThrow(new EntityNotFoundException("Category not found"));
 
-        assertThatThrownBy(() -> createTransactionUseCase.execute(request, authentication))
+        assertThatThrownBy(() -> createTransactionUseCase.execute(command))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Category not found");
 
@@ -167,9 +124,8 @@ class CreateTransactionUseCaseTest {
         User user = buildUser(1L, "bryan@email.com");
         Account account = buildAccount(10L);
         Category category = buildCategory(20L, CategoryType.INCOME);
-        CreateTransactionRequest request = buildCreateTransactionRequest();
+        CreateTransactionCommand command = buildCreateTransactionCommand(user);
 
-        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
         when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
         when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
 
@@ -177,7 +133,7 @@ class CreateTransactionUseCaseTest {
                 .when(transactionCategoryValidator)
                 .validate(category, TransactionType.EXPENSE);
 
-        assertThatThrownBy(() -> createTransactionUseCase.execute(request, authentication))
+        assertThatThrownBy(() -> createTransactionUseCase.execute(command))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Category type does not match transaction type");
 
@@ -202,15 +158,16 @@ class CreateTransactionUseCaseTest {
         assertThat(transaction.getInstallmentGroupId()).isNull();
     }
 
-    private CreateTransactionRequest buildCreateTransactionRequest() {
-        return new CreateTransactionRequest(
+    private CreateTransactionCommand buildCreateTransactionCommand(User user) {
+        return new CreateTransactionCommand(
                 new BigDecimal("150.00"),
                 "Mercado",
                 LocalDate.of(2026, 4, 4),
                 TransactionType.EXPENSE,
                 SourceType.WEB,
                 10L,
-                20L
+                20L,
+                user
         );
     }
 

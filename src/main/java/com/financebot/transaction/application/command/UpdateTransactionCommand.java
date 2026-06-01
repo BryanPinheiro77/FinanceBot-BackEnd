@@ -1,0 +1,21 @@
+package com.financebot.transaction.application.command;
+
+import com.financebot.transaction.domain.SourceType;
+import com.financebot.transaction.domain.TransactionType;
+import com.financebot.user.domain.User;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+public record UpdateTransactionCommand(
+        Long transactionId,
+        BigDecimal amount,
+        String description,
+        LocalDate date,
+        TransactionType type,
+        SourceType sourceType,
+        Long accountId,
+        Long categoryId,
+        User user
+) {
+}

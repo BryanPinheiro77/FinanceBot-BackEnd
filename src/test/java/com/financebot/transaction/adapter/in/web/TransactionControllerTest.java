@@ -4,6 +4,9 @@ import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.dto.response.InstallmentTransactionCreationResponse;
 import com.financebot.analysis.dto.response.TransactionCreationResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
+import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
+import com.financebot.transaction.application.command.CreateTransactionCommand;
+import com.financebot.transaction.application.command.UpdateTransactionCommand;
 import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
 import com.financebot.transaction.application.dto.request.UpdateTransactionRequest;
@@ -18,6 +21,9 @@ import com.financebot.transaction.application.usecase.UpdateTransactionUseCase;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.TransactionType;
 import com.financebot.transaction.dto.TransactionFilter;
+import com.financebot.transaction.mapper.TransactionMapper;
+import com.financebot.user.domain.User;
+import com.financebot.user.service.AuthenticatedUserResolver;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +51,12 @@ class TransactionControllerTest {
 
     @Mock
     private FinancialAnalysisService financialAnalysisService;
+
+    @Mock
+    private AuthenticatedUserResolver authenticatedUserResolver;
+
+    @Mock
+    private TransactionMapper transactionMapper;
 
     @Mock
     private CreateTransactionUseCase createTransactionUseCase;
@@ -83,10 +95,26 @@ class TransactionControllerTest {
                 20L
         );
 
+        User user = new User();
+        user.setId(1L);
+
+        CreateTransactionCommand command = new CreateTransactionCommand(
+                request.amount(),
+                request.description(),
+                request.date(),
+                request.type(),
+                request.sourceType(),
+                request.accountId(),
+                request.categoryId(),
+                user
+        );
+
         TransactionResponse transactionResponse = mock(TransactionResponse.class);
         FinancialCommitmentResponse financialAnalysis = mock(FinancialCommitmentResponse.class);
 
-        when(createTransactionUseCase.execute(request, authentication)).thenReturn(transactionResponse);
+        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
+        when(transactionMapper.toCommand(request, user)).thenReturn(command);
+        when(createTransactionUseCase.execute(command)).thenReturn(transactionResponse);
         when(financialAnalysisService.getFinancialCommitment(authentication)).thenReturn(financialAnalysis);
 
         TransactionCreationResponse result = transactionController.create(request, authentication);
@@ -94,7 +122,9 @@ class TransactionControllerTest {
         assertThat(result.transaction()).isEqualTo(transactionResponse);
         assertThat(result.analysis()).isEqualTo(financialAnalysis);
 
-        verify(createTransactionUseCase).execute(request, authentication);
+        verify(authenticatedUserResolver).resolve(authentication);
+        verify(transactionMapper).toCommand(request, user);
+        verify(createTransactionUseCase).execute(command);
         verify(financialAnalysisService).getFinancialCommitment(authentication);
     }
 
@@ -112,10 +142,27 @@ class TransactionControllerTest {
                 3
         );
 
+        User user = new User();
+        user.setId(1L);
+
+        CreateInstallmentTransactionCommand command = new CreateInstallmentTransactionCommand(
+                request.totalAmount(),
+                request.description(),
+                request.firstInstallmentDate(),
+                request.type(),
+                request.sourceType(),
+                request.accountId(),
+                request.categoryId(),
+                request.totalInstallments(),
+                user
+        );
+
         InstallmentTransactionResponse installmentResponse = mock(InstallmentTransactionResponse.class);
         FinancialCommitmentResponse financialAnalysis = mock(FinancialCommitmentResponse.class);
 
-        when(createInstallmentTransactionUseCase.execute(request, authentication)).thenReturn(installmentResponse);
+        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
+        when(transactionMapper.toCommand(request, user)).thenReturn(command);
+        when(createInstallmentTransactionUseCase.execute(command)).thenReturn(installmentResponse);
         when(financialAnalysisService.getFinancialCommitment(authentication)).thenReturn(financialAnalysis);
 
         InstallmentTransactionCreationResponse result =
@@ -124,7 +171,9 @@ class TransactionControllerTest {
         assertThat(result.installment()).isEqualTo(installmentResponse);
         assertThat(result.analysis()).isEqualTo(financialAnalysis);
 
-        verify(createInstallmentTransactionUseCase).execute(request, authentication);
+        verify(authenticatedUserResolver).resolve(authentication);
+        verify(transactionMapper).toCommand(request, user);
+        verify(createInstallmentTransactionUseCase).execute(command);
         verify(financialAnalysisService).getFinancialCommitment(authentication);
     }
 
@@ -202,15 +251,34 @@ class TransactionControllerTest {
                 20L
         );
 
+        User user = new User();
+        user.setId(1L);
+
+        UpdateTransactionCommand command = new UpdateTransactionCommand(
+                77L,
+                request.amount(),
+                request.description(),
+                request.date(),
+                request.type(),
+                request.sourceType(),
+                request.accountId(),
+                request.categoryId(),
+                user
+        );
+
         TransactionResponse response = mock(TransactionResponse.class);
 
-        when(updateTransactionUseCase.execute(77L, request, authentication)).thenReturn(response);
+        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
+        when(transactionMapper.toCommand(77L, request, user)).thenReturn(command);
+        when(updateTransactionUseCase.execute(command)).thenReturn(response);
 
         TransactionResponse result = transactionController.update(77L, request, authentication);
 
         assertThat(result).isEqualTo(response);
 
-        verify(updateTransactionUseCase).execute(77L, request, authentication);
+        verify(authenticatedUserResolver).resolve(authentication);
+        verify(transactionMapper).toCommand(77L, request, user);
+        verify(updateTransactionUseCase).execute(command);
     }
 
     @Test

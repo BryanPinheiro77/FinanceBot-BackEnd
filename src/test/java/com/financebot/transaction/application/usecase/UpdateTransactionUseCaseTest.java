@@ -3,7 +3,7 @@ package com.financebot.transaction.application.usecase;
 import com.financebot.account.domain.Account;
 import com.financebot.category.domain.Category;
 import com.financebot.category.domain.CategoryType;
-import com.financebot.transaction.application.dto.request.UpdateTransactionRequest;
+import com.financebot.transaction.application.command.UpdateTransactionCommand;
 import com.financebot.transaction.application.dto.response.TransactionResponse;
 import com.financebot.transaction.application.port.out.FindTransactionPort;
 import com.financebot.transaction.application.port.out.SaveTransactionPort;
@@ -13,7 +13,6 @@ import com.financebot.transaction.domain.TransactionType;
 import com.financebot.transaction.mapper.TransactionMapper;
 import com.financebot.transaction.validation.TransactionCategoryValidator;
 import com.financebot.user.domain.User;
-import com.financebot.user.service.AuthenticatedUserResolver;
 import com.financebot.user.service.UserResourceResolver;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;
@@ -22,7 +21,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.Authentication;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -48,9 +46,6 @@ class UpdateTransactionUseCaseTest {
     private SaveTransactionPort saveTransactionPort;
 
     @Mock
-    private AuthenticatedUserResolver authenticatedUserResolver;
-
-    @Mock
     private UserResourceResolver userResourceResolver;
 
     @Mock
@@ -58,9 +53,6 @@ class UpdateTransactionUseCaseTest {
 
     @Mock
     private TransactionMapper transactionMapper;
-
-    @Mock
-    private Authentication authentication;
 
     @InjectMocks
     private UpdateTransactionUseCase updateTransactionUseCase;
@@ -74,23 +66,25 @@ class UpdateTransactionUseCaseTest {
         Category category = buildCategory(20L, CategoryType.INCOME);
         TransactionResponse response = mock(TransactionResponse.class);
 
-        UpdateTransactionRequest request = buildUpdateTransactionRequest();
+        UpdateTransactionCommand command = buildUpdateTransactionCommand(user);
 
-        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
         when(findTransactionPort.findByIdAndUserId(77L, 1L)).thenReturn(Optional.of(transaction));
         when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
         when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
         when(saveTransactionPort.save(transaction)).thenReturn(transaction);
         when(transactionMapper.toResponse(transaction)).thenReturn(response);
 
-        TransactionResponse result = updateTransactionUseCase.execute(77L, request, authentication);
+        TransactionResponse result = updateTransactionUseCase.execute(command);
 
         assertThat(result).isEqualTo(response);
         assertThat(transaction.getAccount()).isEqualTo(account);
         assertThat(transaction.getCategory()).isEqualTo(category);
 
+        verify(findTransactionPort).findByIdAndUserId(77L, 1L);
+        verify(userResourceResolver).resolveAccount(10L, 1L);
+        verify(userResourceResolver).resolveCategory(20L, 1L);
         verify(transactionCategoryValidator).validate(category, TransactionType.INCOME);
-        verify(transactionMapper).updateEntity(request, transaction);
+        verify(transactionMapper).updateEntity(command, transaction);
         verify(saveTransactionPort).save(transaction);
         verify(transactionMapper).toResponse(transaction);
     }
@@ -99,12 +93,11 @@ class UpdateTransactionUseCaseTest {
     @DisplayName("deve lançar erro quando transação a atualizar não existir")
     void shouldThrowWhenTransactionToUpdateDoesNotExist() {
         User user = buildUser(1L, "bryan@email.com");
-        UpdateTransactionRequest request = buildUpdateTransactionRequest();
+        UpdateTransactionCommand command = buildUpdateTransactionCommand(user);
 
-        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
         when(findTransactionPort.findByIdAndUserId(77L, 1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> updateTransactionUseCase.execute(77L, request, authentication))
+        assertThatThrownBy(() -> updateTransactionUseCase.execute(command))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Transaction not found");
 
@@ -116,20 +109,19 @@ class UpdateTransactionUseCaseTest {
     void shouldThrowWhenAccountForUpdateIsNotFound() {
         User user = buildUser(1L, "bryan@email.com");
         Transaction transaction = new Transaction();
-        UpdateTransactionRequest request = buildUpdateTransactionRequest();
+        UpdateTransactionCommand command = buildUpdateTransactionCommand(user);
 
-        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
         when(findTransactionPort.findByIdAndUserId(77L, 1L)).thenReturn(Optional.of(transaction));
         when(userResourceResolver.resolveAccount(10L, 1L))
                 .thenThrow(new EntityNotFoundException("Account not found"));
 
-        assertThatThrownBy(() -> updateTransactionUseCase.execute(77L, request, authentication))
+        assertThatThrownBy(() -> updateTransactionUseCase.execute(command))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Account not found");
 
         verify(userResourceResolver, never()).resolveCategory(any(), any());
         verifyNoInteractions(transactionCategoryValidator);
-        verify(transactionMapper, never()).updateEntity(any(), any());
+        verify(transactionMapper, never()).updateEntity(any(UpdateTransactionCommand.class), any(Transaction.class));
         verify(saveTransactionPort, never()).save(any());
     }
 
@@ -139,20 +131,19 @@ class UpdateTransactionUseCaseTest {
         User user = buildUser(1L, "bryan@email.com");
         Transaction transaction = new Transaction();
         Account account = buildAccount(10L);
-        UpdateTransactionRequest request = buildUpdateTransactionRequest();
+        UpdateTransactionCommand command = buildUpdateTransactionCommand(user);
 
-        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
         when(findTransactionPort.findByIdAndUserId(77L, 1L)).thenReturn(Optional.of(transaction));
         when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
         when(userResourceResolver.resolveCategory(20L, 1L))
                 .thenThrow(new EntityNotFoundException("Category not found"));
 
-        assertThatThrownBy(() -> updateTransactionUseCase.execute(77L, request, authentication))
+        assertThatThrownBy(() -> updateTransactionUseCase.execute(command))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Category not found");
 
         verifyNoInteractions(transactionCategoryValidator);
-        verify(transactionMapper, never()).updateEntity(any(), any());
+        verify(transactionMapper, never()).updateEntity(any(UpdateTransactionCommand.class), any(Transaction.class));
         verify(saveTransactionPort, never()).save(any());
     }
 
@@ -163,9 +154,8 @@ class UpdateTransactionUseCaseTest {
         Transaction transaction = new Transaction();
         Account account = buildAccount(10L);
         Category category = buildCategory(20L, CategoryType.EXPENSE);
-        UpdateTransactionRequest request = buildUpdateTransactionRequest();
+        UpdateTransactionCommand command = buildUpdateTransactionCommand(user);
 
-        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
         when(findTransactionPort.findByIdAndUserId(77L, 1L)).thenReturn(Optional.of(transaction));
         when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
         when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
@@ -174,23 +164,25 @@ class UpdateTransactionUseCaseTest {
                 .when(transactionCategoryValidator)
                 .validate(category, TransactionType.INCOME);
 
-        assertThatThrownBy(() -> updateTransactionUseCase.execute(77L, request, authentication))
+        assertThatThrownBy(() -> updateTransactionUseCase.execute(command))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Category type does not match transaction type");
 
-        verify(transactionMapper, never()).updateEntity(any(), any());
+        verify(transactionMapper, never()).updateEntity(any(UpdateTransactionCommand.class), any(Transaction.class));
         verify(saveTransactionPort, never()).save(any());
     }
 
-    private UpdateTransactionRequest buildUpdateTransactionRequest() {
-        return new UpdateTransactionRequest(
+    private UpdateTransactionCommand buildUpdateTransactionCommand(User user) {
+        return new UpdateTransactionCommand(
+                77L,
                 new BigDecimal("500.00"),
                 "Salário",
                 LocalDate.of(2026, 4, 5),
                 TransactionType.INCOME,
                 SourceType.WEB,
                 10L,
-                20L
+                20L,
+                user
         );
     }
 
