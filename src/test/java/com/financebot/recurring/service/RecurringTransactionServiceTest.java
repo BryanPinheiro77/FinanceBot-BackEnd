@@ -96,36 +96,14 @@ class RecurringTransactionServiceTest {
 
             RecurringTransactionResponse response = recurringTransactionService.create(request, authentication);
 
-            assertThat(response.id()).isEqualTo(RECURRING_TRANSACTION_ID);
-            assertThat(response.description()).isEqualTo("Aluguel");
-            assertThat(response.amount()).isEqualByComparingTo("1200.00");
-            assertThat(response.type()).isEqualTo(TransactionType.EXPENSE);
-            assertThat(response.sourceType()).isEqualTo(SourceType.WEB);
-            assertThat(response.frequency()).isEqualTo(RecurrenceFrequency.MONTHLY);
-            assertThat(response.startDate()).isEqualTo(LocalDate.of(2026, 4, 1));
-            assertThat(response.endDate()).isEqualTo(LocalDate.of(2026, 12, 1));
-            assertThat(response.nextExecutionDate()).isEqualTo(LocalDate.of(2026, 4, 1));
-            assertThat(response.active()).isTrue();
-            assertThat(response.accountId()).isEqualTo(ACCOUNT_ID);
-            assertThat(response.categoryId()).isEqualTo(CATEGORY_ID);
+            assertCreatedRecurringTransactionResponse(response);
 
             ArgumentCaptor<RecurringTransaction> captor = ArgumentCaptor.forClass(RecurringTransaction.class);
             verify(recurringTransactionRepository).save(captor.capture());
 
             RecurringTransaction saved = captor.getValue();
 
-            assertThat(saved.getDescription()).isEqualTo("Aluguel");
-            assertThat(saved.getAmount()).isEqualByComparingTo("1200.00");
-            assertThat(saved.getType()).isEqualTo(TransactionType.EXPENSE);
-            assertThat(saved.getSourceType()).isEqualTo(SourceType.WEB);
-            assertThat(saved.getFrequency()).isEqualTo(RecurrenceFrequency.MONTHLY);
-            assertThat(saved.getStartDate()).isEqualTo(LocalDate.of(2026, 4, 1));
-            assertThat(saved.getEndDate()).isEqualTo(LocalDate.of(2026, 12, 1));
-            assertThat(saved.getNextExecutionDate()).isEqualTo(LocalDate.of(2026, 4, 1));
-            assertThat(saved.isActive()).isTrue();
-            assertThat(saved.getUser()).isEqualTo(user);
-            assertThat(saved.getAccount()).isEqualTo(account);
-            assertThat(saved.getCategory()).isEqualTo(category);
+            assertSavedRecurringTransaction(saved, user, account, category);
 
             verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
         }
@@ -670,6 +648,41 @@ class RecurringTransactionServiceTest {
 
             assertThat(response.active()).isFalse();
         }
+    }
+
+    private void assertCreatedRecurringTransactionResponse(RecurringTransactionResponse response) {
+        assertThat(response.id()).isEqualTo(RECURRING_TRANSACTION_ID);
+        assertThat(response.description()).isEqualTo("Aluguel");
+        assertThat(response.amount()).isEqualByComparingTo("1200.00");
+        assertThat(response.type()).isEqualTo(TransactionType.EXPENSE);
+        assertThat(response.sourceType()).isEqualTo(SourceType.WEB);
+        assertThat(response.frequency()).isEqualTo(RecurrenceFrequency.MONTHLY);
+        assertThat(response.startDate()).isEqualTo(LocalDate.of(2026, 4, 1));
+        assertThat(response.endDate()).isEqualTo(LocalDate.of(2026, 12, 1));
+        assertThat(response.nextExecutionDate()).isEqualTo(LocalDate.of(2026, 4, 1));
+        assertThat(response.active()).isTrue();
+        assertThat(response.accountId()).isEqualTo(ACCOUNT_ID);
+        assertThat(response.categoryId()).isEqualTo(CATEGORY_ID);
+    }
+
+    private void assertSavedRecurringTransaction(
+            RecurringTransaction saved,
+            User user,
+            Account account,
+            Category category
+    ) {
+        assertThat(saved.getDescription()).isEqualTo("Aluguel");
+        assertThat(saved.getAmount()).isEqualByComparingTo("1200.00");
+        assertThat(saved.getType()).isEqualTo(TransactionType.EXPENSE);
+        assertThat(saved.getSourceType()).isEqualTo(SourceType.WEB);
+        assertThat(saved.getFrequency()).isEqualTo(RecurrenceFrequency.MONTHLY);
+        assertThat(saved.getStartDate()).isEqualTo(LocalDate.of(2026, 4, 1));
+        assertThat(saved.getEndDate()).isEqualTo(LocalDate.of(2026, 12, 1));
+        assertThat(saved.getNextExecutionDate()).isEqualTo(LocalDate.of(2026, 4, 1));
+        assertThat(saved.isActive()).isTrue();
+        assertThat(saved.getUser()).isEqualTo(user);
+        assertThat(saved.getAccount()).isEqualTo(account);
+        assertThat(saved.getCategory()).isEqualTo(category);
     }
 
     private void mockAuthenticatedUser(User user) {

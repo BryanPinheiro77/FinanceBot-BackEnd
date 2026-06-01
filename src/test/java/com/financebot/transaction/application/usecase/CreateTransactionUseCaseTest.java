@@ -83,14 +83,41 @@ class CreateTransactionUseCaseTest {
         TransactionResponse result = createTransactionUseCase.execute(request, authentication);
 
         assertThat(result).isEqualTo(response);
-        assertThat(transaction.getUser()).isEqualTo(user);
-        assertThat(transaction.getAccount()).isEqualTo(account);
-        assertThat(transaction.getCategory()).isEqualTo(category);
-        assertThat(transaction.getInstallment()).isFalse();
-        assertThat(transaction.getInstallmentNumber()).isNull();
-        assertThat(transaction.getTotalInstallments()).isNull();
-        assertThat(transaction.getInstallmentGroupId()).isNull();
+        assertTransactionLinkedToUserResources(transaction, user, account, category);
+        assertTransactionMarkedAsNonInstallment(transaction);
 
+        verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
+        verify(transactionMapper).toEntity(request);
+        verify(saveTransactionPort).save(transaction);
+        verify(transactionMapper).toResponse(savedTransaction);
+    }
+
+    @Test
+    @DisplayName("deve criar transação usando usuário já resolvido")
+    void shouldCreateTransactionForResolvedUser() {
+        User user = buildUser(1L, "bryan@email.com");
+        Account account = buildAccount(10L);
+        Category category = buildCategory(20L, CategoryType.EXPENSE);
+
+        CreateTransactionRequest request = buildCreateTransactionRequest();
+
+        Transaction transaction = new Transaction();
+        Transaction savedTransaction = new Transaction();
+        TransactionResponse response = mock(TransactionResponse.class);
+
+        when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
+        when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
+        when(transactionMapper.toEntity(request)).thenReturn(transaction);
+        when(saveTransactionPort.save(transaction)).thenReturn(savedTransaction);
+        when(transactionMapper.toResponse(savedTransaction)).thenReturn(response);
+
+        TransactionResponse result = createTransactionUseCase.executeForUser(request, user);
+
+        assertThat(result).isEqualTo(response);
+        assertTransactionLinkedToUserResources(transaction, user, account, category);
+        assertTransactionMarkedAsNonInstallment(transaction);
+
+        verifyNoInteractions(authenticatedUserResolver);
         verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
         verify(transactionMapper).toEntity(request);
         verify(saveTransactionPort).save(transaction);
@@ -155,6 +182,24 @@ class CreateTransactionUseCaseTest {
                 .hasMessage("Category type does not match transaction type");
 
         verifyNoInteractions(saveTransactionPort, transactionMapper);
+    }
+
+    private void assertTransactionLinkedToUserResources(
+            Transaction transaction,
+            User user,
+            Account account,
+            Category category
+    ) {
+        assertThat(transaction.getUser()).isEqualTo(user);
+        assertThat(transaction.getAccount()).isEqualTo(account);
+        assertThat(transaction.getCategory()).isEqualTo(category);
+    }
+
+    private void assertTransactionMarkedAsNonInstallment(Transaction transaction) {
+        assertThat(transaction.getInstallment()).isFalse();
+        assertThat(transaction.getInstallmentNumber()).isNull();
+        assertThat(transaction.getTotalInstallments()).isNull();
+        assertThat(transaction.getInstallmentGroupId()).isNull();
     }
 
     private CreateTransactionRequest buildCreateTransactionRequest() {

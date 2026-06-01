@@ -8,7 +8,9 @@ import com.financebot.category.domain.Category;
 import com.financebot.telegram.dto.request.*;
 import com.financebot.telegram.dto.response.*;
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
+import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
 import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
+import com.financebot.transaction.application.usecase.CreateTransactionUseCase;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
@@ -42,6 +44,7 @@ public class TelegramIntegrationService {
     private final CreateInstallmentTransactionUseCase createInstallmentTransactionUseCase;
     private final TelegramAccountResolverService telegramAccountResolverService;
     private final TelegramCategoryResolverService telegramCategoryResolverService;
+    private final CreateTransactionUseCase createTransactionUseCase;
 
     @Transactional(readOnly = true)
     public TelegramUserProfileResponse getMe(Long telegramId) {
@@ -153,17 +156,17 @@ public class TelegramIntegrationService {
                 request.description()
         );
 
-        Transaction transaction = new Transaction();
-        transaction.setUser(user);
-        transaction.setAccount(account);
-        transaction.setCategory(category);
-        transaction.setAmount(request.amount());
-        transaction.setDescription(request.description());
-        transaction.setDate(request.date());
-        transaction.setType(transactionType);
-        transaction.setSourceType(SourceType.BOT_TEXT);
+        CreateTransactionRequest transactionRequest = new CreateTransactionRequest(
+                request.amount(),
+                request.description(),
+                request.date(),
+                transactionType,
+                SourceType.BOT_TEXT,
+                account.getId(),
+                category.getId()
+        );
 
-        transactionRepository.save(transaction);
+        createTransactionUseCase.executeForUser(transactionRequest, user);
     }
 
     @Transactional

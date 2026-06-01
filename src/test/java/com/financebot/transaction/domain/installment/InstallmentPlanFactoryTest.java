@@ -62,12 +62,18 @@ class InstallmentPlanFactoryTest {
         @Test
         @DisplayName("deve lancar erro quando tipo da transacao nao for despesa")
         void shouldThrowWhenTransactionTypeIsNotExpense() {
+            BigDecimal totalAmount = new BigDecimal("1000.00");
+            String description = "Salário parcelado";
+            LocalDate firstInstallmentDate = LocalDate.of(2026, 4, 10);
+            TransactionType transactionType = TransactionType.INCOME;
+            Integer totalInstallments = 3;
+
             assertThatThrownBy(() -> installmentPlanFactory.create(
-                    new BigDecimal("1000.00"),
-                    "Salário parcelado",
-                    LocalDate.of(2026, 4, 10),
-                    TransactionType.INCOME,
-                    3
+                    totalAmount,
+                    description,
+                    firstInstallmentDate,
+                    transactionType,
+                    totalInstallments
             ))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Installment transactions are allowed only for expenses");
@@ -76,12 +82,18 @@ class InstallmentPlanFactoryTest {
         @Test
         @DisplayName("deve lancar erro quando total de parcelas for menor que dois")
         void shouldThrowWhenTotalInstallmentsIsLessThanTwo() {
+            BigDecimal totalAmount = new BigDecimal("1000.00");
+            String description = "Notebook";
+            LocalDate firstInstallmentDate = LocalDate.of(2026, 4, 10);
+            TransactionType transactionType = TransactionType.EXPENSE;
+            Integer totalInstallments = 1;
+
             assertThatThrownBy(() -> installmentPlanFactory.create(
-                    new BigDecimal("1000.00"),
-                    "Notebook",
-                    LocalDate.of(2026, 4, 10),
-                    TransactionType.EXPENSE,
-                    1
+                    totalAmount,
+                    description,
+                    firstInstallmentDate,
+                    transactionType,
+                    totalInstallments
             ))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Total installments must be at least 2");
@@ -90,12 +102,18 @@ class InstallmentPlanFactoryTest {
         @Test
         @DisplayName("deve lancar erro quando total de parcelas for nulo")
         void shouldThrowWhenTotalInstallmentsIsNull() {
+            BigDecimal totalAmount = new BigDecimal("1000.00");
+            String description = "Notebook";
+            LocalDate firstInstallmentDate = LocalDate.of(2026, 4, 10);
+            TransactionType transactionType = TransactionType.EXPENSE;
+            Integer totalInstallments = null;
+
             assertThatThrownBy(() -> installmentPlanFactory.create(
-                    new BigDecimal("1000.00"),
-                    "Notebook",
-                    LocalDate.of(2026, 4, 10),
-                    TransactionType.EXPENSE,
-                    null
+                    totalAmount,
+                    description,
+                    firstInstallmentDate,
+                    transactionType,
+                    totalInstallments
             ))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Total installments must be at least 2");
