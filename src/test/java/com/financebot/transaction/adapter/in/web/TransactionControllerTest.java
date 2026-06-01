@@ -4,6 +4,9 @@ import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.dto.response.InstallmentTransactionCreationResponse;
 import com.financebot.analysis.dto.response.TransactionCreationResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
+import com.financebot.common.pagination.PageQuery;
+import com.financebot.common.pagination.PageResult;
+import com.financebot.common.pagination.SortDirection;
 import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateTransactionCommand;
 import com.financebot.transaction.application.command.UpdateTransactionCommand;
@@ -32,9 +35,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 
 import java.math.BigDecimal;
@@ -42,6 +45,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -180,16 +185,29 @@ class TransactionControllerTest {
     @Test
     @DisplayName("deve listar transações usando filtros recebidos pela requisição")
     void shouldFindAllTransactionsWithFilters() {
-        Pageable pageable = PageRequest.of(0, 10);
+        Pageable pageable = PageRequest.of(
+                0,
+                10,
+                Sort.by(Sort.Order.desc("date"), Sort.Order.asc("amount"))
+        );
 
         TransactionResponse transactionResponse = mock(TransactionResponse.class);
-        Page<TransactionResponse> expectedPage = new PageImpl<>(List.of(transactionResponse), pageable, 1);
+
+        PageResult<TransactionResponse> pageResult = new PageResult<>(
+                List.of(transactionResponse),
+                0,
+                10,
+                1,
+                1,
+                true,
+                true
+        );
 
         when(listTransactionsUseCase.execute(
-                org.mockito.ArgumentMatchers.any(TransactionFilter.class),
-                org.mockito.ArgumentMatchers.eq(authentication),
-                org.mockito.ArgumentMatchers.eq(pageable)
-        )).thenReturn(expectedPage);
+                any(TransactionFilter.class),
+                eq(authentication),
+                any(PageQuery.class)
+        )).thenReturn(pageResult);
 
         Page<TransactionResponse> result = transactionController.findAll(
                 TransactionType.EXPENSE,
@@ -203,14 +221,19 @@ class TransactionControllerTest {
                 pageable
         );
 
-        assertThat(result).isEqualTo(expectedPage);
+        assertThat(result.getContent()).containsExactly(transactionResponse);
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getNumber()).isZero();
+        assertThat(result.getSize()).isEqualTo(10);
+        assertThat(result.getSort()).isEqualTo(pageable.getSort());
 
         ArgumentCaptor<TransactionFilter> filterCaptor = ArgumentCaptor.forClass(TransactionFilter.class);
+        ArgumentCaptor<PageQuery> pageQueryCaptor = ArgumentCaptor.forClass(PageQuery.class);
 
         verify(listTransactionsUseCase).execute(
                 filterCaptor.capture(),
-                org.mockito.ArgumentMatchers.eq(authentication),
-                org.mockito.ArgumentMatchers.eq(pageable)
+                eq(authentication),
+                pageQueryCaptor.capture()
         );
 
         TransactionFilter capturedFilter = filterCaptor.getValue();
@@ -222,6 +245,18 @@ class TransactionControllerTest {
         assertThat(capturedFilter.endDate()).isEqualTo(LocalDate.of(2026, 4, 30));
         assertThat(capturedFilter.sourceType()).isEqualTo(SourceType.WEB);
         assertThat(capturedFilter.description()).isEqualTo("mercado");
+
+        PageQuery capturedPageQuery = pageQueryCaptor.getValue();
+
+        assertThat(capturedPageQuery.page()).isZero();
+        assertThat(capturedPageQuery.size()).isEqualTo(10);
+        assertThat(capturedPageQuery.sorts()).hasSize(2);
+
+        assertThat(capturedPageQuery.sorts().get(0).property()).isEqualTo("date");
+        assertThat(capturedPageQuery.sorts().get(0).direction()).isEqualTo(SortDirection.DESC);
+
+        assertThat(capturedPageQuery.sorts().get(1).property()).isEqualTo("amount");
+        assertThat(capturedPageQuery.sorts().get(1).direction()).isEqualTo(SortDirection.ASC);
     }
 
     @Test
