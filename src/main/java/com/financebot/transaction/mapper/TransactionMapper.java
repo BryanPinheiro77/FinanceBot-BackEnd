@@ -1,12 +1,12 @@
 package com.financebot.transaction.mapper;
 
+import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateTransactionCommand;
 import com.financebot.transaction.application.command.UpdateTransactionCommand;
+import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
 import com.financebot.transaction.application.dto.request.UpdateTransactionRequest;
 import com.financebot.transaction.application.dto.response.TransactionResponse;
-import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
-import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.user.domain.User;
 import org.springframework.stereotype.Component;

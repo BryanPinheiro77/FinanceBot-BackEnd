@@ -11,14 +11,17 @@
 - Separados DTOs de request HTTP dos commands internos nos fluxos de criação, criação parcelada e atualização de transações.
 - Ajustado o fluxo de parcelamento para `CreateInstallmentTransactionUseCase` receber `CreateInstallmentTransactionCommand`.
 - Ajustado o fluxo de atualização para `UpdateTransactionUseCase` receber `UpdateTransactionCommand`.
-- Ajustado o fluxo do Telegram para criar transações parceladas usando command interno em vez de DTO HTTP.
+- Ajustado o fluxo do Telegram para criar transações comuns e parceladas usando commands internos em vez de DTOs HTTP.
 
 ### Added
 - Adicionados ports de saída para persistência de transações.
 - Adicionado `TransactionPersistenceAdapter`.
+
+### Tests
 - Adicionados testes unitários para use cases, controller e adapter de persistência de transações.
 - Atualizados testes de use cases, controller e integração Telegram para os novos commands internos.
-
+- Adicionada cobertura para criação parcelada via Telegram delegando para `CreateInstallmentTransactionCommand`.
+- 
 ## v1.2.0
 
 ### Added
