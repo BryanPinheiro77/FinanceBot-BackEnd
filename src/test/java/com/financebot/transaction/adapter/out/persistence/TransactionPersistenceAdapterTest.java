@@ -1,5 +1,8 @@
 package com.financebot.transaction.adapter.out.persistence;
 
+import com.financebot.common.pagination.PageQuery;
+import com.financebot.common.pagination.PageResult;
+import com.financebot.common.pagination.SortDirection;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
@@ -14,7 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
@@ -109,20 +112,40 @@ class TransactionPersistenceAdapterTest {
                 "mercado"
         );
 
-        Pageable pageable = PageRequest.of(0, 10);
+        PageQuery pageQuery = new PageQuery(
+                0,
+                10,
+                "date",
+                SortDirection.DESC
+        );
+
+        PageRequest expectedPageRequest = PageRequest.of(
+                0,
+                10,
+                Sort.by(Sort.Direction.DESC, "date")
+        );
 
         Transaction transaction = new Transaction();
-        Page<Transaction> page = new PageImpl<>(List.of(transaction), pageable, 1);
+        Page<Transaction> page = new PageImpl<>(List.of(transaction), expectedPageRequest, 1);
 
-        when(transactionRepository.findAll(any(Specification.class), eq(pageable)))
+        when(transactionRepository.findAll(any(Specification.class), eq(expectedPageRequest)))
                 .thenReturn(page);
 
-        Page<Transaction> result = transactionPersistenceAdapter.findAllByFilter(userId, filter, pageable);
+        PageResult<Transaction> result = transactionPersistenceAdapter.findAllByFilter(
+                userId,
+                filter,
+                pageQuery
+        );
 
-        assertThat(result.getContent()).containsExactly(transaction);
-        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.content()).containsExactly(transaction);
+        assertThat(result.page()).isZero();
+        assertThat(result.size()).isEqualTo(10);
+        assertThat(result.totalElements()).isEqualTo(1);
+        assertThat(result.totalPages()).isEqualTo(1);
+        assertThat(result.first()).isTrue();
+        assertThat(result.last()).isTrue();
 
-        verify(transactionRepository).findAll(any(Specification.class), eq(pageable));
+        verify(transactionRepository).findAll(any(Specification.class), eq(expectedPageRequest));
     }
 
     @Test

@@ -32,7 +32,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -183,13 +182,23 @@ class TransactionControllerTest {
         Pageable pageable = PageRequest.of(0, 10);
 
         TransactionResponse transactionResponse = mock(TransactionResponse.class);
-        Page<TransactionResponse> expectedPage = new PageImpl<>(List.of(transactionResponse), pageable, 1);
+
+        com.financebot.common.pagination.PageResult<TransactionResponse> pageResult =
+                new com.financebot.common.pagination.PageResult<>(
+                        List.of(transactionResponse),
+                        0,
+                        10,
+                        1,
+                        1,
+                        true,
+                        true
+                );
 
         when(listTransactionsUseCase.execute(
                 org.mockito.ArgumentMatchers.any(TransactionFilter.class),
                 org.mockito.ArgumentMatchers.eq(authentication),
-                org.mockito.ArgumentMatchers.eq(pageable)
-        )).thenReturn(expectedPage);
+                org.mockito.ArgumentMatchers.any(com.financebot.common.pagination.PageQuery.class)
+        )).thenReturn(pageResult);
 
         Page<TransactionResponse> result = transactionController.findAll(
                 TransactionType.EXPENSE,
@@ -203,14 +212,19 @@ class TransactionControllerTest {
                 pageable
         );
 
-        assertThat(result).isEqualTo(expectedPage);
+        assertThat(result.getContent()).containsExactly(transactionResponse);
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getNumber()).isZero();
+        assertThat(result.getSize()).isEqualTo(10);
 
         ArgumentCaptor<TransactionFilter> filterCaptor = ArgumentCaptor.forClass(TransactionFilter.class);
+        ArgumentCaptor<com.financebot.common.pagination.PageQuery> pageQueryCaptor =
+                ArgumentCaptor.forClass(com.financebot.common.pagination.PageQuery.class);
 
         verify(listTransactionsUseCase).execute(
                 filterCaptor.capture(),
                 org.mockito.ArgumentMatchers.eq(authentication),
-                org.mockito.ArgumentMatchers.eq(pageable)
+                pageQueryCaptor.capture()
         );
 
         TransactionFilter capturedFilter = filterCaptor.getValue();
@@ -222,6 +236,14 @@ class TransactionControllerTest {
         assertThat(capturedFilter.endDate()).isEqualTo(LocalDate.of(2026, 4, 30));
         assertThat(capturedFilter.sourceType()).isEqualTo(SourceType.WEB);
         assertThat(capturedFilter.description()).isEqualTo("mercado");
+
+        com.financebot.common.pagination.PageQuery capturedPageQuery = pageQueryCaptor.getValue();
+
+        assertThat(capturedPageQuery.page()).isZero();
+        assertThat(capturedPageQuery.size()).isEqualTo(10);
+        assertThat(capturedPageQuery.sortBy()).isEqualTo("date");
+        assertThat(capturedPageQuery.direction())
+                .isEqualTo(com.financebot.common.pagination.SortDirection.DESC);
     }
 
     @Test
