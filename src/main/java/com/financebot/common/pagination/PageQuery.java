@@ -1,9 +1,10 @@
 package com.financebot.common.pagination;
 
+import java.util.List;
+
 public record PageQuery(
         int page,
         int size,
-        String sortBy,
-        SortDirection direction
+        List<PageSort> sorts
 ) {
 }

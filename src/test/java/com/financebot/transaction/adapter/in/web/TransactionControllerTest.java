@@ -4,6 +4,9 @@ import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.dto.response.InstallmentTransactionCreationResponse;
 import com.financebot.analysis.dto.response.TransactionCreationResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
+import com.financebot.common.pagination.PageQuery;
+import com.financebot.common.pagination.PageResult;
+import com.financebot.common.pagination.SortDirection;
 import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateTransactionCommand;
 import com.financebot.transaction.application.command.UpdateTransactionCommand;
@@ -34,6 +37,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 
 import java.math.BigDecimal;
@@ -41,6 +45,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -179,25 +185,28 @@ class TransactionControllerTest {
     @Test
     @DisplayName("deve listar transações usando filtros recebidos pela requisição")
     void shouldFindAllTransactionsWithFilters() {
-        Pageable pageable = PageRequest.of(0, 10);
+        Pageable pageable = PageRequest.of(
+                0,
+                10,
+                Sort.by(Sort.Order.desc("date"), Sort.Order.asc("amount"))
+        );
 
         TransactionResponse transactionResponse = mock(TransactionResponse.class);
 
-        com.financebot.common.pagination.PageResult<TransactionResponse> pageResult =
-                new com.financebot.common.pagination.PageResult<>(
-                        List.of(transactionResponse),
-                        0,
-                        10,
-                        1,
-                        1,
-                        true,
-                        true
-                );
+        PageResult<TransactionResponse> pageResult = new PageResult<>(
+                List.of(transactionResponse),
+                0,
+                10,
+                1,
+                1,
+                true,
+                true
+        );
 
         when(listTransactionsUseCase.execute(
-                org.mockito.ArgumentMatchers.any(TransactionFilter.class),
-                org.mockito.ArgumentMatchers.eq(authentication),
-                org.mockito.ArgumentMatchers.any(com.financebot.common.pagination.PageQuery.class)
+                any(TransactionFilter.class),
+                eq(authentication),
+                any(PageQuery.class)
         )).thenReturn(pageResult);
 
         Page<TransactionResponse> result = transactionController.findAll(
@@ -216,14 +225,14 @@ class TransactionControllerTest {
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getNumber()).isZero();
         assertThat(result.getSize()).isEqualTo(10);
+        assertThat(result.getSort()).isEqualTo(pageable.getSort());
 
         ArgumentCaptor<TransactionFilter> filterCaptor = ArgumentCaptor.forClass(TransactionFilter.class);
-        ArgumentCaptor<com.financebot.common.pagination.PageQuery> pageQueryCaptor =
-                ArgumentCaptor.forClass(com.financebot.common.pagination.PageQuery.class);
+        ArgumentCaptor<PageQuery> pageQueryCaptor = ArgumentCaptor.forClass(PageQuery.class);
 
         verify(listTransactionsUseCase).execute(
                 filterCaptor.capture(),
-                org.mockito.ArgumentMatchers.eq(authentication),
+                eq(authentication),
                 pageQueryCaptor.capture()
         );
 
@@ -237,13 +246,17 @@ class TransactionControllerTest {
         assertThat(capturedFilter.sourceType()).isEqualTo(SourceType.WEB);
         assertThat(capturedFilter.description()).isEqualTo("mercado");
 
-        com.financebot.common.pagination.PageQuery capturedPageQuery = pageQueryCaptor.getValue();
+        PageQuery capturedPageQuery = pageQueryCaptor.getValue();
 
         assertThat(capturedPageQuery.page()).isZero();
         assertThat(capturedPageQuery.size()).isEqualTo(10);
-        assertThat(capturedPageQuery.sortBy()).isEqualTo("date");
-        assertThat(capturedPageQuery.direction())
-                .isEqualTo(com.financebot.common.pagination.SortDirection.DESC);
+        assertThat(capturedPageQuery.sorts()).hasSize(2);
+
+        assertThat(capturedPageQuery.sorts().get(0).property()).isEqualTo("date");
+        assertThat(capturedPageQuery.sorts().get(0).direction()).isEqualTo(SortDirection.DESC);
+
+        assertThat(capturedPageQuery.sorts().get(1).property()).isEqualTo("amount");
+        assertThat(capturedPageQuery.sorts().get(1).direction()).isEqualTo(SortDirection.ASC);
     }
 
     @Test

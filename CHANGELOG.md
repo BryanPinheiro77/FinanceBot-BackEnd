@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## v1.2.1
+
 ### Changed
 - Refatorado o módulo de transações para uma estrutura mais próxima da arquitetura hexagonal.
 - Extraídos casos de uso para criação, listagem, busca, atualização, remoção e parcelamento de transações.
@@ -12,16 +14,23 @@
 - Ajustado o fluxo de parcelamento para `CreateInstallmentTransactionUseCase` receber `CreateInstallmentTransactionCommand`.
 - Ajustado o fluxo de atualização para `UpdateTransactionUseCase` receber `UpdateTransactionCommand`.
 - Ajustado o fluxo do Telegram para criar transações comuns e parceladas usando commands internos em vez de DTOs HTTP.
+- Removida a dependência direta de `Page` e `Pageable` da camada application de transações.
+- Ajustado `ListTransactionsUseCase` e `FindTransactionPort` para usar tipos neutros de paginação.
+- Adaptado `TransactionPersistenceAdapter` para converter paginação neutra para Spring Data.
 
 ### Added
 - Adicionados ports de saída para persistência de transações.
 - Adicionado `TransactionPersistenceAdapter`.
+- Adicionados `PageQuery`, `PageResult`, `PageSort` e `SortDirection` como tipos neutros de paginação.
+- Adicionado mapper de paginação entre Spring Data e tipos internos no adapter web.
 
 ### Tests
 - Adicionados testes unitários para use cases, controller e adapter de persistência de transações.
 - Atualizados testes de use cases, controller e integração Telegram para os novos commands internos.
 - Adicionada cobertura para criação parcelada via Telegram delegando para `CreateInstallmentTransactionCommand`.
-- 
+- Adicionados testes para o mapper de paginação.
+- Atualizados testes de listagem, controller e adapter de persistência de transações para os tipos neutros de paginação.
+
 ## v1.2.0
 
 ### Added

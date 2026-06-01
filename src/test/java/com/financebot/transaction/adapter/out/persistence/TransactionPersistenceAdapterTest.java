@@ -2,6 +2,7 @@ package com.financebot.transaction.adapter.out.persistence;
 
 import com.financebot.common.pagination.PageQuery;
 import com.financebot.common.pagination.PageResult;
+import com.financebot.common.pagination.PageSort;
 import com.financebot.common.pagination.SortDirection;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.Transaction;
@@ -115,8 +116,7 @@ class TransactionPersistenceAdapterTest {
         PageQuery pageQuery = new PageQuery(
                 0,
                 10,
-                "date",
-                SortDirection.DESC
+                List.of(new PageSort("date", SortDirection.DESC))
         );
 
         PageRequest expectedPageRequest = PageRequest.of(
@@ -144,6 +144,102 @@ class TransactionPersistenceAdapterTest {
         assertThat(result.totalPages()).isEqualTo(1);
         assertThat(result.first()).isTrue();
         assertThat(result.last()).isTrue();
+
+        verify(transactionRepository).findAll(any(Specification.class), eq(expectedPageRequest));
+    }
+
+    @Test
+    @DisplayName("deve listar transações sem ordenação quando page query não tiver sort")
+    void shouldFindAllByFilterWithoutSort() {
+        Long userId = 1L;
+
+        TransactionFilter filter = new TransactionFilter(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        PageQuery pageQuery = new PageQuery(
+                0,
+                10,
+                List.of()
+        );
+
+        PageRequest expectedPageRequest = PageRequest.of(
+                0,
+                10,
+                Sort.unsorted()
+        );
+
+        Transaction transaction = new Transaction();
+        Page<Transaction> page = new PageImpl<>(List.of(transaction), expectedPageRequest, 1);
+
+        when(transactionRepository.findAll(any(Specification.class), eq(expectedPageRequest)))
+                .thenReturn(page);
+
+        PageResult<Transaction> result = transactionPersistenceAdapter.findAllByFilter(
+                userId,
+                filter,
+                pageQuery
+        );
+
+        assertThat(result.content()).containsExactly(transaction);
+        assertThat(result.totalElements()).isEqualTo(1);
+
+        verify(transactionRepository).findAll(any(Specification.class), eq(expectedPageRequest));
+    }
+
+    @Test
+    @DisplayName("deve listar transações preservando múltiplas ordenações")
+    void shouldFindAllByFilterWithMultipleSorts() {
+        Long userId = 1L;
+
+        TransactionFilter filter = new TransactionFilter(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        PageQuery pageQuery = new PageQuery(
+                0,
+                10,
+                List.of(
+                        new PageSort("date", SortDirection.DESC),
+                        new PageSort("amount", SortDirection.ASC)
+                )
+        );
+
+        PageRequest expectedPageRequest = PageRequest.of(
+                0,
+                10,
+                Sort.by(
+                        Sort.Order.desc("date"),
+                        Sort.Order.asc("amount")
+                )
+        );
+
+        Transaction transaction = new Transaction();
+        Page<Transaction> page = new PageImpl<>(List.of(transaction), expectedPageRequest, 1);
+
+        when(transactionRepository.findAll(any(Specification.class), eq(expectedPageRequest)))
+                .thenReturn(page);
+
+        PageResult<Transaction> result = transactionPersistenceAdapter.findAllByFilter(
+                userId,
+                filter,
+                pageQuery
+        );
+
+        assertThat(result.content()).containsExactly(transaction);
+        assertThat(result.totalElements()).isEqualTo(1);
 
         verify(transactionRepository).findAll(any(Specification.class), eq(expectedPageRequest));
     }

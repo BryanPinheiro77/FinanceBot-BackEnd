@@ -117,7 +117,7 @@ public class TransactionController {
         PageResult<TransactionResponse> result =
                 listTransactionsUseCase.execute(filter, authentication, pageQuery);
 
-        return SpringPageMapper.toSpringPage(result);
+        return SpringPageMapper.toSpringPage(result, pageable);
     }
 
     @GetMapping("/{id}")

@@ -2,6 +2,7 @@ package com.financebot.transaction.adapter.out.persistence;
 
 import com.financebot.common.pagination.PageQuery;
 import com.financebot.common.pagination.PageResult;
+import com.financebot.common.pagination.PageSort;
 import com.financebot.common.pagination.SortDirection;
 import com.financebot.transaction.application.port.out.DeleteTransactionPort;
 import com.financebot.transaction.application.port.out.FindTransactionPort;
@@ -62,15 +63,34 @@ public class TransactionPersistenceAdapter implements SaveTransactionPort, FindT
     }
 
     private PageRequest toPageRequest(PageQuery pageQuery) {
-        Sort.Direction direction = pageQuery.direction() == SortDirection.ASC
-                ? Sort.Direction.ASC
-                : Sort.Direction.DESC;
+        Sort sort = toSpringSort(pageQuery.sorts());
 
         return PageRequest.of(
                 pageQuery.page(),
                 pageQuery.size(),
-                Sort.by(direction, pageQuery.sortBy())
+                sort
         );
+    }
+
+    private Sort toSpringSort(List<PageSort> sorts) {
+        if (sorts == null || sorts.isEmpty()) {
+            return Sort.unsorted();
+        }
+
+        List<Sort.Order> orders = sorts.stream()
+                .map(sort -> new Sort.Order(
+                        toSpringDirection(sort.direction()),
+                        sort.property()
+                ))
+                .toList();
+
+        return Sort.by(orders);
+    }
+
+    private Sort.Direction toSpringDirection(SortDirection direction) {
+        return direction == SortDirection.ASC
+                ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
     }
 
     private PageResult<Transaction> toPageResult(Page<Transaction> page) {

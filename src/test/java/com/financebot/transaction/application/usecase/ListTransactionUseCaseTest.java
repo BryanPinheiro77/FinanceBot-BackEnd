@@ -2,6 +2,7 @@ package com.financebot.transaction.application.usecase;
 
 import com.financebot.common.pagination.PageQuery;
 import com.financebot.common.pagination.PageResult;
+import com.financebot.common.pagination.PageSort;
 import com.financebot.common.pagination.SortDirection;
 import com.financebot.transaction.application.dto.response.TransactionResponse;
 import com.financebot.transaction.application.port.out.FindTransactionPort;
@@ -67,8 +68,7 @@ class ListTransactionUseCaseTest {
         PageQuery pageQuery = new PageQuery(
                 0,
                 10,
-                "date",
-                SortDirection.DESC
+                List.of(new PageSort("date", SortDirection.DESC))
         );
 
         Transaction transaction = new Transaction();
@@ -121,8 +121,7 @@ class ListTransactionUseCaseTest {
         PageQuery pageQuery = new PageQuery(
                 0,
                 10,
-                "date",
-                SortDirection.DESC
+                List.of()
         );
 
         when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
