@@ -1,6 +1,7 @@
 package com.financebot.transaction.mapper;
 
 import com.financebot.transaction.application.command.CreateTransactionCommand;
+import com.financebot.transaction.application.command.UpdateTransactionCommand;
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
 import com.financebot.transaction.application.dto.request.UpdateTransactionRequest;
 import com.financebot.transaction.application.dto.response.TransactionResponse;
@@ -53,12 +54,30 @@ public class TransactionMapper {
         );
     }
 
-    public void updateEntity(UpdateTransactionRequest dto, Transaction transaction) {
-        transaction.setAmount(dto.amount());
-        transaction.setDescription(dto.description().trim());
-        transaction.setDate(dto.date());
-        transaction.setType(dto.type());
-        transaction.setSourceType(dto.sourceType());
+    public UpdateTransactionCommand toCommand(
+            Long transactionId,
+            UpdateTransactionRequest request,
+            User user
+    ) {
+        return new UpdateTransactionCommand(
+                transactionId,
+                request.amount(),
+                request.description(),
+                request.date(),
+                request.type(),
+                request.sourceType(),
+                request.accountId(),
+                request.categoryId(),
+                user
+        );
+    }
+
+    public void updateEntity(UpdateTransactionCommand command, Transaction transaction) {
+        transaction.setAmount(command.amount());
+        transaction.setDescription(command.description().trim());
+        transaction.setDate(command.date());
+        transaction.setType(command.type());
+        transaction.setSourceType(command.sourceType());
     }
 
     public TransactionResponse toResponse(Transaction transaction) {

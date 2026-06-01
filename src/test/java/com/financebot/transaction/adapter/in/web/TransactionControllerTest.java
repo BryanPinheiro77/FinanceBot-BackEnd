@@ -6,6 +6,7 @@ import com.financebot.analysis.dto.response.TransactionCreationResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
 import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateTransactionCommand;
+import com.financebot.transaction.application.command.UpdateTransactionCommand;
 import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
 import com.financebot.transaction.application.dto.request.UpdateTransactionRequest;
@@ -250,15 +251,34 @@ class TransactionControllerTest {
                 20L
         );
 
+        User user = new User();
+        user.setId(1L);
+
+        UpdateTransactionCommand command = new UpdateTransactionCommand(
+                77L,
+                request.amount(),
+                request.description(),
+                request.date(),
+                request.type(),
+                request.sourceType(),
+                request.accountId(),
+                request.categoryId(),
+                user
+        );
+
         TransactionResponse response = mock(TransactionResponse.class);
 
-        when(updateTransactionUseCase.execute(77L, request, authentication)).thenReturn(response);
+        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
+        when(transactionMapper.toCommand(77L, request, user)).thenReturn(command);
+        when(updateTransactionUseCase.execute(command)).thenReturn(response);
 
         TransactionResponse result = transactionController.update(77L, request, authentication);
 
         assertThat(result).isEqualTo(response);
 
-        verify(updateTransactionUseCase).execute(77L, request, authentication);
+        verify(authenticatedUserResolver).resolve(authentication);
+        verify(transactionMapper).toCommand(77L, request, user);
+        verify(updateTransactionUseCase).execute(command);
     }
 
     @Test

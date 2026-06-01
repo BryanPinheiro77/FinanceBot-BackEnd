@@ -6,6 +6,7 @@ import com.financebot.analysis.dto.response.TransactionCreationResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
 import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateTransactionCommand;
+import com.financebot.transaction.application.command.UpdateTransactionCommand;
 import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
 import com.financebot.transaction.application.dto.request.UpdateTransactionRequest;
@@ -125,7 +126,10 @@ public class TransactionController {
             @RequestBody @Valid UpdateTransactionRequest request,
             Authentication authentication
     ) {
-        return updateTransactionUseCase.execute(id, request, authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
+        UpdateTransactionCommand command = transactionMapper.toCommand(id, request, user);
+
+        return updateTransactionUseCase.execute(command);
     }
 
     @DeleteMapping("/{id}")
