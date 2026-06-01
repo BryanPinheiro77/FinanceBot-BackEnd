@@ -4,9 +4,11 @@ import com.financebot.account.domain.Account;
 import com.financebot.analysis.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
 import com.financebot.category.domain.Category;
+import com.financebot.telegram.dto.request.CreateInstallmentTransactionFromTelegramRequest;
 import com.financebot.telegram.dto.request.CreateTransactionFromTelegramRequest;
 import com.financebot.telegram.dto.request.InstallmentPurchaseCapacityRequest;
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
+import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateTransactionCommand;
 import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
 import com.financebot.transaction.application.usecase.CreateTransactionUseCase;
@@ -71,17 +73,9 @@ class TelegramIntegrationServiceTest {
         @Test
         @DisplayName("deve delegar criacao de transacao comum para o use case")
         void shouldDelegateCommonTransactionCreationToUseCase() {
-            User user = new User();
-            user.setId(1L);
-            user.setTelegramId(123L);
-
-            Account account = new Account();
-            account.setId(10L);
-            account.setName("Carteira");
-
-            Category category = new Category();
-            category.setId(20L);
-            category.setName("Alimentação");
+            User user = buildTelegramUser();
+            Account account = buildAccount();
+            Category category = buildCategory("Alimentação");
 
             CreateTransactionFromTelegramRequest request = new CreateTransactionFromTelegramRequest(
                     123L,
@@ -122,17 +116,9 @@ class TelegramIntegrationServiceTest {
         @Test
         @DisplayName("deve usar categoria automatica quando categoria nao for informada")
         void shouldUseAutomaticCategoryWhenCategoryNameIsNotProvided() {
-            User user = new User();
-            user.setId(1L);
-            user.setTelegramId(123L);
-
-            Account account = new Account();
-            account.setId(10L);
-            account.setName("Carteira");
-
-            Category category = new Category();
-            category.setId(20L);
-            category.setName("Alimentação");
+            User user = buildTelegramUser();
+            Account account = buildAccount();
+            Category category = buildCategory("Alimentação");
 
             CreateTransactionFromTelegramRequest request = new CreateTransactionFromTelegramRequest(
                     123L,
@@ -170,17 +156,9 @@ class TelegramIntegrationServiceTest {
         @Test
         @DisplayName("deve usar categoria automatica quando categoria vier em branco")
         void shouldUseAutomaticCategoryWhenCategoryNameIsBlank() {
-            User user = new User();
-            user.setId(1L);
-            user.setTelegramId(123L);
-
-            Account account = new Account();
-            account.setId(10L);
-            account.setName("Carteira");
-
-            Category category = new Category();
-            category.setId(20L);
-            category.setName("Alimentação");
+            User user = buildTelegramUser();
+            Account account = buildAccount();
+            Category category = buildCategory("Alimentação");
 
             CreateTransactionFromTelegramRequest request = new CreateTransactionFromTelegramRequest(
                     123L,
@@ -241,15 +219,129 @@ class TelegramIntegrationServiceTest {
     }
 
     @Nested
+    @DisplayName("createInstallmentTransactionFromTelegram")
+    class CreateInstallmentTransactionFromTelegramTests {
+
+        @Test
+        @DisplayName("deve delegar criacao de transacao parcelada para o use case")
+        void shouldDelegateInstallmentTransactionCreationToUseCase() {
+            User user = buildTelegramUser();
+            Account account = buildAccount();
+            Category category = buildCategory("Eletrônicos");
+
+            CreateInstallmentTransactionFromTelegramRequest request =
+                    new CreateInstallmentTransactionFromTelegramRequest(
+                            123L,
+                            new BigDecimal("1200.00"),
+                            "Notebook",
+                            LocalDate.of(2026, 6, 1),
+                            "Carteira",
+                            "Eletrônicos",
+                            12
+                    );
+
+            when(userRepository.findByTelegramId(123L)).thenReturn(Optional.of(user));
+            when(telegramAccountResolverService.resolve(user, "Carteira")).thenReturn(account);
+            when(telegramCategoryResolverService.resolveExplicitCategory(
+                    user,
+                    TransactionType.EXPENSE,
+                    "Eletrônicos"
+            )).thenReturn(category);
+
+            telegramIntegrationService.createInstallmentTransactionFromTelegram(request);
+
+            verify(createInstallmentTransactionUseCase).execute(
+                    argThat(command ->
+                            command.totalAmount().compareTo(new BigDecimal("1200.00")) == 0
+                                    && command.description().equals("Notebook")
+                                    && command.firstInstallmentDate().equals(LocalDate.of(2026, 6, 1))
+                                    && command.type() == TransactionType.EXPENSE
+                                    && command.sourceType() == SourceType.BOT_TEXT
+                                    && command.accountId().equals(10L)
+                                    && command.categoryId().equals(20L)
+                                    && command.totalInstallments().equals(12)
+                                    && command.user().equals(user)
+                    )
+            );
+
+            verify(transactionRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("deve usar categoria automatica no parcelamento quando categoria nao for informada")
+        void shouldUseAutomaticCategoryForInstallmentWhenCategoryNameIsNotProvided() {
+            User user = buildTelegramUser();
+            Account account = buildAccount();
+            Category category = buildCategory("Eletrônicos");
+
+            CreateInstallmentTransactionFromTelegramRequest request =
+                    new CreateInstallmentTransactionFromTelegramRequest(
+                            123L,
+                            new BigDecimal("1200.00"),
+                            "Notebook",
+                            LocalDate.of(2026, 6, 1),
+                            "Carteira",
+                            null,
+                            12
+                    );
+
+            when(userRepository.findByTelegramId(123L)).thenReturn(Optional.of(user));
+            when(telegramAccountResolverService.resolve(user, "Carteira")).thenReturn(account);
+            when(telegramCategoryResolverService.resolveCategory(
+                    user,
+                    TransactionType.EXPENSE,
+                    "Notebook"
+            )).thenReturn(category);
+
+            telegramIntegrationService.createInstallmentTransactionFromTelegram(request);
+
+            verify(telegramCategoryResolverService).resolveCategory(
+                    user,
+                    TransactionType.EXPENSE,
+                    "Notebook"
+            );
+
+            verify(createInstallmentTransactionUseCase).execute(
+                    any(CreateInstallmentTransactionCommand.class)
+            );
+
+            verify(transactionRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("deve lancar erro quando usuario do telegram nao existir no parcelamento")
+        void shouldThrowWhenTelegramUserDoesNotExistOnCreateInstallmentTransaction() {
+            CreateInstallmentTransactionFromTelegramRequest request =
+                    new CreateInstallmentTransactionFromTelegramRequest(
+                            123L,
+                            new BigDecimal("1200.00"),
+                            "Notebook",
+                            LocalDate.of(2026, 6, 1),
+                            "Carteira",
+                            "Eletrônicos",
+                            12
+                    );
+
+            when(userRepository.findByTelegramId(123L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> telegramIntegrationService.createInstallmentTransactionFromTelegram(request))
+                    .isInstanceOf(TelegramUserNotFoundException.class);
+
+            verify(createInstallmentTransactionUseCase, never())
+                    .execute(any(CreateInstallmentTransactionCommand.class));
+
+            verify(transactionRepository, never()).save(any());
+        }
+    }
+
+    @Nested
     @DisplayName("analyzeInstallmentPurchaseCapacity")
     class AnalyzeInstallmentPurchaseCapacityTests {
 
         @Test
         @DisplayName("deve delegar analise de compra parcelada para o financial analysis service")
         void shouldDelegateInstallmentPurchaseCapacityAnalysis() {
-            User user = new User();
-            user.setId(1L);
-            user.setTelegramId(123L);
+            User user = buildTelegramUser();
 
             InstallmentPurchaseCapacityRequest request = new InstallmentPurchaseCapacityRequest(
                     123L,
@@ -398,5 +490,26 @@ class TelegramIntegrationServiceTest {
 
             return (String) method.invoke(telegramIntegrationService, description);
         }
+    }
+
+    private User buildTelegramUser() {
+        User user = new User();
+        user.setId(1L);
+        user.setTelegramId(123L);
+        return user;
+    }
+
+    private Account buildAccount() {
+        Account account = new Account();
+        account.setId(10L);
+        account.setName("Carteira");
+        return account;
+    }
+
+    private Category buildCategory(String name) {
+        Category category = new Category();
+        category.setId(20L);
+        category.setName(name);
+        return category;
     }
 }
