@@ -1,5 +1,9 @@
 package com.financebot.transaction.application.usecase;
 
+import com.financebot.common.pagination.PageQuery;
+import com.financebot.common.pagination.PageResult;
+import com.financebot.common.pagination.PageSort;
+import com.financebot.common.pagination.SortDirection;
 import com.financebot.transaction.application.dto.response.TransactionResponse;
 import com.financebot.transaction.application.port.out.FindTransactionPort;
 import com.financebot.transaction.domain.SourceType;
@@ -15,11 +19,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 
 import java.time.LocalDate;
@@ -66,22 +65,41 @@ class ListTransactionUseCaseTest {
                 "mercado"
         );
 
-        Pageable pageable = PageRequest.of(0, 10, Sort.by("date").descending());
+        PageQuery pageQuery = new PageQuery(
+                0,
+                10,
+                List.of(new PageSort("date", SortDirection.DESC))
+        );
+
         Transaction transaction = new Transaction();
         TransactionResponse response = mock(TransactionResponse.class);
 
-        Page<Transaction> page = new PageImpl<>(List.of(transaction), pageable, 1);
+        PageResult<Transaction> pageResult = new PageResult<>(
+                List.of(transaction),
+                0,
+                10,
+                1,
+                1,
+                true,
+                true
+        );
 
         when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
-        when(findTransactionPort.findAllByFilter(1L, filter, pageable)).thenReturn(page);
+        when(findTransactionPort.findAllByFilter(1L, filter, pageQuery)).thenReturn(pageResult);
         when(transactionMapper.toResponse(transaction)).thenReturn(response);
 
-        Page<TransactionResponse> result = listTransactionsUseCase.execute(filter, authentication, pageable);
+        PageResult<TransactionResponse> result =
+                listTransactionsUseCase.execute(filter, authentication, pageQuery);
 
-        assertThat(result.getContent()).containsExactly(response);
-        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.content()).containsExactly(response);
+        assertThat(result.totalElements()).isEqualTo(1);
+        assertThat(result.page()).isZero();
+        assertThat(result.size()).isEqualTo(10);
+        assertThat(result.totalPages()).isEqualTo(1);
+        assertThat(result.first()).isTrue();
+        assertThat(result.last()).isTrue();
 
-        verify(findTransactionPort).findAllByFilter(1L, filter, pageable);
+        verify(findTransactionPort).findAllByFilter(1L, filter, pageQuery);
         verify(transactionMapper).toResponse(transaction);
     }
 
@@ -100,15 +118,19 @@ class ListTransactionUseCaseTest {
                 null
         );
 
-        Pageable pageable = PageRequest.of(0, 10);
+        PageQuery pageQuery = new PageQuery(
+                0,
+                10,
+                List.of()
+        );
 
         when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
 
-        assertThatThrownBy(() -> listTransactionsUseCase.execute(filter, authentication, pageable))
+        assertThatThrownBy(() -> listTransactionsUseCase.execute(filter, authentication, pageQuery))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Start date cannot be after end date");
 
-        verify(findTransactionPort, never()).findAllByFilter(1L, filter, pageable);
+        verify(findTransactionPort, never()).findAllByFilter(1L, filter, pageQuery);
         verifyNoInteractions(transactionMapper);
     }
 

@@ -4,6 +4,9 @@ import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.dto.response.InstallmentTransactionCreationResponse;
 import com.financebot.analysis.dto.response.TransactionCreationResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
+import com.financebot.common.pagination.PageQuery;
+import com.financebot.common.pagination.PageResult;
+import com.financebot.transaction.adapter.in.web.mapper.SpringPageMapper;
 import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateTransactionCommand;
 import com.financebot.transaction.application.command.UpdateTransactionCommand;
@@ -109,7 +112,12 @@ public class TransactionController {
                 description
         );
 
-        return listTransactionsUseCase.execute(filter, authentication, pageable);
+        PageQuery pageQuery = SpringPageMapper.toPageQuery(pageable);
+
+        PageResult<TransactionResponse> result =
+                listTransactionsUseCase.execute(filter, authentication, pageQuery);
+
+        return SpringPageMapper.toSpringPage(result, pageable);
     }
 
     @GetMapping("/{id}")
