@@ -8,13 +8,13 @@ import com.financebot.category.domain.Category;
 import com.financebot.telegram.dto.request.*;
 import com.financebot.telegram.dto.response.*;
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
-import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
+import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
+import com.financebot.transaction.application.command.CreateTransactionCommand;
 import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
 import com.financebot.transaction.application.usecase.CreateTransactionUseCase;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
-import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.user.domain.User;
 import com.financebot.user.dto.request.UpdateMonthlyBaseIncomeRequest;
@@ -156,17 +156,18 @@ public class TelegramIntegrationService {
                 request.description()
         );
 
-        CreateTransactionRequest transactionRequest = new CreateTransactionRequest(
+        CreateTransactionCommand command = new CreateTransactionCommand(
                 request.amount(),
                 request.description(),
                 request.date(),
                 transactionType,
                 SourceType.BOT_TEXT,
                 account.getId(),
-                category.getId()
+                category.getId(),
+                user
         );
 
-        createTransactionUseCase.executeForUser(transactionRequest, user);
+        createTransactionUseCase.execute(command);
     }
 
     @Transactional
@@ -181,7 +182,7 @@ public class TelegramIntegrationService {
                 request.description()
         );
 
-        CreateInstallmentTransactionRequest installmentRequest = new CreateInstallmentTransactionRequest(
+        CreateInstallmentTransactionCommand command = new CreateInstallmentTransactionCommand(
                 request.totalAmount(),
                 request.description(),
                 request.firstInstallmentDate(),
@@ -189,10 +190,11 @@ public class TelegramIntegrationService {
                 SourceType.BOT_TEXT,
                 account.getId(),
                 category.getId(),
-                request.totalInstallments()
+                request.totalInstallments(),
+                user
         );
 
-        createInstallmentTransactionUseCase.executeForUser(installmentRequest, user);
+        createInstallmentTransactionUseCase.execute(command);
     }
 
     @Transactional(readOnly = true)

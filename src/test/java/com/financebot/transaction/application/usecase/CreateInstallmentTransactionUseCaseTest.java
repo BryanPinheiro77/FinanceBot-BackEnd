@@ -3,7 +3,7 @@ package com.financebot.transaction.application.usecase;
 import com.financebot.account.domain.Account;
 import com.financebot.category.domain.Category;
 import com.financebot.category.domain.CategoryType;
-import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
+import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
 import com.financebot.transaction.application.dto.response.InstallmentTransactionResponse;
 import com.financebot.transaction.application.dto.response.TransactionResponse;
 import com.financebot.transaction.application.port.out.SaveTransactionPort;
@@ -16,7 +16,6 @@ import com.financebot.transaction.domain.installment.InstallmentPlanItem;
 import com.financebot.transaction.mapper.TransactionMapper;
 import com.financebot.transaction.validation.TransactionCategoryValidator;
 import com.financebot.user.domain.User;
-import com.financebot.user.service.AuthenticatedUserResolver;
 import com.financebot.user.service.UserResourceResolver;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;
@@ -26,7 +25,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.Authentication;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -52,9 +50,6 @@ class CreateInstallmentTransactionUseCaseTest {
     private SaveTransactionPort saveTransactionPort;
 
     @Mock
-    private AuthenticatedUserResolver authenticatedUserResolver;
-
-    @Mock
     private UserResourceResolver userResourceResolver;
 
     @Mock
@@ -66,9 +61,6 @@ class CreateInstallmentTransactionUseCaseTest {
     @Mock
     private TransactionMapper transactionMapper;
 
-    @Mock
-    private Authentication authentication;
-
     @InjectMocks
     private CreateInstallmentTransactionUseCase createInstallmentTransactionUseCase;
 
@@ -79,17 +71,15 @@ class CreateInstallmentTransactionUseCaseTest {
         Account account = buildAccount(10L);
         Category category = buildCategory(20L, CategoryType.EXPENSE);
 
-        CreateInstallmentTransactionRequest request = buildInstallmentRequest();
+        CreateInstallmentTransactionCommand command = buildInstallmentCommand(user);
 
         TransactionResponse response1 = mock(TransactionResponse.class);
         TransactionResponse response2 = mock(TransactionResponse.class);
         TransactionResponse response3 = mock(TransactionResponse.class);
 
-        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
-        mockInstallmentCreationDependencies(user, account, category, request, response1, response2, response3);
+        mockInstallmentCreationDependencies(user, account, category, command, response1, response2, response3);
 
-        InstallmentTransactionResponse result =
-                createInstallmentTransactionUseCase.execute(request, authentication);
+        InstallmentTransactionResponse result = createInstallmentTransactionUseCase.execute(command);
 
         List<Transaction> savedTransactions = captureSavedInstallments();
 
@@ -101,49 +91,13 @@ class CreateInstallmentTransactionUseCaseTest {
         assertInstallmentResponse(result, response1, response2, response3);
 
         verify(installmentPlanFactory).create(
-                request.totalAmount(),
-                request.description(),
-                request.firstInstallmentDate(),
-                request.type(),
-                request.totalInstallments()
+                command.totalAmount(),
+                command.description(),
+                command.firstInstallmentDate(),
+                command.type(),
+                command.totalInstallments()
         );
         verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
-    }
-
-    @Test
-    @DisplayName("deve criar parcelamento para usuário informado diretamente")
-    void shouldCreateInstallmentForUserSuccessfully() {
-        User user = buildUser(1L, "bryan@email.com");
-        Account account = buildAccount(10L);
-        Category category = buildCategory(20L, CategoryType.EXPENSE);
-
-        CreateInstallmentTransactionRequest request = buildInstallmentRequest();
-
-        TransactionResponse response1 = mock(TransactionResponse.class);
-        TransactionResponse response2 = mock(TransactionResponse.class);
-        TransactionResponse response3 = mock(TransactionResponse.class);
-
-        mockInstallmentCreationDependencies(user, account, category, request, response1, response2, response3);
-
-        InstallmentTransactionResponse result =
-                createInstallmentTransactionUseCase.executeForUser(request, user);
-
-        List<Transaction> savedTransactions = captureSavedInstallments();
-
-        assertThat(savedTransactions).hasSize(3);
-        assertThat(result.totalInstallments()).isEqualTo(3);
-        assertThat(result.installmentGroupId()).isEqualTo(INSTALLMENT_GROUP_ID);
-        assertThat(result.transactions()).containsExactly(response1, response2, response3);
-
-        verify(installmentPlanFactory).create(
-                request.totalAmount(),
-                request.description(),
-                request.firstInstallmentDate(),
-                request.type(),
-                request.totalInstallments()
-        );
-        verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
-        verify(authenticatedUserResolver, never()).resolve(any());
     }
 
     @Test
@@ -151,7 +105,7 @@ class CreateInstallmentTransactionUseCaseTest {
     void shouldThrowWhenInstallmentPlanRejectsIncomeTransaction() {
         User user = buildUser(1L, "bryan@email.com");
 
-        CreateInstallmentTransactionRequest request = new CreateInstallmentTransactionRequest(
+        CreateInstallmentTransactionCommand command = new CreateInstallmentTransactionCommand(
                 new BigDecimal("1000.00"),
                 "Salário parcelado",
                 LocalDate.of(2026, 4, 10),
@@ -159,19 +113,19 @@ class CreateInstallmentTransactionUseCaseTest {
                 SourceType.WEB,
                 10L,
                 20L,
-                3
+                3,
+                user
         );
 
-        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
         when(installmentPlanFactory.create(
-                request.totalAmount(),
-                request.description(),
-                request.firstInstallmentDate(),
-                request.type(),
-                request.totalInstallments()
+                command.totalAmount(),
+                command.description(),
+                command.firstInstallmentDate(),
+                command.type(),
+                command.totalInstallments()
         )).thenThrow(new IllegalArgumentException("Installment transactions are allowed only for expenses"));
 
-        assertThatThrownBy(() -> createInstallmentTransactionUseCase.execute(request, authentication))
+        assertThatThrownBy(() -> createInstallmentTransactionUseCase.execute(command))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Installment transactions are allowed only for expenses");
 
@@ -184,7 +138,7 @@ class CreateInstallmentTransactionUseCaseTest {
     void shouldThrowWhenInstallmentPlanRejectsTotalInstallmentsLessThanTwo() {
         User user = buildUser(1L, "bryan@email.com");
 
-        CreateInstallmentTransactionRequest request = new CreateInstallmentTransactionRequest(
+        CreateInstallmentTransactionCommand command = new CreateInstallmentTransactionCommand(
                 new BigDecimal("1000.00"),
                 "Notebook",
                 LocalDate.of(2026, 4, 10),
@@ -192,19 +146,19 @@ class CreateInstallmentTransactionUseCaseTest {
                 SourceType.WEB,
                 10L,
                 20L,
-                1
+                1,
+                user
         );
 
-        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
         when(installmentPlanFactory.create(
-                request.totalAmount(),
-                request.description(),
-                request.firstInstallmentDate(),
-                request.type(),
-                request.totalInstallments()
+                command.totalAmount(),
+                command.description(),
+                command.firstInstallmentDate(),
+                command.type(),
+                command.totalInstallments()
         )).thenThrow(new IllegalArgumentException("Total installments must be at least 2"));
 
-        assertThatThrownBy(() -> createInstallmentTransactionUseCase.execute(request, authentication))
+        assertThatThrownBy(() -> createInstallmentTransactionUseCase.execute(command))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Total installments must be at least 2");
 
@@ -217,21 +171,20 @@ class CreateInstallmentTransactionUseCaseTest {
     void shouldThrowWhenAccountIsNotFoundForUserOnCreateInstallment() {
         User user = buildUser(1L, "bryan@email.com");
 
-        CreateInstallmentTransactionRequest request = buildInstallmentRequest();
+        CreateInstallmentTransactionCommand command = buildInstallmentCommand(user);
         InstallmentPlan plan = buildInstallmentPlan();
 
-        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
         when(installmentPlanFactory.create(
-                request.totalAmount(),
-                request.description(),
-                request.firstInstallmentDate(),
-                request.type(),
-                request.totalInstallments()
+                command.totalAmount(),
+                command.description(),
+                command.firstInstallmentDate(),
+                command.type(),
+                command.totalInstallments()
         )).thenReturn(plan);
         when(userResourceResolver.resolveAccount(10L, 1L))
                 .thenThrow(new EntityNotFoundException("Account not found"));
 
-        assertThatThrownBy(() -> createInstallmentTransactionUseCase.execute(request, authentication))
+        assertThatThrownBy(() -> createInstallmentTransactionUseCase.execute(command))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Account not found");
 
@@ -246,22 +199,21 @@ class CreateInstallmentTransactionUseCaseTest {
         User user = buildUser(1L, "bryan@email.com");
         Account account = buildAccount(10L);
 
-        CreateInstallmentTransactionRequest request = buildInstallmentRequest();
+        CreateInstallmentTransactionCommand command = buildInstallmentCommand(user);
         InstallmentPlan plan = buildInstallmentPlan();
 
-        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
         when(installmentPlanFactory.create(
-                request.totalAmount(),
-                request.description(),
-                request.firstInstallmentDate(),
-                request.type(),
-                request.totalInstallments()
+                command.totalAmount(),
+                command.description(),
+                command.firstInstallmentDate(),
+                command.type(),
+                command.totalInstallments()
         )).thenReturn(plan);
         when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
         when(userResourceResolver.resolveCategory(20L, 1L))
                 .thenThrow(new EntityNotFoundException("Category not found"));
 
-        assertThatThrownBy(() -> createInstallmentTransactionUseCase.execute(request, authentication))
+        assertThatThrownBy(() -> createInstallmentTransactionUseCase.execute(command))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Category not found");
 
@@ -276,16 +228,15 @@ class CreateInstallmentTransactionUseCaseTest {
         Account account = buildAccount(10L);
         Category category = buildCategory(20L, CategoryType.INCOME);
 
-        CreateInstallmentTransactionRequest request = buildInstallmentRequest();
+        CreateInstallmentTransactionCommand command = buildInstallmentCommand(user);
         InstallmentPlan plan = buildInstallmentPlan();
 
-        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
         when(installmentPlanFactory.create(
-                request.totalAmount(),
-                request.description(),
-                request.firstInstallmentDate(),
-                request.type(),
-                request.totalInstallments()
+                command.totalAmount(),
+                command.description(),
+                command.firstInstallmentDate(),
+                command.type(),
+                command.totalInstallments()
         )).thenReturn(plan);
         when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
         when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
@@ -294,7 +245,7 @@ class CreateInstallmentTransactionUseCaseTest {
                 .when(transactionCategoryValidator)
                 .validate(category, TransactionType.EXPENSE);
 
-        assertThatThrownBy(() -> createInstallmentTransactionUseCase.execute(request, authentication))
+        assertThatThrownBy(() -> createInstallmentTransactionUseCase.execute(command))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Category type does not match transaction type");
 
@@ -302,8 +253,8 @@ class CreateInstallmentTransactionUseCaseTest {
         verify(saveTransactionPort, never()).saveAll(anyList());
     }
 
-    private CreateInstallmentTransactionRequest buildInstallmentRequest() {
-        return new CreateInstallmentTransactionRequest(
+    private CreateInstallmentTransactionCommand buildInstallmentCommand(User user) {
+        return new CreateInstallmentTransactionCommand(
                 new BigDecimal("1000.00"),
                 "Notebook",
                 LocalDate.of(2026, 4, 10),
@@ -311,7 +262,8 @@ class CreateInstallmentTransactionUseCaseTest {
                 SourceType.WEB,
                 10L,
                 20L,
-                3
+                3,
+                user
         );
     }
 
@@ -319,7 +271,7 @@ class CreateInstallmentTransactionUseCaseTest {
             User user,
             Account account,
             Category category,
-            CreateInstallmentTransactionRequest request,
+            CreateInstallmentTransactionCommand command,
             TransactionResponse response1,
             TransactionResponse response2,
             TransactionResponse response3
@@ -327,15 +279,15 @@ class CreateInstallmentTransactionUseCaseTest {
         InstallmentPlan plan = buildInstallmentPlan();
 
         when(installmentPlanFactory.create(
-                request.totalAmount(),
-                request.description(),
-                request.firstInstallmentDate(),
-                request.type(),
-                request.totalInstallments()
+                command.totalAmount(),
+                command.description(),
+                command.firstInstallmentDate(),
+                command.type(),
+                command.totalInstallments()
         )).thenReturn(plan);
 
-        when(userResourceResolver.resolveAccount(request.accountId(), user.getId())).thenReturn(account);
-        when(userResourceResolver.resolveCategory(request.categoryId(), user.getId())).thenReturn(category);
+        when(userResourceResolver.resolveAccount(command.accountId(), user.getId())).thenReturn(account);
+        when(userResourceResolver.resolveCategory(command.categoryId(), user.getId())).thenReturn(category);
 
         when(saveTransactionPort.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 

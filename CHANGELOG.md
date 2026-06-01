@@ -8,12 +8,20 @@
 - Removido o `TransactionService`, substituindo o fluxo por use cases e ports/adapters.
 - Movido `TransactionController` para `adapter/in/web`.
 - Isolado o acesso a `TransactionRepository` e `TransactionSpecification` no adapter de persistência.
+- Separados DTOs de request HTTP dos commands internos nos fluxos de criação, criação parcelada e atualização de transações.
+- Ajustado o fluxo de parcelamento para `CreateInstallmentTransactionUseCase` receber `CreateInstallmentTransactionCommand`.
+- Ajustado o fluxo de atualização para `UpdateTransactionUseCase` receber `UpdateTransactionCommand`.
+- Ajustado o fluxo do Telegram para criar transações comuns e parceladas usando commands internos em vez de DTOs HTTP.
 
 ### Added
 - Adicionados ports de saída para persistência de transações.
 - Adicionado `TransactionPersistenceAdapter`.
-- Adicionados testes unitários para use cases, controller e adapter de persistência de transações.
 
+### Tests
+- Adicionados testes unitários para use cases, controller e adapter de persistência de transações.
+- Atualizados testes de use cases, controller e integração Telegram para os novos commands internos.
+- Adicionada cobertura para criação parcelada via Telegram delegando para `CreateInstallmentTransactionCommand`.
+- 
 ## v1.2.0
 
 ### Added
