@@ -27,8 +27,27 @@ public class CreateTransactionUseCase {
     private final TransactionCategoryValidator transactionCategoryValidator;
 
     @Transactional
-    public TransactionResponse execute(CreateTransactionRequest request, Authentication authentication) {
+    public TransactionResponse execute(
+            CreateTransactionRequest request,
+            Authentication authentication
+    ) {
         User user = authenticatedUserResolver.resolve(authentication);
+
+        return createTransaction(request, user);
+    }
+
+    @Transactional
+    public TransactionResponse executeForUser(
+            CreateTransactionRequest request,
+            User user
+    ) {
+        return createTransaction(request, user);
+    }
+
+    private TransactionResponse createTransaction(
+            CreateTransactionRequest request,
+            User user
+    ) {
 
         Account account = userResourceResolver.resolveAccount(request.accountId(), user.getId());
         Category category = userResourceResolver.resolveCategory(request.categoryId(), user.getId());

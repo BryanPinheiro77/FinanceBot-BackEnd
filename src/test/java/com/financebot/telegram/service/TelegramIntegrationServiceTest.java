@@ -1,10 +1,17 @@
 package com.financebot.telegram.service;
 
+import com.financebot.account.domain.Account;
 import com.financebot.analysis.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
+import com.financebot.category.domain.Category;
+import com.financebot.telegram.dto.request.CreateTransactionFromTelegramRequest;
 import com.financebot.telegram.dto.request.InstallmentPurchaseCapacityRequest;
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
+import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
 import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
+import com.financebot.transaction.application.usecase.CreateTransactionUseCase;
+import com.financebot.transaction.domain.SourceType;
+import com.financebot.transaction.domain.TransactionType;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.user.domain.User;
 import com.financebot.user.repository.UserRepository;
@@ -19,10 +26,15 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -42,6 +54,9 @@ class TelegramIntegrationServiceTest {
     private CreateInstallmentTransactionUseCase createInstallmentTransactionUseCase;
 
     @Mock
+    private CreateTransactionUseCase createTransactionUseCase;
+
+    @Mock
     private TelegramAccountResolverService telegramAccountResolverService;
 
     @Mock
@@ -49,6 +64,184 @@ class TelegramIntegrationServiceTest {
 
     @InjectMocks
     private TelegramIntegrationService telegramIntegrationService;
+
+    @Nested
+    @DisplayName("createTransactionFromTelegram")
+    class CreateTransactionFromTelegramTests {
+
+        @Test
+        @DisplayName("deve delegar criacao de transacao comum para o use case")
+        void shouldDelegateCommonTransactionCreationToUseCase() {
+            User user = new User();
+            user.setId(1L);
+            user.setTelegramId(123L);
+
+            Account account = new Account();
+            account.setId(10L);
+            account.setName("Carteira");
+
+            Category category = new Category();
+            category.setId(20L);
+            category.setName("Alimentação");
+
+            CreateTransactionFromTelegramRequest request = new CreateTransactionFromTelegramRequest(
+                    123L,
+                    "EXPENSE",
+                    new BigDecimal("50.00"),
+                    "lanche",
+                    LocalDate.of(2026, 5, 30),
+                    "Alimentação",
+                    "Carteira"
+            );
+
+            when(userRepository.findByTelegramId(123L)).thenReturn(Optional.of(user));
+            when(telegramAccountResolverService.resolve(user, "Carteira")).thenReturn(account);
+            when(telegramCategoryResolverService.resolveExplicitCategory(
+                    user,
+                    TransactionType.EXPENSE,
+                    "Alimentação"
+            )).thenReturn(category);
+
+            telegramIntegrationService.createTransactionFromTelegram(request);
+
+            verify(createTransactionUseCase).executeForUser(
+                    argThat(transactionRequest ->
+                            transactionRequest.amount().compareTo(new BigDecimal("50.00")) == 0
+                                    && transactionRequest.description().equals("lanche")
+                                    && transactionRequest.date().equals(LocalDate.of(2026, 5, 30))
+                                    && transactionRequest.type() == TransactionType.EXPENSE
+                                    && transactionRequest.sourceType() == SourceType.BOT_TEXT
+                                    && transactionRequest.accountId().equals(10L)
+                                    && transactionRequest.categoryId().equals(20L)
+                    ),
+                    eq(user)
+            );
+
+            verify(transactionRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("deve usar categoria automatica quando categoria nao for informada")
+        void shouldUseAutomaticCategoryWhenCategoryNameIsNotProvided() {
+            User user = new User();
+            user.setId(1L);
+            user.setTelegramId(123L);
+
+            Account account = new Account();
+            account.setId(10L);
+            account.setName("Carteira");
+
+            Category category = new Category();
+            category.setId(20L);
+            category.setName("Alimentação");
+
+            CreateTransactionFromTelegramRequest request = new CreateTransactionFromTelegramRequest(
+                    123L,
+                    "EXPENSE",
+                    new BigDecimal("50.00"),
+                    "lanche",
+                    LocalDate.of(2026, 5, 30),
+                    null,
+                    "Carteira"
+            );
+
+            when(userRepository.findByTelegramId(123L)).thenReturn(Optional.of(user));
+            when(telegramAccountResolverService.resolve(user, "Carteira")).thenReturn(account);
+            when(telegramCategoryResolverService.resolveCategory(
+                    user,
+                    TransactionType.EXPENSE,
+                    "lanche"
+            )).thenReturn(category);
+
+            telegramIntegrationService.createTransactionFromTelegram(request);
+
+            verify(telegramCategoryResolverService).resolveCategory(
+                    user,
+                    TransactionType.EXPENSE,
+                    "lanche"
+            );
+
+            verify(createTransactionUseCase).executeForUser(
+                    any(CreateTransactionRequest.class),
+                    eq(user)
+            );
+
+            verify(transactionRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("deve usar categoria automatica quando categoria vier em branco")
+        void shouldUseAutomaticCategoryWhenCategoryNameIsBlank() {
+            User user = new User();
+            user.setId(1L);
+            user.setTelegramId(123L);
+
+            Account account = new Account();
+            account.setId(10L);
+            account.setName("Carteira");
+
+            Category category = new Category();
+            category.setId(20L);
+            category.setName("Alimentação");
+
+            CreateTransactionFromTelegramRequest request = new CreateTransactionFromTelegramRequest(
+                    123L,
+                    "EXPENSE",
+                    new BigDecimal("50.00"),
+                    "lanche",
+                    LocalDate.of(2026, 5, 30),
+                    "   ",
+                    "Carteira"
+            );
+
+            when(userRepository.findByTelegramId(123L)).thenReturn(Optional.of(user));
+            when(telegramAccountResolverService.resolve(user, "Carteira")).thenReturn(account);
+            when(telegramCategoryResolverService.resolveCategory(
+                    user,
+                    TransactionType.EXPENSE,
+                    "lanche"
+            )).thenReturn(category);
+
+            telegramIntegrationService.createTransactionFromTelegram(request);
+
+            verify(telegramCategoryResolverService).resolveCategory(
+                    user,
+                    TransactionType.EXPENSE,
+                    "lanche"
+            );
+
+            verify(createTransactionUseCase).executeForUser(
+                    any(CreateTransactionRequest.class),
+                    eq(user)
+            );
+
+            verify(transactionRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("deve lancar erro quando usuario do telegram nao existir")
+        void shouldThrowWhenTelegramUserDoesNotExistOnCreateTransaction() {
+            CreateTransactionFromTelegramRequest request = new CreateTransactionFromTelegramRequest(
+                    123L,
+                    "EXPENSE",
+                    new BigDecimal("50.00"),
+                    "lanche",
+                    LocalDate.of(2026, 5, 30),
+                    "Alimentação",
+                    "Carteira"
+            );
+
+            when(userRepository.findByTelegramId(123L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> telegramIntegrationService.createTransactionFromTelegram(request))
+                    .isInstanceOf(TelegramUserNotFoundException.class);
+
+            verify(createTransactionUseCase, never())
+                    .executeForUser(any(CreateTransactionRequest.class), any(User.class));
+
+            verify(transactionRepository, never()).save(any());
+        }
+    }
 
     @Nested
     @DisplayName("analyzeInstallmentPurchaseCapacity")
