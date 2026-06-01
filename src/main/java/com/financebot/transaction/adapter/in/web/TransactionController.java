@@ -4,6 +4,7 @@ import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.dto.response.InstallmentTransactionCreationResponse;
 import com.financebot.analysis.dto.response.TransactionCreationResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
+import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateTransactionCommand;
 import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
@@ -70,8 +71,11 @@ public class TransactionController {
             @RequestBody @Valid CreateInstallmentTransactionRequest request,
             Authentication authentication
     ) {
+        User user = authenticatedUserResolver.resolve(authentication);
+        CreateInstallmentTransactionCommand command = transactionMapper.toCommand(request, user);
+
         InstallmentTransactionResponse installment =
-                createInstallmentTransactionUseCase.execute(request, authentication);
+                createInstallmentTransactionUseCase.execute(command);
 
         FinancialCommitmentResponse analysis = financialAnalysisService.getFinancialCommitment(authentication);
 

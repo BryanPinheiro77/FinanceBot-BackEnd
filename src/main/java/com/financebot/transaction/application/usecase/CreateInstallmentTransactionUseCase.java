@@ -2,7 +2,7 @@ package com.financebot.transaction.application.usecase;
 
 import com.financebot.account.domain.Account;
 import com.financebot.category.domain.Category;
-import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
+import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
 import com.financebot.transaction.application.dto.response.InstallmentTransactionResponse;
 import com.financebot.transaction.application.dto.response.TransactionResponse;
 import com.financebot.transaction.application.port.out.SaveTransactionPort;
@@ -12,11 +12,8 @@ import com.financebot.transaction.domain.installment.InstallmentPlanFactory;
 import com.financebot.transaction.domain.installment.InstallmentPlanItem;
 import com.financebot.transaction.mapper.TransactionMapper;
 import com.financebot.transaction.validation.TransactionCategoryValidator;
-import com.financebot.user.domain.User;
-import com.financebot.user.service.AuthenticatedUserResolver;
 import com.financebot.user.service.UserResourceResolver;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,50 +26,28 @@ public class CreateInstallmentTransactionUseCase {
     private final SaveTransactionPort saveTransactionPort;
     private final UserResourceResolver userResourceResolver;
     private final TransactionMapper transactionMapper;
-    private final AuthenticatedUserResolver authenticatedUserResolver;
     private final TransactionCategoryValidator transactionCategoryValidator;
     private final InstallmentPlanFactory installmentPlanFactory;
 
     @Transactional
-    public InstallmentTransactionResponse execute(
-            CreateInstallmentTransactionRequest request,
-            Authentication authentication
-    ) {
-        User user = authenticatedUserResolver.resolve(authentication);
-
-        return createInstallment(request, user);
-    }
-
-    @Transactional
-    public InstallmentTransactionResponse executeForUser(
-            CreateInstallmentTransactionRequest request,
-            User user
-    ) {
-        return createInstallment(request, user);
-    }
-
-    private InstallmentTransactionResponse createInstallment(
-            CreateInstallmentTransactionRequest request,
-            User user
-    ) {
+    public InstallmentTransactionResponse execute(CreateInstallmentTransactionCommand command) {
         InstallmentPlan plan = installmentPlanFactory.create(
-                request.totalAmount(),
-                request.description(),
-                request.firstInstallmentDate(),
-                request.type(),
-                request.totalInstallments()
+                command.totalAmount(),
+                command.description(),
+                command.firstInstallmentDate(),
+                command.type(),
+                command.totalInstallments()
         );
 
-        Account account = userResourceResolver.resolveAccount(request.accountId(), user.getId());
-        Category category = userResourceResolver.resolveCategory(request.categoryId(), user.getId());
+        Account account = userResourceResolver.resolveAccount(command.accountId(), command.user().getId());
+        Category category = userResourceResolver.resolveCategory(command.categoryId(), command.user().getId());
 
-        transactionCategoryValidator.validate(category, request.type());
+        transactionCategoryValidator.validate(category, command.type());
 
         List<Transaction> transactions = plan.items().stream()
                 .map(item -> buildInstallmentTransaction(
                         item,
-                        request,
-                        user,
+                        command,
                         account,
                         category
                 ))
@@ -93,8 +68,7 @@ public class CreateInstallmentTransactionUseCase {
 
     private Transaction buildInstallmentTransaction(
             InstallmentPlanItem item,
-            CreateInstallmentTransactionRequest request,
-            User user,
+            CreateInstallmentTransactionCommand command,
             Account account,
             Category category
     ) {
@@ -103,9 +77,9 @@ public class CreateInstallmentTransactionUseCase {
         transaction.setAmount(item.amount());
         transaction.setDescription(item.description());
         transaction.setDate(item.date());
-        transaction.setType(request.type());
-        transaction.setSourceType(request.sourceType());
-        transaction.setUser(user);
+        transaction.setType(command.type());
+        transaction.setSourceType(command.sourceType());
+        transaction.setUser(command.user());
         transaction.setAccount(account);
         transaction.setCategory(category);
         transaction.setInstallment(true);

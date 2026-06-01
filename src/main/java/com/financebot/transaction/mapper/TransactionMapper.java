@@ -4,6 +4,8 @@ import com.financebot.transaction.application.command.CreateTransactionCommand;
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
 import com.financebot.transaction.application.dto.request.UpdateTransactionRequest;
 import com.financebot.transaction.application.dto.response.TransactionResponse;
+import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
+import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.user.domain.User;
 import org.springframework.stereotype.Component;
@@ -34,14 +36,21 @@ public class TransactionMapper {
         return transaction;
     }
 
-    public Transaction toEntity(CreateTransactionRequest dto) {
-        Transaction transaction = new Transaction();
-        transaction.setAmount(dto.amount());
-        transaction.setDescription(dto.description().trim());
-        transaction.setDate(dto.date());
-        transaction.setType(dto.type());
-        transaction.setSourceType(dto.sourceType());
-        return transaction;
+    public CreateInstallmentTransactionCommand toCommand(
+            CreateInstallmentTransactionRequest request,
+            User user
+    ) {
+        return new CreateInstallmentTransactionCommand(
+                request.totalAmount(),
+                request.description(),
+                request.firstInstallmentDate(),
+                request.type(),
+                request.sourceType(),
+                request.accountId(),
+                request.categoryId(),
+                request.totalInstallments(),
+                user
+        );
     }
 
     public void updateEntity(UpdateTransactionRequest dto, Transaction transaction) {

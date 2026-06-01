@@ -4,6 +4,7 @@ import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.dto.response.InstallmentTransactionCreationResponse;
 import com.financebot.analysis.dto.response.TransactionCreationResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
+import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateTransactionCommand;
 import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
@@ -140,10 +141,27 @@ class TransactionControllerTest {
                 3
         );
 
+        User user = new User();
+        user.setId(1L);
+
+        CreateInstallmentTransactionCommand command = new CreateInstallmentTransactionCommand(
+                request.totalAmount(),
+                request.description(),
+                request.firstInstallmentDate(),
+                request.type(),
+                request.sourceType(),
+                request.accountId(),
+                request.categoryId(),
+                request.totalInstallments(),
+                user
+        );
+
         InstallmentTransactionResponse installmentResponse = mock(InstallmentTransactionResponse.class);
         FinancialCommitmentResponse financialAnalysis = mock(FinancialCommitmentResponse.class);
 
-        when(createInstallmentTransactionUseCase.execute(request, authentication)).thenReturn(installmentResponse);
+        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
+        when(transactionMapper.toCommand(request, user)).thenReturn(command);
+        when(createInstallmentTransactionUseCase.execute(command)).thenReturn(installmentResponse);
         when(financialAnalysisService.getFinancialCommitment(authentication)).thenReturn(financialAnalysis);
 
         InstallmentTransactionCreationResponse result =
@@ -152,7 +170,9 @@ class TransactionControllerTest {
         assertThat(result.installment()).isEqualTo(installmentResponse);
         assertThat(result.analysis()).isEqualTo(financialAnalysis);
 
-        verify(createInstallmentTransactionUseCase).execute(request, authentication);
+        verify(authenticatedUserResolver).resolve(authentication);
+        verify(transactionMapper).toCommand(request, user);
+        verify(createInstallmentTransactionUseCase).execute(command);
         verify(financialAnalysisService).getFinancialCommitment(authentication);
     }
 
