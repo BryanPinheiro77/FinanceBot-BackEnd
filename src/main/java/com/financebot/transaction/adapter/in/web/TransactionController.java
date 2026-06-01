@@ -4,6 +4,12 @@ import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.dto.response.InstallmentTransactionCreationResponse;
 import com.financebot.analysis.dto.response.TransactionCreationResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
+import com.financebot.transaction.application.command.CreateTransactionCommand;
+import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
+import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
+import com.financebot.transaction.application.dto.request.UpdateTransactionRequest;
+import com.financebot.transaction.application.dto.response.InstallmentTransactionResponse;
+import com.financebot.transaction.application.dto.response.TransactionResponse;
 import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
 import com.financebot.transaction.application.usecase.CreateTransactionUseCase;
 import com.financebot.transaction.application.usecase.DeleteTransactionUseCase;
@@ -12,12 +18,10 @@ import com.financebot.transaction.application.usecase.ListTransactionsUseCase;
 import com.financebot.transaction.application.usecase.UpdateTransactionUseCase;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.TransactionType;
-import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
-import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
-import com.financebot.transaction.application.dto.response.InstallmentTransactionResponse;
 import com.financebot.transaction.dto.TransactionFilter;
-import com.financebot.transaction.application.dto.response.TransactionResponse;
-import com.financebot.transaction.application.dto.request.UpdateTransactionRequest;
+import com.financebot.transaction.mapper.TransactionMapper;
+import com.financebot.user.domain.User;
+import com.financebot.user.service.AuthenticatedUserResolver;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -33,7 +37,10 @@ import java.time.LocalDate;
 @RequestMapping("/transactions")
 @RequiredArgsConstructor
 public class TransactionController {
+
     private final FinancialAnalysisService financialAnalysisService;
+    private final AuthenticatedUserResolver authenticatedUserResolver;
+    private final TransactionMapper transactionMapper;
 
     private final CreateTransactionUseCase createTransactionUseCase;
     private final CreateInstallmentTransactionUseCase createInstallmentTransactionUseCase;
@@ -48,7 +55,10 @@ public class TransactionController {
             @RequestBody @Valid CreateTransactionRequest request,
             Authentication authentication
     ) {
-        TransactionResponse transaction = createTransactionUseCase.execute(request, authentication);
+        User user = authenticatedUserResolver.resolve(authentication);
+        CreateTransactionCommand command = transactionMapper.toCommand(request, user);
+
+        TransactionResponse transaction = createTransactionUseCase.execute(command);
         FinancialCommitmentResponse analysis = financialAnalysisService.getFinancialCommitment(authentication);
 
         return new TransactionCreationResponse(transaction, analysis);

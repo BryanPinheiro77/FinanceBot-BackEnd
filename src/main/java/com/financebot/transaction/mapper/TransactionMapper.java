@@ -1,13 +1,38 @@
 package com.financebot.transaction.mapper;
 
-import com.financebot.transaction.domain.Transaction;
+import com.financebot.transaction.application.command.CreateTransactionCommand;
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
-import com.financebot.transaction.application.dto.response.TransactionResponse;
 import com.financebot.transaction.application.dto.request.UpdateTransactionRequest;
+import com.financebot.transaction.application.dto.response.TransactionResponse;
+import com.financebot.transaction.domain.Transaction;
+import com.financebot.user.domain.User;
 import org.springframework.stereotype.Component;
 
 @Component
 public class TransactionMapper {
+
+    public CreateTransactionCommand toCommand(CreateTransactionRequest request, User user) {
+        return new CreateTransactionCommand(
+                request.amount(),
+                request.description(),
+                request.date(),
+                request.type(),
+                request.sourceType(),
+                request.accountId(),
+                request.categoryId(),
+                user
+        );
+    }
+
+    public Transaction toEntity(CreateTransactionCommand command) {
+        Transaction transaction = new Transaction();
+        transaction.setAmount(command.amount());
+        transaction.setDescription(command.description().trim());
+        transaction.setDate(command.date());
+        transaction.setType(command.type());
+        transaction.setSourceType(command.sourceType());
+        return transaction;
+    }
 
     public Transaction toEntity(CreateTransactionRequest dto) {
         Transaction transaction = new Transaction();

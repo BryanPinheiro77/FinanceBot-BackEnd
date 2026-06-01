@@ -7,7 +7,7 @@ import com.financebot.category.domain.Category;
 import com.financebot.telegram.dto.request.CreateTransactionFromTelegramRequest;
 import com.financebot.telegram.dto.request.InstallmentPurchaseCapacityRequest;
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
-import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
+import com.financebot.transaction.application.command.CreateTransactionCommand;
 import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
 import com.financebot.transaction.application.usecase.CreateTransactionUseCase;
 import com.financebot.transaction.domain.SourceType;
@@ -33,7 +33,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -104,17 +103,17 @@ class TelegramIntegrationServiceTest {
 
             telegramIntegrationService.createTransactionFromTelegram(request);
 
-            verify(createTransactionUseCase).executeForUser(
-                    argThat(transactionRequest ->
-                            transactionRequest.amount().compareTo(new BigDecimal("50.00")) == 0
-                                    && transactionRequest.description().equals("lanche")
-                                    && transactionRequest.date().equals(LocalDate.of(2026, 5, 30))
-                                    && transactionRequest.type() == TransactionType.EXPENSE
-                                    && transactionRequest.sourceType() == SourceType.BOT_TEXT
-                                    && transactionRequest.accountId().equals(10L)
-                                    && transactionRequest.categoryId().equals(20L)
-                    ),
-                    eq(user)
+            verify(createTransactionUseCase).execute(
+                    argThat(command ->
+                            command.amount().compareTo(new BigDecimal("50.00")) == 0
+                                    && command.description().equals("lanche")
+                                    && command.date().equals(LocalDate.of(2026, 5, 30))
+                                    && command.type() == TransactionType.EXPENSE
+                                    && command.sourceType() == SourceType.BOT_TEXT
+                                    && command.accountId().equals(10L)
+                                    && command.categoryId().equals(20L)
+                                    && command.user().equals(user)
+                    )
             );
 
             verify(transactionRepository, never()).save(any());
@@ -161,9 +160,8 @@ class TelegramIntegrationServiceTest {
                     "lanche"
             );
 
-            verify(createTransactionUseCase).executeForUser(
-                    any(CreateTransactionRequest.class),
-                    eq(user)
+            verify(createTransactionUseCase).execute(
+                    any(CreateTransactionCommand.class)
             );
 
             verify(transactionRepository, never()).save(any());
@@ -210,9 +208,8 @@ class TelegramIntegrationServiceTest {
                     "lanche"
             );
 
-            verify(createTransactionUseCase).executeForUser(
-                    any(CreateTransactionRequest.class),
-                    eq(user)
+            verify(createTransactionUseCase).execute(
+                    any(CreateTransactionCommand.class)
             );
 
             verify(transactionRepository, never()).save(any());
@@ -237,7 +234,7 @@ class TelegramIntegrationServiceTest {
                     .isInstanceOf(TelegramUserNotFoundException.class);
 
             verify(createTransactionUseCase, never())
-                    .executeForUser(any(CreateTransactionRequest.class), any(User.class));
+                    .execute(any(CreateTransactionCommand.class));
 
             verify(transactionRepository, never()).save(any());
         }
