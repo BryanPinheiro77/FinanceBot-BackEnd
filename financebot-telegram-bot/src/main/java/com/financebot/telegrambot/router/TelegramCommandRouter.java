@@ -1,48 +1,34 @@
 package com.financebot.telegrambot.router;
 
-import com.financebot.telegrambot.client.FinanceBotApiClient;
 import com.financebot.telegrambot.dto.ParsedTelegramMessage;
-import com.financebot.telegrambot.dto.request.InstallmentPurchaseCapacityRequest;
-import com.financebot.telegrambot.dto.request.TelegramInstallmentCountRequest;
-import com.financebot.telegrambot.dto.request.TelegramTransactionSummaryRequest;
-import com.financebot.telegrambot.dto.response.InstallmentPurchaseCapacityResponse;
-import com.financebot.telegrambot.dto.response.MonthlyAmountSummaryResponse;
-import com.financebot.telegrambot.dto.response.TelegramActiveInstallmentSummaryResponse;
-import com.financebot.telegrambot.dto.response.TelegramActiveInstallmentsResponse;
-import com.financebot.telegrambot.dto.response.TelegramInstallmentCountResponse;
-import com.financebot.telegrambot.dto.response.TelegramTransactionSummaryResponse;
-import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
+import com.financebot.telegrambot.handler.TelegramBasicCommandHandler;
+import com.financebot.telegrambot.handler.TelegramFinancialQueryHandler;
 import com.financebot.telegrambot.handler.TelegramPendingEditHandler;
 import com.financebot.telegrambot.handler.TelegramPendingOperationHandler;
-import com.financebot.telegrambot.handler.TelegramBasicCommandHandler;
 import com.financebot.telegrambot.handler.TelegramTransactionPreviewHandler;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import com.financebot.telegrambot.service.TelegramIntentService;
 import com.financebot.telegrambot.service.TelegramPendingConfirmationService;
 import com.financebot.telegrambot.service.TelegramPendingQueryService;
 import com.financebot.telegrambot.service.TelegramQueryContextService;
-import com.financebot.telegrambot.support.TelegramBotErrorMapper;
 import com.financebot.telegrambot.support.TelegramCommandMatcher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClientResponseException;
 
 @Component
 @RequiredArgsConstructor
 public class TelegramCommandRouter {
 
-    private final FinanceBotApiClient financeBotApiClient;
     private final TelegramIntentService telegramIntentService;
     private final TelegramPendingConfirmationService telegramPendingConfirmationService;
     private final TelegramPendingQueryService telegramPendingQueryService;
     private final TelegramQueryContextService telegramQueryContextService;
-    private final TelegramMessageFormatter telegramMessageFormatter;
     private final TelegramCommandMatcher telegramCommandMatcher;
-    private final TelegramBotErrorMapper telegramBotErrorMapper;
     private final TelegramBasicCommandHandler telegramBasicCommandHandler;
     private final TelegramPendingOperationHandler telegramPendingOperationHandler;
     private final TelegramTransactionPreviewHandler telegramTransactionPreviewHandler;
     private final TelegramPendingEditHandler telegramPendingEditHandler;
+    private final TelegramFinancialQueryHandler telegramFinancialQueryHandler;
 
     public String route(
             String messageText,
@@ -121,7 +107,7 @@ public class TelegramCommandRouter {
         parsedMessage = telegramQueryContextService.applyQueryContext(telegramId, normalizedMessage, parsedMessage);
 
         if (parsedMessage.intentType() != null && parsedMessage.intentType().name().startsWith("QUERY_")) {
-            return handleNaturalLanguageQuery(parsedMessage, telegramId);
+            return telegramFinancialQueryHandler.handleQuery(parsedMessage, telegramId);
         }
 
         if (parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE
@@ -151,175 +137,6 @@ public class TelegramCommandRouter {
             """;
     }
 
-    private String handleNaturalLanguageQuery(ParsedTelegramMessage parsedMessage, Long telegramId) {
-        try {
-            String resultMessage = switch (parsedMessage.intentType()) {
-                case QUERY_MONTH_EXPENSE_TOTAL -> {
-                    MonthlyAmountSummaryResponse response = financeBotApiClient.getCurrentMonthExpenseSummary(telegramId);
-                    yield telegramMessageFormatter.formatMonthExpenseSummary(response.totalAmount());
-                }
-                case QUERY_MONTH_INCOME_TOTAL -> {
-                    MonthlyAmountSummaryResponse response = financeBotApiClient.getCurrentMonthIncomeSummary(telegramId);
-                    yield telegramMessageFormatter.formatMonthIncomeSummary(response.totalAmount());
-                }
-                case QUERY_MONTH_ANALYSIS -> telegramBasicCommandHandler.handleAnalysis(telegramId);
-
-                case QUERY_TRANSACTION_TOTAL -> {
-                    String type = parsedMessage.originalMessage().toLowerCase().contains("recebi")
-                            || parsedMessage.originalMessage().toLowerCase().contains("entrou")
-                            ? "INCOME"
-                            : "EXPENSE";
-
-                    TelegramTransactionSummaryResponse response = financeBotApiClient.getTransactionSummary(
-                            new TelegramTransactionSummaryRequest(
-                                    telegramId,
-                                    type,
-                                    parsedMessage.categoryName(),
-                                    parsedMessage.accountName(),
-                                    parsedMessage.startDate(),
-                                    parsedMessage.endDate()
-                            )
-                    );
-
-                    String label = "EXPENSE".equals(type) ? "gasto" : "recebido";
-
-                    StringBuilder complemento = new StringBuilder();
-                    if (response.categoryName() != null) {
-                        complemento.append(" em ").append(response.categoryName());
-                    }
-                    if (response.accountName() != null) {
-                        complemento.append(" na conta ").append(response.accountName());
-                    }
-
-                    yield telegramMessageFormatter.formatTransactionSummary(
-                            label,
-                            complemento.toString(),
-                            response.totalAmount()
-                    );
-                }
-
-                case QUERY_INSTALLMENT_COUNT -> {
-                    TelegramInstallmentCountResponse response = financeBotApiClient.getInstallmentCount(
-                            new TelegramInstallmentCountRequest(
-                                    telegramId,
-                                    parsedMessage.startDate(),
-                                    parsedMessage.endDate()
-                            )
-                    );
-
-                    yield telegramMessageFormatter.formatInstallmentCountMessage(
-                            response.installmentCount(),
-                            response.startDate(),
-                            response.endDate()
-                    );
-                }
-
-                case QUERY_INSTALLMENT_PURCHASE_CAPACITY -> {
-                    InstallmentPurchaseCapacityResponse response =
-                            financeBotApiClient.getInstallmentPurchaseCapacity(
-                                    new InstallmentPurchaseCapacityRequest(
-                                            telegramId,
-                                            parsedMessage.totalAmount(),
-                                            parsedMessage.totalInstallments()
-                                    )
-                            );
-
-                    yield telegramMessageFormatter.formatInstallmentPurchaseCapacityMessage(
-                            response.totalAmount(),
-                            response.totalInstallments(),
-                            response.estimatedInstallmentAmount(),
-                            response.analysisResult(),
-                            response.observation()
-                    );
-                }
-
-                case QUERY_ACTIVE_INSTALLMENTS -> {
-                    TelegramActiveInstallmentsResponse response = financeBotApiClient.getActiveInstallments(telegramId);
-
-                    yield telegramMessageFormatter.formatActiveInstallmentsMessage(
-                            response.activeInstallmentGroupCount()
-                    );
-                }
-
-                case QUERY_INSTALLMENT_REMAINING -> {
-                    try {
-                        TelegramActiveInstallmentSummaryResponse response =
-                                financeBotApiClient.getActiveInstallmentSummary(
-                                        telegramId,
-                                        parsedMessage.installmentQueryTarget()
-                                );
-
-                        if (response == null || !response.hasActiveInstallment()) {
-                            if (parsedMessage.installmentQueryTarget() != null
-                                    && !parsedMessage.installmentQueryTarget().isBlank()) {
-                                yield telegramMessageFormatter.formatInstallmentNotFoundMessage(
-                                        parsedMessage.installmentQueryTarget()
-                                );
-                            }
-                            yield telegramMessageFormatter.formatNoActiveInstallmentsMessage();
-                        }
-
-                        yield telegramMessageFormatter.formatRemainingInstallmentsMessage(
-                                response.description(),
-                                response.currentDueDate(),
-                                response.currentInstallmentNumber(),
-                                response.nextDueDate(),
-                                response.remainingInstallments(),
-                                response.nextInstallmentNumber(),
-                                response.totalInstallments()
-                        );
-                    } catch (RestClientResponseException e) {
-                        if (e.getStatusCode().value() == 409 || e.getStatusCode().value() == 403) {
-                            telegramPendingQueryService.savePending(telegramId, parsedMessage);
-                            yield telegramMessageFormatter.formatMultipleActiveInstallmentsMessage();
-                        }
-                        throw e;
-                    }
-                }
-
-                case QUERY_INSTALLMENT_END_DATE -> {
-                    try {
-                        TelegramActiveInstallmentSummaryResponse response =
-                                financeBotApiClient.getActiveInstallmentSummary(
-                                        telegramId,
-                                        parsedMessage.installmentQueryTarget()
-                                );
-
-                        if (response == null || !response.hasActiveInstallment()) {
-                            if (parsedMessage.installmentQueryTarget() != null
-                                    && !parsedMessage.installmentQueryTarget().isBlank()) {
-                                yield telegramMessageFormatter.formatInstallmentNotFoundMessage(
-                                        parsedMessage.installmentQueryTarget()
-                                );
-                            }
-                            yield telegramMessageFormatter.formatNoActiveInstallmentsMessage();
-                        }
-
-                        yield telegramMessageFormatter.formatInstallmentEndDateMessage(
-                                response.description(),
-                                response.endDate()
-                        );
-                    } catch (RestClientResponseException e) {
-                        if (e.getStatusCode().value() == 409 || e.getStatusCode().value() == 403) {
-                            telegramPendingQueryService.savePending(telegramId, parsedMessage);
-                            yield telegramMessageFormatter.formatMultipleActiveInstallmentsMessage();
-                        }
-                        throw e;
-                    }
-                }
-
-                default -> "Não consegui interpretar sua consulta.";
-            };
-
-            telegramQueryContextService.saveQueryContext(telegramId, parsedMessage);
-            return resultMessage;
-        } catch (RestClientResponseException e) {
-            return telegramBotErrorMapper.mapDefaultBotErrors(e);
-        } catch (Exception e) {
-            return "Não foi possível consultar essas informações agora.";
-        }
-    }
-
     private String handlePendingInstallmentQuerySelection(
             Long telegramId,
             String messageText,
@@ -346,7 +163,7 @@ public class TelegramCommandRouter {
         );
 
         telegramPendingQueryService.clearPending(telegramId);
-        return handleNaturalLanguageQuery(updated, telegramId);
+        return telegramFinancialQueryHandler.handleQuery(updated, telegramId);
     }
 
 }
