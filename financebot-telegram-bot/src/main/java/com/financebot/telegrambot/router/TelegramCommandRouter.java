@@ -10,7 +10,6 @@ import com.financebot.telegrambot.dto.response.InstallmentPurchaseCapacityRespon
 import com.financebot.telegrambot.dto.response.MonthlyAmountSummaryResponse;
 import com.financebot.telegrambot.dto.response.TelegramActiveInstallmentSummaryResponse;
 import com.financebot.telegrambot.dto.response.TelegramActiveInstallmentsResponse;
-import com.financebot.telegrambot.dto.response.TelegramDefaultAccountResponse;
 import com.financebot.telegrambot.dto.response.TelegramInstallmentCountResponse;
 import com.financebot.telegrambot.dto.response.TelegramTransactionSummaryResponse;
 import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
@@ -24,6 +23,7 @@ import com.financebot.telegrambot.service.TelegramPendingQueryService;
 import com.financebot.telegrambot.service.TelegramQueryContextService;
 import com.financebot.telegrambot.support.TelegramBotErrorMapper;
 import com.financebot.telegrambot.support.TelegramCommandMatcher;
+import com.financebot.telegrambot.support.TelegramPreviewAccountResolver;
 import com.financebot.telegrambot.support.TelegramTextNormalizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -53,6 +53,7 @@ public class TelegramCommandRouter {
     private final TelegramCommandMatcher telegramCommandMatcher;
     private final TelegramBotErrorMapper telegramBotErrorMapper;
     private final TelegramTextNormalizer telegramTextNormalizer;
+    private final TelegramPreviewAccountResolver telegramPreviewAccountResolver;
     private final TelegramBasicCommandHandler telegramBasicCommandHandler;
     private final TelegramPendingOperationHandler telegramPendingOperationHandler;
 
@@ -178,7 +179,9 @@ public class TelegramCommandRouter {
         PendingTelegramTransaction pendingTransaction =
                 pendingTelegramTransactionMapper.fromParsedMessage(parsedMessage);
 
-        ResolvedPreviewAccount resolvedAccount = resolvePreviewAccount(pendingTransaction, telegramId);
+        TelegramPreviewAccountResolver.ResolvedPreviewAccount resolvedAccount =
+                telegramPreviewAccountResolver.resolve(pendingTransaction, telegramId);
+
         pendingTransaction = withResolvedAccountName(pendingTransaction, resolvedAccount.persistedName());
 
         if (pendingTransaction.intentType() == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE) {
@@ -514,7 +517,9 @@ public class TelegramCommandRouter {
     }
 
     private String buildUpdatedPendingMessage(Long telegramId, PendingTelegramTransaction pendingTransaction) {
-        ResolvedPreviewAccount resolvedAccount = resolvePreviewAccount(pendingTransaction, telegramId);
+        TelegramPreviewAccountResolver.ResolvedPreviewAccount resolvedAccount =
+                telegramPreviewAccountResolver.resolve(pendingTransaction, telegramId);
+
         return telegramMessageFormatter.formatUpdatedPendingMessage(
                 pendingTransaction,
                 resolvedAccount.displayName()
@@ -669,32 +674,6 @@ public class TelegramCommandRouter {
         return capitalizeWords(cleaned);
     }
 
-    private ResolvedPreviewAccount resolvePreviewAccount(PendingTelegramTransaction pendingTransaction, Long telegramId) {
-        if (pendingTransaction.accountName() != null && !pendingTransaction.accountName().isBlank()) {
-            return new ResolvedPreviewAccount(
-                    pendingTransaction.accountName(),
-                    pendingTransaction.accountName()
-            );
-        }
-
-        try {
-            TelegramDefaultAccountResponse response = financeBotApiClient.getDefaultAccount(telegramId);
-
-            if (response != null && response.accountName() != null && !response.accountName().isBlank()) {
-                return new ResolvedPreviewAccount(
-                        response.accountName(),
-                        response.accountName()
-                );
-            }
-        } catch (RestClientResponseException e) {
-            return new ResolvedPreviewAccount("conta padrão", null);
-        } catch (Exception e) {
-            return new ResolvedPreviewAccount("conta padrão", null);
-        }
-
-        return new ResolvedPreviewAccount("conta padrão", null);
-    }
-
     private boolean containsAmountEditHint(String lower) {
         return lower.contains("valor");
     }
@@ -783,9 +762,4 @@ public class TelegramCommandRouter {
             .appendValue(ChronoField.YEAR, 4)
             .toFormatter();
 
-    private record ResolvedPreviewAccount(
-            String displayName,
-            String persistedName
-    ) {
-    }
 }
