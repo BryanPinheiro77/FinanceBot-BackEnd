@@ -2,10 +2,15 @@ package com.financebot.telegrambot.service;
 
 import com.financebot.telegrambot.client.FinanceBotApiClient;
 import com.financebot.telegrambot.dto.ParsedTelegramMessage;
+import com.financebot.telegrambot.dto.PendingTelegramTransaction;
+import com.financebot.telegrambot.dto.request.CreateInstallmentTransactionFromTelegramRequest;
+import com.financebot.telegrambot.dto.request.CreateTransactionFromTelegramRequest;
 import com.financebot.telegrambot.dto.request.InstallmentPurchaseCapacityRequest;
 import com.financebot.telegrambot.dto.response.InstallmentPurchaseCapacityResponse;
+import com.financebot.telegrambot.dto.response.TelegramDefaultAccountResponse;
 import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
 import com.financebot.telegrambot.intent.TelegramIntentType;
+import com.financebot.telegrambot.mapper.PendingTelegramTransactionMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,6 +45,9 @@ class TelegramCommandServiceTest {
     private TelegramPendingConfirmationService telegramPendingConfirmationService;
 
     @Mock
+    private TelegramPendingQueryService telegramPendingQueryService;
+
+    @Mock
     private TelegramQueryContextService telegramQueryContextService;
 
     private TelegramCommandService telegramCommandService;
@@ -49,8 +58,10 @@ class TelegramCommandServiceTest {
                 financeBotApiClient,
                 telegramIntentService,
                 telegramPendingConfirmationService,
+                telegramPendingQueryService,
                 telegramQueryContextService,
-                new TelegramMessageFormatter()
+                new TelegramMessageFormatter(),
+                new PendingTelegramTransactionMapper()
         );
     }
 
@@ -73,7 +84,8 @@ class TelegramCommandServiceTest {
         );
 
         when(telegramIntentService.parse(any())).thenReturn(parsedMessage);
-        when(telegramQueryContextService.applyQueryContext(eq(123L), any(), eq(parsedMessage))).thenReturn(parsedMessage);
+        when(telegramQueryContextService.applyQueryContext(eq(123L), any(), eq(parsedMessage)))
+                .thenReturn(parsedMessage);
         when(financeBotApiClient.getInstallmentPurchaseCapacity(any()))
                 .thenReturn(new InstallmentPurchaseCapacityResponse(
                         new BigDecimal("2400"),
@@ -126,7 +138,8 @@ class TelegramCommandServiceTest {
         );
 
         when(telegramIntentService.parse(any())).thenReturn(parsedMessage);
-        when(telegramQueryContextService.applyQueryContext(eq(123L), any(), eq(parsedMessage))).thenReturn(parsedMessage);
+        when(telegramQueryContextService.applyQueryContext(eq(123L), any(), eq(parsedMessage)))
+                .thenReturn(parsedMessage);
         when(financeBotApiClient.getInstallmentPurchaseCapacity(any()))
                 .thenThrow(HttpClientErrorException.create(
                         HttpStatus.BAD_REQUEST,
@@ -144,5 +157,229 @@ class TelegramCommandServiceTest {
         );
 
         assertThat(result).contains("solicitação está inválida");
+    }
+
+    @Test
+    @DisplayName("deve gerar preview de despesa e salvar PendingTelegramTransaction")
+    void shouldGenerateExpensePreviewAndSavePendingTransaction() {
+        ParsedTelegramMessage parsedMessage = new ParsedTelegramMessage(
+                TelegramIntentType.CREATE_EXPENSE,
+                new BigDecimal("50.00"),
+                "mercado",
+                LocalDate.of(2026, 6, 1),
+                "gastei 50 no mercado pelo nubank",
+                "Mercado",
+                "Nubank",
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        when(telegramIntentService.parse(any())).thenReturn(parsedMessage);
+        when(telegramQueryContextService.applyQueryContext(eq(123L), any(), eq(parsedMessage)))
+                .thenReturn(parsedMessage);
+
+        String result = telegramCommandService.handleMessage(
+                "gastei 50 no mercado pelo nubank",
+                123L,
+                "bryan",
+                "Bryan"
+        );
+
+        ArgumentCaptor<PendingTelegramTransaction> pendingCaptor =
+                ArgumentCaptor.forClass(PendingTelegramTransaction.class);
+
+        verify(telegramPendingConfirmationService).savePending(eq(123L), pendingCaptor.capture());
+        verify(telegramPendingQueryService, never()).savePending(any(), any());
+
+        PendingTelegramTransaction pending = pendingCaptor.getValue();
+
+        assertThat(pending.intentType()).isEqualTo(TelegramIntentType.CREATE_EXPENSE);
+        assertThat(pending.amount()).isEqualByComparingTo("50.00");
+        assertThat(pending.description()).isEqualTo("mercado");
+        assertThat(pending.date()).isEqualTo(LocalDate.of(2026, 6, 1));
+        assertThat(pending.categoryName()).isEqualTo("Mercado");
+        assertThat(pending.accountName()).isEqualTo("Nubank");
+
+        assertThat(result).contains("Entendi esta despesa");
+        assertThat(result).contains("Mercado");
+        assertThat(result).contains("Nubank");
+    }
+
+    @Test
+    @DisplayName("deve confirmar despesa usando dados do PendingTelegramTransaction")
+    void shouldConfirmExpenseUsingPendingTransactionData() {
+        PendingTelegramTransaction pending = new PendingTelegramTransaction(
+                TelegramIntentType.CREATE_EXPENSE,
+                new BigDecimal("50.00"),
+                "mercado",
+                LocalDate.of(2026, 6, 1),
+                "Mercado",
+                "Nubank",
+                null,
+                "gastei 50 no mercado pelo nubank"
+        );
+
+        when(telegramPendingConfirmationService.getPending(123L)).thenReturn(pending);
+
+        String result = telegramCommandService.handleMessage(
+                "confirmar",
+                123L,
+                "bryan",
+                "Bryan"
+        );
+
+        ArgumentCaptor<CreateTransactionFromTelegramRequest> requestCaptor =
+                ArgumentCaptor.forClass(CreateTransactionFromTelegramRequest.class);
+
+        verify(financeBotApiClient).createTransaction(requestCaptor.capture());
+        verify(telegramPendingConfirmationService).clearPending(123L);
+
+        CreateTransactionFromTelegramRequest request = requestCaptor.getValue();
+
+        assertThat(request.telegramId()).isEqualTo(123L);
+        assertThat(request.type()).isEqualTo("EXPENSE");
+        assertThat(request.amount()).isEqualByComparingTo("50.00");
+        assertThat(request.description()).isEqualTo("mercado");
+        assertThat(request.date()).isEqualTo(LocalDate.of(2026, 6, 1));
+        assertThat(request.categoryName()).isEqualTo("Mercado");
+        assertThat(request.accountName()).isEqualTo("Nubank");
+
+        assertThat(result).contains("Transação registrada com sucesso");
+    }
+
+    @Test
+    @DisplayName("deve gerar preview de parcelamento e salvar PendingTelegramTransaction")
+    void shouldGenerateInstallmentPreviewAndSavePendingTransaction() {
+        ParsedTelegramMessage parsedMessage = new ParsedTelegramMessage(
+                TelegramIntentType.CREATE_INSTALLMENT_EXPENSE,
+                new BigDecimal("1200.00"),
+                "notebook",
+                LocalDate.of(2026, 6, 1),
+                "comprei notebook de 1200 em 12x no nubank",
+                "Eletrônicos",
+                "Nubank",
+                null,
+                null,
+                12,
+                null,
+                null
+        );
+
+        when(telegramIntentService.parse(any())).thenReturn(parsedMessage);
+        when(telegramQueryContextService.applyQueryContext(eq(123L), any(), eq(parsedMessage)))
+                .thenReturn(parsedMessage);
+
+        String result = telegramCommandService.handleMessage(
+                "comprei notebook de 1200 em 12x no nubank",
+                123L,
+                "bryan",
+                "Bryan"
+        );
+
+        ArgumentCaptor<PendingTelegramTransaction> pendingCaptor =
+                ArgumentCaptor.forClass(PendingTelegramTransaction.class);
+
+        verify(telegramPendingConfirmationService).savePending(eq(123L), pendingCaptor.capture());
+
+        PendingTelegramTransaction pending = pendingCaptor.getValue();
+
+        assertThat(pending.intentType()).isEqualTo(TelegramIntentType.CREATE_INSTALLMENT_EXPENSE);
+        assertThat(pending.amount()).isEqualByComparingTo("1200.00");
+        assertThat(pending.description()).isEqualTo("notebook");
+        assertThat(pending.date()).isEqualTo(LocalDate.of(2026, 6, 1));
+        assertThat(pending.categoryName()).isEqualTo("Eletrônicos");
+        assertThat(pending.accountName()).isEqualTo("Nubank");
+        assertThat(pending.totalInstallments()).isEqualTo(12);
+
+        assertThat(result).contains("Entendi este parcelamento");
+        assertThat(result).contains("12x");
+        assertThat(result).contains("Nubank");
+    }
+
+    @Test
+    @DisplayName("deve confirmar parcelamento usando dados do PendingTelegramTransaction")
+    void shouldConfirmInstallmentUsingPendingTransactionData() {
+        PendingTelegramTransaction pending = new PendingTelegramTransaction(
+                TelegramIntentType.CREATE_INSTALLMENT_EXPENSE,
+                new BigDecimal("1200.00"),
+                "notebook",
+                LocalDate.of(2026, 6, 1),
+                "Eletrônicos",
+                "Nubank",
+                12,
+                "comprei notebook de 1200 em 12x no nubank"
+        );
+
+        when(telegramPendingConfirmationService.getPending(123L)).thenReturn(pending);
+
+        String result = telegramCommandService.handleMessage(
+                "sim",
+                123L,
+                "bryan",
+                "Bryan"
+        );
+
+        ArgumentCaptor<CreateInstallmentTransactionFromTelegramRequest> requestCaptor =
+                ArgumentCaptor.forClass(CreateInstallmentTransactionFromTelegramRequest.class);
+
+        verify(financeBotApiClient).createInstallmentTransaction(requestCaptor.capture());
+        verify(telegramPendingConfirmationService).clearPending(123L);
+
+        CreateInstallmentTransactionFromTelegramRequest request = requestCaptor.getValue();
+
+        assertThat(request.telegramId()).isEqualTo(123L);
+        assertThat(request.totalAmount()).isEqualByComparingTo("1200.00");
+        assertThat(request.description()).isEqualTo("notebook");
+        assertThat(request.firstInstallmentDate()).isEqualTo(LocalDate.of(2026, 6, 1));
+        assertThat(request.categoryName()).isEqualTo("Eletrônicos");
+        assertThat(request.accountName()).isEqualTo("Nubank");
+        assertThat(request.totalInstallments()).isEqualTo(12);
+
+        assertThat(result).contains("Parcelamento registrado com sucesso");
+    }
+
+    @Test
+    @DisplayName("deve salvar conta padrao resolvida no PendingTelegramTransaction")
+    void shouldSaveResolvedDefaultAccountInPendingTransaction() {
+        ParsedTelegramMessage parsedMessage = new ParsedTelegramMessage(
+                TelegramIntentType.CREATE_EXPENSE,
+                new BigDecimal("80.00"),
+                "gasolina",
+                LocalDate.of(2026, 6, 1),
+                "paguei 80 de gasolina",
+                "Combustível",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        when(telegramIntentService.parse(any())).thenReturn(parsedMessage);
+        when(telegramQueryContextService.applyQueryContext(eq(123L), any(), eq(parsedMessage)))
+                .thenReturn(parsedMessage);
+        when(financeBotApiClient.getDefaultAccount(123L))
+                .thenReturn(new TelegramDefaultAccountResponse(10L, "Carteira"));
+
+        String result = telegramCommandService.handleMessage(
+                "paguei 80 de gasolina",
+                123L,
+                "bryan",
+                "Bryan"
+        );
+
+        ArgumentCaptor<PendingTelegramTransaction> pendingCaptor =
+                ArgumentCaptor.forClass(PendingTelegramTransaction.class);
+
+        verify(telegramPendingConfirmationService).savePending(eq(123L), pendingCaptor.capture());
+
+        PendingTelegramTransaction pending = pendingCaptor.getValue();
+
+        assertThat(pending.accountName()).isEqualTo("Carteira");
+        assertThat(result).contains("Carteira");
     }
 }
