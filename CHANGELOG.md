@@ -2,14 +2,21 @@
 
 ## [Unreleased]
 
+## v1.3.0
+
 ### Changed
 
 - Alinhado o fluxo de preview, confirmação e persistência de transações via Telegram usando `PendingTelegramTransaction`, garantindo que os dados exibidos ao usuário sejam os mesmos usados na confirmação.
+- Refatorado o fluxo de comandos do Telegram, mantendo `TelegramCommandService` como fachada fina.
+- Adicionado `TelegramCommandRouter` para centralizar o roteamento de mensagens e delegar os fluxos para handlers especializados.
+- Extraídos handlers específicos para comandos básicos, operações pendentes, preview de transações, confirmação de transações, edição de pendências, consultas financeiras, consultas pendentes e mensagens em linguagem natural.
+- Extraídos componentes auxiliares para identificação de comandos, normalização de texto, parsing de edição pendente, resolução de conta padrão no preview e mapeamento de erros do bot.
 
 ### Tests
 
 - Adicionada cobertura para preview e confirmação de transações comuns e parceladas no bot Telegram.
 - Adicionado teste garantindo que a conta padrão resolvida no preview seja preservada no pending quando encontrada.
+- Ajustados testes do fluxo de comandos do Telegram após a separação em router, handlers e componentes auxiliares.
 
 ## v1.2.1
 
