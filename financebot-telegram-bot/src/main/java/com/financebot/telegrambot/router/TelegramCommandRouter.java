@@ -1,16 +1,11 @@
 package com.financebot.telegrambot.router;
 
-import com.financebot.telegrambot.dto.ParsedTelegramMessage;
 import com.financebot.telegrambot.handler.TelegramBasicCommandHandler;
-import com.financebot.telegrambot.handler.TelegramFinancialQueryHandler;
 import com.financebot.telegrambot.handler.TelegramPendingEditHandler;
 import com.financebot.telegrambot.handler.TelegramPendingOperationHandler;
-import com.financebot.telegrambot.handler.TelegramTransactionPreviewHandler;
 import com.financebot.telegrambot.handler.TelegramPendingQueryHandler;
-import com.financebot.telegrambot.intent.TelegramIntentType;
-import com.financebot.telegrambot.service.TelegramIntentService;
+import com.financebot.telegrambot.handler.TelegramNaturalLanguageHandler;
 import com.financebot.telegrambot.service.TelegramPendingConfirmationService;
-import com.financebot.telegrambot.service.TelegramQueryContextService;
 import com.financebot.telegrambot.support.TelegramCommandMatcher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -19,16 +14,13 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class TelegramCommandRouter {
 
-    private final TelegramIntentService telegramIntentService;
     private final TelegramPendingConfirmationService telegramPendingConfirmationService;
-    private final TelegramQueryContextService telegramQueryContextService;
     private final TelegramCommandMatcher telegramCommandMatcher;
     private final TelegramBasicCommandHandler telegramBasicCommandHandler;
     private final TelegramPendingOperationHandler telegramPendingOperationHandler;
-    private final TelegramTransactionPreviewHandler telegramTransactionPreviewHandler;
     private final TelegramPendingEditHandler telegramPendingEditHandler;
-    private final TelegramFinancialQueryHandler telegramFinancialQueryHandler;
     private final TelegramPendingQueryHandler telegramPendingQueryHandler;
+    private final TelegramNaturalLanguageHandler telegramNaturalLanguageHandler;
 
     public String route(
             String messageText,
@@ -102,38 +94,7 @@ public class TelegramCommandRouter {
             );
         }
 
-        ParsedTelegramMessage parsedMessage = telegramIntentService.parse(normalizedMessage);
-        parsedMessage = telegramQueryContextService.applyQueryContext(telegramId, normalizedMessage, parsedMessage);
-
-        if (parsedMessage.intentType() != null && parsedMessage.intentType().name().startsWith("QUERY_")) {
-            return telegramFinancialQueryHandler.handleQuery(parsedMessage, telegramId);
-        }
-
-        if (parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE
-                || parsedMessage.intentType() == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE
-                || parsedMessage.intentType() == TelegramIntentType.CREATE_INCOME) {
-            return telegramTransactionPreviewHandler.handlePreview(telegramId, parsedMessage);
-        }
-
-        return """
-            Não reconheci sua mensagem.
-            
-            Você pode usar comandos:
-            /start ou /iniciar
-            /help ou /ajuda
-            /connect ou /conectar CODIGO
-            /me ou /perfil
-            /status ou /resumo
-            /analysis ou /analise
-            /setincome ou /definirrenda VALOR
-            /disconnect ou /desconectar
-            
-            Ou pode escrever naturalmente, por exemplo:
-            - gastei 50 no mercado
-            - recebi 1200 de salário
-            - quanto gastei esse mês?
-            - me dá a análise desse mês
-            """;
+        return telegramNaturalLanguageHandler.handle(normalizedMessage, telegramId);
     }
 
 }

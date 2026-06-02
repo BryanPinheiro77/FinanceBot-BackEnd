@@ -15,6 +15,7 @@ import com.financebot.telegrambot.handler.TelegramPendingOperationHandler;
 import com.financebot.telegrambot.handler.TelegramTransactionPreviewHandler;
 import com.financebot.telegrambot.handler.TelegramFinancialQueryHandler;
 import com.financebot.telegrambot.handler.TelegramPendingQueryHandler;
+import com.financebot.telegrambot.handler.TelegramNaturalLanguageHandler;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import com.financebot.telegrambot.mapper.PendingTelegramTransactionMapper;
 import com.financebot.telegrambot.router.TelegramCommandRouter;
@@ -116,17 +117,21 @@ class TelegramCommandServiceTest {
                 telegramFinancialQueryHandler
         );
 
-        TelegramCommandRouter telegramCommandRouter = new TelegramCommandRouter(
+        TelegramNaturalLanguageHandler telegramNaturalLanguageHandler = new TelegramNaturalLanguageHandler(
                 telegramIntentService,
-                telegramPendingConfirmationService,
                 telegramQueryContextService,
+                telegramFinancialQueryHandler,
+                telegramTransactionPreviewHandler
+        );
+
+        TelegramCommandRouter telegramCommandRouter = new TelegramCommandRouter(
+                telegramPendingConfirmationService,
                 new TelegramCommandMatcher(telegramTextNormalizer),
                 telegramBasicCommandHandler,
                 telegramPendingOperationHandler,
-                telegramTransactionPreviewHandler,
                 telegramPendingEditHandler,
-                telegramFinancialQueryHandler,
-                telegramPendingQueryHandler
+                telegramPendingQueryHandler,
+                telegramNaturalLanguageHandler
         );
 
         telegramCommandService = new TelegramCommandService(telegramCommandRouter);
