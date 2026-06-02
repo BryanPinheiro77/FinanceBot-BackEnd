@@ -9,8 +9,17 @@ import com.financebot.telegrambot.dto.request.InstallmentPurchaseCapacityRequest
 import com.financebot.telegrambot.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.telegrambot.dto.response.TelegramDefaultAccountResponse;
 import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
+import com.financebot.telegrambot.handler.TelegramBasicCommandHandler;
+import com.financebot.telegrambot.handler.TelegramPendingEditHandler;
+import com.financebot.telegrambot.handler.TelegramPendingOperationHandler;
+import com.financebot.telegrambot.handler.TelegramTransactionPreviewHandler;
+import com.financebot.telegrambot.handler.TelegramFinancialQueryHandler;
+import com.financebot.telegrambot.handler.TelegramPendingQueryHandler;
+import com.financebot.telegrambot.handler.TelegramNaturalLanguageHandler;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import com.financebot.telegrambot.mapper.PendingTelegramTransactionMapper;
+import com.financebot.telegrambot.router.TelegramCommandRouter;
+import com.financebot.telegrambot.support.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -54,15 +63,78 @@ class TelegramCommandServiceTest {
 
     @BeforeEach
     void setUp() {
-        telegramCommandService = new TelegramCommandService(
+        TelegramMessageFormatter telegramMessageFormatter = new TelegramMessageFormatter();
+        TelegramTextNormalizer telegramTextNormalizer = new TelegramTextNormalizer();
+        TelegramBotErrorMapper telegramBotErrorMapper = new TelegramBotErrorMapper(telegramMessageFormatter);
+        TelegramPreviewAccountResolver telegramPreviewAccountResolver =
+                new TelegramPreviewAccountResolver(financeBotApiClient);
+
+        TelegramBasicCommandHandler telegramBasicCommandHandler = new TelegramBasicCommandHandler(
                 financeBotApiClient,
-                telegramIntentService,
                 telegramPendingConfirmationService,
                 telegramPendingQueryService,
-                telegramQueryContextService,
-                new TelegramMessageFormatter(),
-                new PendingTelegramTransactionMapper()
+                telegramMessageFormatter,
+                telegramBotErrorMapper
         );
+
+        TelegramPendingOperationHandler telegramPendingOperationHandler = new TelegramPendingOperationHandler(
+                financeBotApiClient,
+                telegramPendingConfirmationService,
+                telegramPendingQueryService,
+                telegramMessageFormatter,
+                telegramBotErrorMapper
+        );
+
+        TelegramTransactionPreviewHandler telegramTransactionPreviewHandler = new TelegramTransactionPreviewHandler(
+                telegramPendingConfirmationService,
+                telegramMessageFormatter,
+                new PendingTelegramTransactionMapper(),
+                telegramPreviewAccountResolver
+        );
+
+        TelegramPendingEditParser telegramPendingEditParser =
+                new TelegramPendingEditParser(telegramTextNormalizer);
+
+        TelegramPendingEditHandler telegramPendingEditHandler = new TelegramPendingEditHandler(
+                telegramPendingConfirmationService,
+                telegramMessageFormatter,
+                telegramPendingEditParser,
+                telegramPreviewAccountResolver
+        );
+
+        TelegramFinancialQueryHandler telegramFinancialQueryHandler = new TelegramFinancialQueryHandler(
+                financeBotApiClient,
+                telegramPendingQueryService,
+                telegramQueryContextService,
+                telegramMessageFormatter,
+                telegramBotErrorMapper,
+                telegramBasicCommandHandler
+        );
+
+        TelegramPendingQueryHandler telegramPendingQueryHandler = new TelegramPendingQueryHandler(
+                telegramIntentService,
+                telegramPendingQueryService,
+                telegramFinancialQueryHandler
+        );
+
+        TelegramNaturalLanguageHandler telegramNaturalLanguageHandler = new TelegramNaturalLanguageHandler(
+                telegramIntentService,
+                telegramQueryContextService,
+                telegramFinancialQueryHandler,
+                telegramTransactionPreviewHandler
+        );
+
+        TelegramCommandRouter telegramCommandRouter = new TelegramCommandRouter(
+                telegramPendingConfirmationService,
+                new TelegramCommandMatcher(telegramTextNormalizer),
+                telegramBasicCommandHandler,
+                telegramPendingOperationHandler,
+                telegramPendingEditHandler,
+                telegramPendingQueryHandler,
+                telegramNaturalLanguageHandler
+        );
+
+        telegramCommandService = new TelegramCommandService(telegramCommandRouter);
     }
 
     @Test
