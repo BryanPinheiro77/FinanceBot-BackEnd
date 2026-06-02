@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Alinhado o fluxo de preview, confirmação e persistência de transações via Telegram usando `PendingTelegramTransaction`, garantindo que os dados exibidos ao usuário sejam os mesmos usados na confirmação.
+
+### Tests
+
+- Adicionada cobertura para preview e confirmação de transações comuns e parceladas no bot Telegram.
+- Adicionado teste garantindo que a conta padrão resolvida no preview seja preservada no pending quando encontrada.
+
 ## v1.2.1
 
 ### Changed
