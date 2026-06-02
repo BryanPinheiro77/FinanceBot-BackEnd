@@ -15,10 +15,7 @@ import com.financebot.telegrambot.handler.TelegramTransactionPreviewHandler;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import com.financebot.telegrambot.mapper.PendingTelegramTransactionMapper;
 import com.financebot.telegrambot.router.TelegramCommandRouter;
-import com.financebot.telegrambot.support.TelegramBotErrorMapper;
-import com.financebot.telegrambot.support.TelegramCommandMatcher;
-import com.financebot.telegrambot.support.TelegramPreviewAccountResolver;
-import com.financebot.telegrambot.support.TelegramTextNormalizer;
+import com.financebot.telegrambot.support.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -91,6 +88,9 @@ class TelegramCommandServiceTest {
                 telegramPreviewAccountResolver
         );
 
+        TelegramPendingEditParser telegramPendingEditParser =
+                new TelegramPendingEditParser(telegramTextNormalizer);
+
         TelegramCommandRouter telegramCommandRouter = new TelegramCommandRouter(
                 financeBotApiClient,
                 telegramIntentService,
@@ -100,11 +100,11 @@ class TelegramCommandServiceTest {
                 telegramMessageFormatter,
                 new TelegramCommandMatcher(telegramTextNormalizer),
                 telegramBotErrorMapper,
-                telegramTextNormalizer,
                 telegramPreviewAccountResolver,
                 telegramBasicCommandHandler,
                 telegramPendingOperationHandler,
-                telegramTransactionPreviewHandler
+                telegramTransactionPreviewHandler,
+                telegramPendingEditParser
         );
 
         telegramCommandService = new TelegramCommandService(telegramCommandRouter);
