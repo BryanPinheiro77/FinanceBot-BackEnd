@@ -39,7 +39,7 @@ public class TelegramNaturalLanguageHandler {
 
         return """
                 Não reconheci sua mensagem.
-                
+
                 Você pode usar comandos:
                 /start ou /iniciar
                 /help ou /ajuda
@@ -49,7 +49,7 @@ public class TelegramNaturalLanguageHandler {
                 /analysis ou /analise
                 /setincome ou /definirrenda VALOR
                 /disconnect ou /desconectar
-                
+
                 Ou pode escrever naturalmente, por exemplo:
                 - gastei 50 no mercado
                 - recebi 1200 de salário

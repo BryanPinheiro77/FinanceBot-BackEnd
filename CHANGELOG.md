@@ -16,6 +16,7 @@
 
 - Adicionada cobertura para preview e confirmação de transações comuns e parceladas no bot Telegram.
 - Adicionado teste garantindo que a conta padrão resolvida no preview seja preservada no pending quando encontrada.
+- Adicionada cobertura unitária para `TelegramCommandRouter`, `TelegramPendingEditParser`, `TelegramPreviewAccountResolver` e `TelegramPendingQueryHandler`.
 - Ajustados testes do fluxo de comandos do Telegram após a separação em router, handlers e componentes auxiliares.
 
 ## v1.2.1

@@ -23,7 +23,7 @@ public class TelegramTransactionPreviewHandler {
         if (parsedMessage.amount() == null && parsedMessage.totalAmount() == null) {
             return """
                     Entendi a intenção, mas não consegui identificar o valor.
-                    
+
                     Exemplos:
                     - gastei 50 no mercado
                     - paguei 120 de gasolina
@@ -46,7 +46,7 @@ public class TelegramTransactionPreviewHandler {
             if (pendingTransaction.totalInstallments() == null || pendingTransaction.totalInstallments() < 2) {
                 return """
                         Entendi a intenção de parcelamento, mas não consegui identificar uma quantidade válida de parcelas.
-                        
+
                         Exemplos:
                         - gastei 1200 parcelado em 10x
                         - comprei um celular por 2400 em 12x
