@@ -6,6 +6,7 @@ import com.financebot.telegrambot.dto.request.*;
 import com.financebot.telegrambot.dto.response.*;
 import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
 import com.financebot.telegrambot.intent.TelegramIntentType;
+import com.financebot.telegrambot.mapper.PendingTelegramTransactionMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientResponseException;
@@ -28,8 +29,10 @@ public class TelegramCommandService {
     private final FinanceBotApiClient financeBotApiClient;
     private final TelegramIntentService telegramIntentService;
     private final TelegramPendingConfirmationService telegramPendingConfirmationService;
+    private final TelegramPendingQueryService telegramPendingQueryService;
     private final TelegramQueryContextService telegramQueryContextService;
     private final TelegramMessageFormatter telegramMessageFormatter;
+    private final PendingTelegramTransactionMapper pendingTelegramTransactionMapper;
 
     public String handleMessage(
             String messageText,
@@ -95,12 +98,12 @@ public class TelegramCommandService {
             return handlePendingEdit(telegramId, normalizedMessage);
         }
 
-        ParsedTelegramMessage pending = telegramPendingConfirmationService.getPending(telegramId);
-        if (pending != null
-                && pending.intentType() != null
-                && pending.intentType().name().startsWith("QUERY_INSTALLMENT_")
+        ParsedTelegramMessage pendingQuery = telegramPendingQueryService.getPending(telegramId);
+        if (pendingQuery != null
+                && pendingQuery.intentType() != null
+                && pendingQuery.intentType().name().startsWith("QUERY_INSTALLMENT_")
                 && !normalizedMessage.startsWith("/")) {
-            return handlePendingInstallmentQuerySelection(telegramId, normalizedMessage, pending);
+            return handlePendingInstallmentQuerySelection(telegramId, normalizedMessage, pendingQuery);
         }
 
         ParsedTelegramMessage parsedMessage = telegramIntentService.parse(normalizedMessage);
@@ -177,6 +180,7 @@ public class TelegramCommandService {
         try {
             financeBotApiClient.disconnectTelegram(telegramId);
             telegramPendingConfirmationService.clearPending(telegramId);
+            telegramPendingQueryService.clearPending(telegramId);
 
             return telegramMessageFormatter.formatDisconnectSuccessMessage();
         } catch (RestClientResponseException e) {
@@ -275,37 +279,41 @@ public class TelegramCommandService {
     }
 
     private String handleNaturalLanguageTransactionPreview(Long telegramId, ParsedTelegramMessage parsedMessage) {
-        if (parsedMessage.amount() == null) {
+        if (parsedMessage.amount() == null && parsedMessage.totalAmount() == null) {
             return """
-            Entendi a intenção, mas não consegui identificar o valor.
+        Entendi a intenção, mas não consegui identificar o valor.
+        
+        Exemplos:
+        - gastei 50 no mercado
+        - paguei 120 de gasolina
+        - recebi 1500 de salário
+        """;
+        }
+
+        PendingTelegramTransaction pendingTransaction =
+                pendingTelegramTransactionMapper.fromParsedMessage(parsedMessage);
+
+        ResolvedPreviewAccount resolvedAccount = resolvePreviewAccount(pendingTransaction, telegramId);
+        pendingTransaction = withResolvedAccountName(pendingTransaction, resolvedAccount.persistedName());
+
+        if (pendingTransaction.intentType() == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE) {
+            if (pendingTransaction.totalInstallments() == null || pendingTransaction.totalInstallments() < 2) {
+                return """
+            Entendi a intenção de parcelamento, mas não consegui identificar uma quantidade válida de parcelas.
             
             Exemplos:
-            - gastei 50 no mercado
-            - paguei 120 de gasolina
-            - recebi 1500 de salário
+            - gastei 1200 parcelado em 10x
+            - comprei um celular por 2400 em 12x
+            - gastei 300 no inter parcelado em 3x
             """;
-        }
-
-        String conta = resolvePreviewAccountName(parsedMessage, telegramId);
-
-        if (parsedMessage.intentType() == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE) {
-            if (parsedMessage.totalInstallments() == null || parsedMessage.totalInstallments() < 2) {
-                return """
-                Entendi a intenção de parcelamento, mas não consegui identificar uma quantidade válida de parcelas.
-                
-                Exemplos:
-                - gastei 1200 parcelado em 10x
-                - comprei um celular por 2400 em 12x
-                - gastei 300 no inter parcelado em 3x
-                """;
             }
 
-            telegramPendingConfirmationService.savePending(telegramId, parsedMessage);
-            return telegramMessageFormatter.formatInstallmentTransactionPreview(parsedMessage, conta);
+            telegramPendingConfirmationService.savePending(telegramId, pendingTransaction);
+            return telegramMessageFormatter.formatInstallmentTransactionPreview(pendingTransaction, resolvedAccount.displayName());
         }
 
-        telegramPendingConfirmationService.savePending(telegramId, parsedMessage);
-        return telegramMessageFormatter.formatTransactionPreview(parsedMessage, conta);
+        telegramPendingConfirmationService.savePending(telegramId, pendingTransaction);
+        return telegramMessageFormatter.formatTransactionPreview(pendingTransaction, resolvedAccount.displayName());
     }
 
     private String handleNaturalLanguageQuery(ParsedTelegramMessage parsedMessage, Long telegramId) {
@@ -427,7 +435,7 @@ public class TelegramCommandService {
                         );
                     } catch (RestClientResponseException e) {
                         if (e.getStatusCode().value() == 409 || e.getStatusCode().value() == 403) {
-                            telegramPendingConfirmationService.savePending(telegramId, parsedMessage);
+                            telegramPendingQueryService.savePending(telegramId, parsedMessage);
                             yield telegramMessageFormatter.formatMultipleActiveInstallmentsMessage();
                         }
                         throw e;
@@ -458,7 +466,7 @@ public class TelegramCommandService {
                         );
                     } catch (RestClientResponseException e) {
                         if (e.getStatusCode().value() == 409 || e.getStatusCode().value() == 403) {
-                            telegramPendingConfirmationService.savePending(telegramId, parsedMessage);
+                            telegramPendingQueryService.savePending(telegramId, parsedMessage);
                             yield telegramMessageFormatter.formatMultipleActiveInstallmentsMessage();
                         }
                         throw e;
@@ -477,19 +485,39 @@ public class TelegramCommandService {
         }
     }
 
+    private PendingTelegramTransaction withResolvedAccountName(
+            PendingTelegramTransaction pendingTransaction,
+            String resolvedAccountName
+    ) {
+        if (pendingTransaction.accountName() != null && !pendingTransaction.accountName().isBlank()) {
+            return pendingTransaction;
+        }
+
+        if (resolvedAccountName == null || resolvedAccountName.isBlank()) {
+            return pendingTransaction;
+        }
+
+        return new PendingTelegramTransaction(
+                pendingTransaction.intentType(),
+                pendingTransaction.amount(),
+                pendingTransaction.description(),
+                pendingTransaction.date(),
+                pendingTransaction.categoryName(),
+                resolvedAccountName,
+                pendingTransaction.totalInstallments(),
+                pendingTransaction.originalMessage()
+        );
+    }
+
     private String handleConfirmation(Long telegramId) {
-        ParsedTelegramMessage pending = telegramPendingConfirmationService.getPending(telegramId);
+        PendingTelegramTransaction pending = telegramPendingConfirmationService.getPending(telegramId);
 
         if (pending == null) {
             return "Não há nenhuma operação pendente para confirmar.";
         }
 
-        if (pending.intentType() != null && pending.intentType().name().startsWith("QUERY_INSTALLMENT_")) {
-            return "Me diga qual parcelamento deseja consultar, por exemplo: tv ou computador.";
-        }
-
         try {
-            if (pending.intentType() == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE) {
+            if (pending.isInstallment()) {
                 CreateInstallmentTransactionFromTelegramRequest request =
                         new CreateInstallmentTransactionFromTelegramRequest(
                                 telegramId,
@@ -524,18 +552,22 @@ public class TelegramCommandService {
             return mapDefaultBotErrors(e);
         } catch (Exception e) {
             return """
-                Não foi possível salvar sua transação agora.
-                Você pode tentar confirmar novamente em instantes.
-                """;
+            Não foi possível salvar sua transação agora.
+            Você pode tentar confirmar novamente em instantes.
+            """;
         }
     }
 
     private String handleCancellation(Long telegramId) {
-        if (!telegramPendingConfirmationService.hasPending(telegramId)) {
+        boolean hasPendingConfirmation = telegramPendingConfirmationService.hasPending(telegramId);
+        boolean hasPendingQuery = telegramPendingQueryService.hasPending(telegramId);
+
+        if (!hasPendingConfirmation && !hasPendingQuery) {
             return "Não há nenhuma operação pendente para cancelar.";
         }
 
         telegramPendingConfirmationService.clearPending(telegramId);
+        telegramPendingQueryService.clearPending(telegramId);
 
         return "❌ Operação cancelada com sucesso.";
     }
@@ -565,12 +597,12 @@ public class TelegramCommandService {
                 pending.totalAmount()
         );
 
-        telegramPendingConfirmationService.clearPending(telegramId);
+        telegramPendingQueryService.clearPending(telegramId);
         return handleNaturalLanguageQuery(updated, telegramId);
     }
 
     private String handlePendingEdit(Long telegramId, String messageText) {
-        ParsedTelegramMessage pending = telegramPendingConfirmationService.getPending(telegramId);
+        PendingTelegramTransaction pending = telegramPendingConfirmationService.getPending(telegramId);
 
         if (pending == null) {
             return "Não há nenhuma operação pendente para editar.";
@@ -635,19 +667,15 @@ public class TelegramCommandService {
             return "Entendi que você quer editar a operação, mas não consegui identificar alterações válidas.";
         }
 
-        ParsedTelegramMessage updated = new ParsedTelegramMessage(
+        PendingTelegramTransaction updated = new PendingTelegramTransaction(
                 pending.intentType(),
                 amount,
                 description,
                 date,
-                pending.originalMessage(),
                 categoryName,
                 accountName,
-                pending.startDate(),
-                pending.endDate(),
                 pending.totalInstallments(),
-                pending.installmentQueryTarget(),
-                pending.totalAmount()
+                pending.originalMessage()
         );
 
         telegramPendingConfirmationService.savePending(telegramId, updated);
@@ -655,9 +683,12 @@ public class TelegramCommandService {
         return buildUpdatedPendingMessage(telegramId, updated);
     }
 
-    private String buildUpdatedPendingMessage(Long telegramId, ParsedTelegramMessage parsedMessage) {
-        String conta = resolvePreviewAccountName(parsedMessage, telegramId);
-        return telegramMessageFormatter.formatUpdatedPendingMessage(parsedMessage, conta);
+    private String buildUpdatedPendingMessage(Long telegramId, PendingTelegramTransaction pendingTransaction) {
+        ResolvedPreviewAccount resolvedAccount = resolvePreviewAccount(pendingTransaction, telegramId);
+        return telegramMessageFormatter.formatUpdatedPendingMessage(
+                pendingTransaction,
+                resolvedAccount.displayName()
+        );
     }
 
     private String mapDefaultBotErrors(RestClientResponseException e) {
@@ -976,24 +1007,30 @@ public class TelegramCommandService {
         return capitalizeWords(cleaned);
     }
 
-    private String resolvePreviewAccountName(ParsedTelegramMessage parsedMessage, Long telegramId) {
-        if (parsedMessage.accountName() != null && !parsedMessage.accountName().isBlank()) {
-            return parsedMessage.accountName();
+    private ResolvedPreviewAccount resolvePreviewAccount(PendingTelegramTransaction pendingTransaction, Long telegramId) {
+        if (pendingTransaction.accountName() != null && !pendingTransaction.accountName().isBlank()) {
+            return new ResolvedPreviewAccount(
+                    pendingTransaction.accountName(),
+                    pendingTransaction.accountName()
+            );
         }
 
         try {
             TelegramDefaultAccountResponse response = financeBotApiClient.getDefaultAccount(telegramId);
 
             if (response != null && response.accountName() != null && !response.accountName().isBlank()) {
-                return response.accountName();
+                return new ResolvedPreviewAccount(
+                        response.accountName(),
+                        response.accountName()
+                );
             }
         } catch (RestClientResponseException e) {
-            return "conta padrão";
+            return new ResolvedPreviewAccount("conta padrão", null);
         } catch (Exception e) {
-            return "conta padrão";
+            return new ResolvedPreviewAccount("conta padrão", null);
         }
 
-        return "conta padrão";
+        return new ResolvedPreviewAccount("conta padrão", null);
     }
 
     private boolean containsAmountEditHint(String lower) {
@@ -1020,6 +1057,12 @@ public class TelegramCommandService {
 
     private boolean containsAccountEditHint(String lower) {
         return lower.contains("conta");
+    }
+
+    private record ResolvedPreviewAccount(
+            String displayName,
+            String persistedName
+    ) {
     }
 
     private String trimAtNextEditHint(String text) {
