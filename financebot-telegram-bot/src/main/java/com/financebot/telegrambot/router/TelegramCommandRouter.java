@@ -6,10 +6,10 @@ import com.financebot.telegrambot.handler.TelegramFinancialQueryHandler;
 import com.financebot.telegrambot.handler.TelegramPendingEditHandler;
 import com.financebot.telegrambot.handler.TelegramPendingOperationHandler;
 import com.financebot.telegrambot.handler.TelegramTransactionPreviewHandler;
+import com.financebot.telegrambot.handler.TelegramPendingQueryHandler;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import com.financebot.telegrambot.service.TelegramIntentService;
 import com.financebot.telegrambot.service.TelegramPendingConfirmationService;
-import com.financebot.telegrambot.service.TelegramPendingQueryService;
 import com.financebot.telegrambot.service.TelegramQueryContextService;
 import com.financebot.telegrambot.support.TelegramCommandMatcher;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,6 @@ public class TelegramCommandRouter {
 
     private final TelegramIntentService telegramIntentService;
     private final TelegramPendingConfirmationService telegramPendingConfirmationService;
-    private final TelegramPendingQueryService telegramPendingQueryService;
     private final TelegramQueryContextService telegramQueryContextService;
     private final TelegramCommandMatcher telegramCommandMatcher;
     private final TelegramBasicCommandHandler telegramBasicCommandHandler;
@@ -29,6 +28,7 @@ public class TelegramCommandRouter {
     private final TelegramTransactionPreviewHandler telegramTransactionPreviewHandler;
     private final TelegramPendingEditHandler telegramPendingEditHandler;
     private final TelegramFinancialQueryHandler telegramFinancialQueryHandler;
+    private final TelegramPendingQueryHandler telegramPendingQueryHandler;
 
     public String route(
             String messageText,
@@ -95,12 +95,11 @@ public class TelegramCommandRouter {
             return telegramPendingEditHandler.handleEdit(telegramId, normalizedMessage);
         }
 
-        ParsedTelegramMessage pendingQuery = telegramPendingQueryService.getPending(telegramId);
-        if (pendingQuery != null
-                && pendingQuery.intentType() != null
-                && pendingQuery.intentType().name().startsWith("QUERY_INSTALLMENT_")
-                && !normalizedMessage.startsWith("/")) {
-            return handlePendingInstallmentQuerySelection(telegramId, normalizedMessage, pendingQuery);
+        if (telegramPendingQueryHandler.hasPendingInstallmentQuery(telegramId, normalizedMessage)) {
+            return telegramPendingQueryHandler.handlePendingInstallmentQuerySelection(
+                    telegramId,
+                    normalizedMessage
+            );
         }
 
         ParsedTelegramMessage parsedMessage = telegramIntentService.parse(normalizedMessage);
@@ -135,35 +134,6 @@ public class TelegramCommandRouter {
             - quanto gastei esse mês?
             - me dá a análise desse mês
             """;
-    }
-
-    private String handlePendingInstallmentQuerySelection(
-            Long telegramId,
-            String messageText,
-            ParsedTelegramMessage pending
-    ) {
-        ParsedTelegramMessage reparsed = telegramIntentService.parse(messageText);
-        String selectedTarget = reparsed.installmentQueryTarget() != null
-                ? reparsed.installmentQueryTarget()
-                : messageText.trim();
-
-        ParsedTelegramMessage updated = new ParsedTelegramMessage(
-                pending.intentType(),
-                pending.amount(),
-                pending.description(),
-                pending.date(),
-                pending.originalMessage(),
-                pending.categoryName(),
-                pending.accountName(),
-                pending.startDate(),
-                pending.endDate(),
-                pending.totalInstallments(),
-                selectedTarget,
-                pending.totalAmount()
-        );
-
-        telegramPendingQueryService.clearPending(telegramId);
-        return telegramFinancialQueryHandler.handleQuery(updated, telegramId);
     }
 
 }
