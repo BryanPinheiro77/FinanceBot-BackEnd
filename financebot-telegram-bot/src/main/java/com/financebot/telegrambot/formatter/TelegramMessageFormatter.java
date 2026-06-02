@@ -1,6 +1,6 @@
 package com.financebot.telegrambot.formatter;
 
-import com.financebot.telegrambot.dto.ParsedTelegramMessage;
+import com.financebot.telegrambot.dto.PendingTelegramTransaction;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import org.springframework.stereotype.Component;
 
@@ -99,15 +99,15 @@ public class TelegramMessageFormatter {
     }
 
     public String formatTransactionPreview(
-            ParsedTelegramMessage parsedMessage,
+            PendingTelegramTransaction pendingTransaction,
             String accountName
     ) {
-        String type = parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE
+        String type = pendingTransaction.intentType() == TelegramIntentType.CREATE_EXPENSE
                 ? "despesa"
                 : "receita";
 
-        String category = parsedMessage.categoryName() != null
-                ? parsedMessage.categoryName()
+        String category = pendingTransaction.categoryName() != null
+                ? pendingTransaction.categoryName()
                 : "Automática";
 
         return """
@@ -122,20 +122,22 @@ public class TelegramMessageFormatter {
                 Deseja confirmar e salvar?
                 """.formatted(
                 type,
-                formatCurrency(parsedMessage.amount()),
-                parsedMessage.description() != null ? escapeHtml(parsedMessage.description()) : "Não informada",
-                formatDate(parsedMessage.date()),
+                formatCurrency(pendingTransaction.amount()),
+                pendingTransaction.description() != null
+                        ? escapeHtml(pendingTransaction.description())
+                        : "Não informada",
+                formatDate(pendingTransaction.date()),
                 escapeHtml(accountName),
                 escapeHtml(category)
         );
     }
 
     public String formatInstallmentTransactionPreview(
-            ParsedTelegramMessage parsedMessage,
+            PendingTelegramTransaction pendingTransaction,
             String accountName
     ) {
-        String category = parsedMessage.categoryName() != null
-                ? parsedMessage.categoryName()
+        String category = pendingTransaction.categoryName() != null
+                ? pendingTransaction.categoryName()
                 : "Automática";
 
         return """
@@ -150,22 +152,26 @@ public class TelegramMessageFormatter {
                 
                 Deseja confirmar e salvar?
                 """.formatted(
-                formatCurrency(parsedMessage.amount()),
-                parsedMessage.totalInstallments() != null ? parsedMessage.totalInstallments() + "x" : "Não informada",
-                parsedMessage.description() != null ? escapeHtml(parsedMessage.description()) : "Não informada",
-                formatDate(parsedMessage.date()),
+                formatCurrency(pendingTransaction.amount()),
+                pendingTransaction.totalInstallments() != null
+                        ? pendingTransaction.totalInstallments() + "x"
+                        : "Não informada",
+                pendingTransaction.description() != null
+                        ? escapeHtml(pendingTransaction.description())
+                        : "Não informada",
+                formatDate(pendingTransaction.date()),
                 escapeHtml(accountName),
                 escapeHtml(category)
         );
     }
 
     public String formatUpdatedPendingMessage(
-            ParsedTelegramMessage parsedMessage,
+            PendingTelegramTransaction pendingTransaction,
             String accountName
     ) {
-        if (parsedMessage.intentType() == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE) {
-            String category = parsedMessage.categoryName() != null
-                    ? parsedMessage.categoryName()
+        if (pendingTransaction.intentType() == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE) {
+            String category = pendingTransaction.categoryName() != null
+                    ? pendingTransaction.categoryName()
                     : "Automática";
 
             return """
@@ -182,21 +188,25 @@ public class TelegramMessageFormatter {
                     
                     Deseja confirmar e salvar?
                     """.formatted(
-                    formatCurrency(parsedMessage.amount()),
-                    parsedMessage.totalInstallments() != null ? parsedMessage.totalInstallments() + "x" : "Não informada",
-                    parsedMessage.description() != null ? escapeHtml(parsedMessage.description()) : "Não informada",
-                    formatDate(parsedMessage.date()),
+                    formatCurrency(pendingTransaction.amount()),
+                    pendingTransaction.totalInstallments() != null
+                            ? pendingTransaction.totalInstallments() + "x"
+                            : "Não informada",
+                    pendingTransaction.description() != null
+                            ? escapeHtml(pendingTransaction.description())
+                            : "Não informada",
+                    formatDate(pendingTransaction.date()),
                     escapeHtml(accountName),
                     escapeHtml(category)
             );
         }
 
-        String type = parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE
+        String type = pendingTransaction.intentType() == TelegramIntentType.CREATE_EXPENSE
                 ? "despesa"
                 : "receita";
 
-        String category = parsedMessage.categoryName() != null
-                ? parsedMessage.categoryName()
+        String category = pendingTransaction.categoryName() != null
+                ? pendingTransaction.categoryName()
                 : "Automática";
 
         return """
@@ -213,9 +223,11 @@ public class TelegramMessageFormatter {
                 Deseja confirmar e salvar?
                 """.formatted(
                 type,
-                formatCurrency(parsedMessage.amount()),
-                parsedMessage.description() != null ? escapeHtml(parsedMessage.description()) : "Não informada",
-                formatDate(parsedMessage.date()),
+                formatCurrency(pendingTransaction.amount()),
+                pendingTransaction.description() != null
+                        ? escapeHtml(pendingTransaction.description())
+                        : "Não informada",
+                formatDate(pendingTransaction.date()),
                 escapeHtml(accountName),
                 escapeHtml(category)
         );
