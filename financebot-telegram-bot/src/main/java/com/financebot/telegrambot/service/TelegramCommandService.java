@@ -7,12 +7,13 @@ import com.financebot.telegrambot.dto.response.*;
 import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import com.financebot.telegrambot.mapper.PendingTelegramTransactionMapper;
+import com.financebot.telegrambot.support.TelegramBotErrorMapper;
+import com.financebot.telegrambot.support.TelegramCommandMatcher;
+import com.financebot.telegrambot.support.TelegramTextNormalizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientResponseException;
-
 import java.math.BigDecimal;
-import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -33,6 +34,9 @@ public class TelegramCommandService {
     private final TelegramQueryContextService telegramQueryContextService;
     private final TelegramMessageFormatter telegramMessageFormatter;
     private final PendingTelegramTransactionMapper pendingTelegramTransactionMapper;
+    private final TelegramCommandMatcher telegramCommandMatcher;
+    private final TelegramBotErrorMapper telegramBotErrorMapper;
+    private final TelegramTextNormalizer telegramTextNormalizer;
 
     public String handleMessage(
             String messageText,
@@ -46,55 +50,56 @@ public class TelegramCommandService {
 
         String normalizedMessage = messageText.trim();
 
-        if (startsWithCommand(normalizedMessage, "/start", "/iniciar")) {
+        if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/start", "/iniciar")) {
             return handleStart(telegramFirstName, telegramUsername);
         }
 
-        if (startsWithCommand(normalizedMessage, "/help", "/ajuda")) {
+        if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/help", "/ajuda")) {
             return handleHelp();
         }
 
-        if (startsWithCommand(normalizedMessage, "/connect", "/conectar")) {
+        if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/connect", "/conectar")) {
             return handleConnect(normalizedMessage, telegramId, telegramUsername);
         }
 
-        if (startsWithCommand(normalizedMessage, "/me", "/perfil")) {
+        if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/me", "/perfil")) {
             return handleMe(telegramId);
         }
 
-        if (startsWithCommand(normalizedMessage, "/disconnect", "/desconectar")) {
+        if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/disconnect", "/desconectar")) {
             return handleDisconnect(telegramId);
         }
 
-        if (startsWithCommand(normalizedMessage, "/setincome", "/definirrenda")) {
+        if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/setincome", "/definirrenda")) {
             return handleSetIncome(normalizedMessage, telegramId);
         }
 
-        if (startsWithCommand(normalizedMessage, "/analysis", "/analise")) {
+        if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/analysis", "/analise")) {
             return handleAnalysis(telegramId);
         }
 
-        if (startsWithCommand(normalizedMessage, "/status", "/resumo")) {
+        if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/status", "/resumo")) {
             return handleStatus(telegramId);
         }
 
-        if (containsGreeting(normalizedMessage)) {
+        if (telegramCommandMatcher.containsGreeting(normalizedMessage)) {
             return handleGreeting(telegramFirstName, telegramUsername);
         }
 
-        if (looksLikeConnectionIntent(normalizedMessage)) {
+        if (telegramCommandMatcher.looksLikeConnectionIntent(normalizedMessage)) {
             return telegramMessageFormatter.formatConnectInstructionsMessage();
         }
 
-        if (isConfirmationMessage(normalizedMessage)) {
+        if (telegramCommandMatcher.isConfirmationMessage(normalizedMessage)) {
             return handleConfirmation(telegramId);
         }
 
-        if (isCancellationMessage(normalizedMessage)) {
+        if (telegramCommandMatcher.isCancellationMessage(normalizedMessage)) {
             return handleCancellation(telegramId);
         }
 
-        if (telegramPendingConfirmationService.hasPending(telegramId) && looksLikeEditMessage(normalizedMessage)) {
+        if (telegramPendingConfirmationService.hasPending(telegramId)
+                && telegramCommandMatcher.looksLikeEditMessage(normalizedMessage)) {
             return handlePendingEdit(telegramId, normalizedMessage);
         }
 
@@ -120,24 +125,24 @@ public class TelegramCommandService {
         }
 
         return """
-                Não reconheci sua mensagem.
-                
-                Você pode usar comandos:
-                /start ou /iniciar
-                /help ou /ajuda
-                /connect ou /conectar CODIGO
-                /me ou /perfil
-                /status ou /resumo
-                /analysis ou /analise
-                /setincome ou /definirrenda VALOR
-                /disconnect ou /desconectar
-                
-                Ou pode escrever naturalmente, por exemplo:
-                - gastei 50 no mercado
-                - recebi 1200 de salário
-                - quanto gastei esse mês?
-                - me dá a análise desse mês
-                """;
+            Não reconheci sua mensagem.
+            
+            Você pode usar comandos:
+            /start ou /iniciar
+            /help ou /ajuda
+            /connect ou /conectar CODIGO
+            /me ou /perfil
+            /status ou /resumo
+            /analysis ou /analise
+            /setincome ou /definirrenda VALOR
+            /disconnect ou /desconectar
+            
+            Ou pode escrever naturalmente, por exemplo:
+            - gastei 50 no mercado
+            - recebi 1200 de salário
+            - quanto gastei esse mês?
+            - me dá a análise desse mês
+            """;
     }
 
     private String handleStart(String telegramFirstName, String telegramUsername) {
@@ -184,7 +189,7 @@ public class TelegramCommandService {
 
             return telegramMessageFormatter.formatDisconnectSuccessMessage();
         } catch (RestClientResponseException e) {
-            return mapDefaultBotErrors(e);
+            return telegramBotErrorMapper.mapDefaultBotErrors(e);
         } catch (Exception e) {
             return telegramMessageFormatter.formatGenericDisconnectFailureMessage();
         }
@@ -201,7 +206,7 @@ public class TelegramCommandService {
                     response.telegramId() != null
             );
         } catch (RestClientResponseException e) {
-            return mapDefaultBotErrors(e);
+            return telegramBotErrorMapper.mapDefaultBotErrors(e);
         } catch (Exception e) {
             return telegramMessageFormatter.formatGenericProfileFailureMessage();
         }
@@ -230,7 +235,7 @@ public class TelegramCommandService {
         } catch (NumberFormatException e) {
             return telegramMessageFormatter.formatSetIncomeInvalidValueMessage();
         } catch (RestClientResponseException e) {
-            return mapDefaultBotErrors(e);
+            return telegramBotErrorMapper.mapDefaultBotErrors(e);
         } catch (Exception e) {
             return telegramMessageFormatter.formatGenericSetIncomeFailureMessage();
         }
@@ -254,7 +259,7 @@ public class TelegramCommandService {
                     response.message()
             );
         } catch (RestClientResponseException e) {
-            return mapDefaultBotErrors(e);
+            return telegramBotErrorMapper.mapDefaultBotErrors(e);
         } catch (Exception e) {
             return "Não foi possível gerar sua análise financeira agora.";
         }
@@ -272,7 +277,7 @@ public class TelegramCommandService {
                     translateRiskLevel(analysis.riskLevel())
             );
         } catch (RestClientResponseException e) {
-            return mapDefaultBotErrors(e);
+            return telegramBotErrorMapper.mapDefaultBotErrors(e);
         } catch (Exception e) {
             return "Não foi possível buscar o status da sua conta agora.";
         }
@@ -309,11 +314,15 @@ public class TelegramCommandService {
             }
 
             telegramPendingConfirmationService.savePending(telegramId, pendingTransaction);
-            return telegramMessageFormatter.formatInstallmentTransactionPreview(pendingTransaction, resolvedAccount.displayName());
+            return telegramMessageFormatter.formatInstallmentTransactionPreview
+                    (pendingTransaction,
+                    resolvedAccount.displayName());
         }
 
         telegramPendingConfirmationService.savePending(telegramId, pendingTransaction);
-        return telegramMessageFormatter.formatTransactionPreview(pendingTransaction, resolvedAccount.displayName());
+        return telegramMessageFormatter.formatTransactionPreview
+                (pendingTransaction,
+                resolvedAccount.displayName());
     }
 
     private String handleNaturalLanguageQuery(ParsedTelegramMessage parsedMessage, Long telegramId) {
@@ -479,7 +488,7 @@ public class TelegramCommandService {
             telegramQueryContextService.saveQueryContext(telegramId, parsedMessage);
             return resultMessage;
         } catch (RestClientResponseException e) {
-            return mapDefaultBotErrors(e);
+            return telegramBotErrorMapper.mapDefaultBotErrors(e);
         } catch (Exception e) {
             return "Não foi possível consultar essas informações agora.";
         }
@@ -549,7 +558,7 @@ public class TelegramCommandService {
 
             return telegramMessageFormatter.formatTransactionSuccess(pending.intentType());
         } catch (RestClientResponseException e) {
-            return mapDefaultBotErrors(e);
+            return telegramBotErrorMapper.mapDefaultBotErrors(e);
         } catch (Exception e) {
             return """
             Não foi possível salvar sua transação agora.
@@ -608,7 +617,7 @@ public class TelegramCommandService {
             return "Não há nenhuma operação pendente para editar.";
         }
 
-        String lower = normalizeText(messageText);
+        String lower = telegramTextNormalizer.normalize(messageText);
 
         BigDecimal amount = pending.amount();
         String description = pending.description();
@@ -691,10 +700,6 @@ public class TelegramCommandService {
         );
     }
 
-    private String mapDefaultBotErrors(RestClientResponseException e) {
-        return telegramMessageFormatter.formatDefaultBotErrorMessage(e.getStatusCode().value());
-    }
-
     private String translateRiskLevel(String riskLevel) {
         if (riskLevel == null || riskLevel.isBlank()) {
             return "Não informado";
@@ -718,117 +723,6 @@ public class TelegramCommandService {
         }
 
         return null;
-    }
-
-    private boolean containsGreeting(String messageText) {
-        String lower = messageText.toLowerCase();
-
-        return lower.equals("oi")
-                || lower.equals("olá")
-                || lower.equals("ola")
-                || lower.equals("bom dia")
-                || lower.equals("boa tarde")
-                || lower.equals("boa noite");
-    }
-
-    private boolean looksLikeConnectionIntent(String messageText) {
-        String lower = messageText.toLowerCase();
-
-        return lower.contains("conectar")
-                || lower.contains("vincular")
-                || lower.contains("ligar conta")
-                || lower.contains("linkar")
-                || lower.contains("telegram");
-    }
-
-    private boolean isConfirmationMessage(String messageText) {
-        String lower = messageText.toLowerCase();
-
-        return lower.equals("sim")
-                || lower.equals("confirmar")
-                || lower.equals("confirmado")
-                || lower.equals("ok");
-    }
-
-    private boolean isCancellationMessage(String messageText) {
-        String lower = messageText.toLowerCase();
-
-        return lower.equals("cancelar")
-                || lower.equals("cancelado")
-                || lower.equals("cancelar operação")
-                || lower.equals("cancelar operacao")
-                || lower.equals("não")
-                || lower.equals("nao");
-    }
-
-    private boolean looksLikeEditMessage(String messageText) {
-        String lower = normalizeText(messageText);
-
-        return lower.contains("muda valor")
-                || lower.contains("muda o valor")
-                || lower.contains("mude valor")
-                || lower.contains("mude o valor")
-                || lower.contains("altera valor")
-                || lower.contains("altera o valor")
-                || lower.contains("altere valor")
-                || lower.contains("altere o valor")
-                || lower.contains("corrige valor")
-                || lower.contains("corrige o valor")
-                || lower.contains("corrija valor")
-                || lower.contains("corrija o valor")
-                || lower.contains("troca valor")
-                || lower.contains("troque valor")
-                || lower.contains("muda descricao")
-                || lower.contains("muda a descricao")
-                || lower.contains("altera descricao")
-                || lower.contains("altera a descricao")
-                || lower.contains("corrige descricao")
-                || lower.contains("corrige a descricao")
-                || lower.contains("muda categoria")
-                || lower.contains("muda a categoria")
-                || lower.contains("troca categoria")
-                || lower.contains("troca a categoria")
-                || lower.contains("altera categoria")
-                || lower.contains("altera a categoria")
-                || lower.contains("muda data")
-                || lower.contains("muda a data")
-                || lower.contains("troca data")
-                || lower.contains("troca a data")
-                || lower.contains("altera data")
-                || lower.contains("altera a data")
-                || lower.contains("muda conta")
-                || lower.contains("muda a conta")
-                || lower.contains("troca conta")
-                || lower.contains("troca a conta")
-                || lower.contains("altera conta")
-                || lower.contains("altera a conta")
-                || lower.contains("usa a conta")
-                || lower.contains("coloca na conta")
-                || lower.contains("coloca a conta")
-                || lower.startsWith("data de ")
-                || lower.startsWith("data para ")
-                || lower.startsWith("data pra ")
-                || lower.contains("pra ")
-                || lower.contains("para ");
-    }
-
-    private String normalizeText(String text) {
-        if(text == null){
-            return "";
-        }
-        return Normalizer.normalize(text, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "")
-                .toLowerCase()
-                .trim();
-    }
-
-    private boolean startsWithCommand(String messageText, String... commands) {
-        for (String command : commands) {
-            if (messageText.startsWith(command)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private BigDecimal parseBrazilianNumber(String value) {
@@ -864,7 +758,7 @@ public class TelegramCommandService {
     }
 
     private String extractDescriptionFromEdit(String text) {
-        String cleaned = normalizeText(text)
+        String cleaned = telegramTextNormalizer.normalize(text)
                 .replaceFirst(".*?descricao\\s+para\\s+", "")
                 .replaceFirst(".*?descricao\\s+pra\\s+", "")
                 .replaceFirst(".*?descricao\\s+", "")
@@ -876,7 +770,7 @@ public class TelegramCommandService {
     }
 
     private String extractCategoryFromEdit(String text) {
-        String cleaned = normalizeText(text)
+        String cleaned = telegramTextNormalizer.normalize(text)
                 .replaceFirst(".*?categoria\\s+para\\s+", "")
                 .replaceFirst(".*?categoria\\s+pra\\s+", "")
                 .replaceFirst(".*?categoria\\s+", "")
@@ -892,7 +786,7 @@ public class TelegramCommandService {
     }
 
     private LocalDate extractDateFromEdit(String text) {
-        String lower = normalizeText(text);
+        String lower = telegramTextNormalizer.normalize(text);
 
         if (lower.contains("hoje")) {
             return LocalDate.now();
@@ -979,7 +873,7 @@ public class TelegramCommandService {
             .toFormatter();
 
     private String extractAccountFromEdit(String text) {
-        String cleaned = normalizeText(text)
+        String cleaned = telegramTextNormalizer.normalize(text)
                 .replaceFirst(".*?conta\\s+para\\s+", "")
                 .replaceFirst(".*?conta\\s+pra\\s+", "")
                 .replaceFirst(".*?usa\\s+a\\s+conta\\s+", "")
@@ -1070,7 +964,7 @@ public class TelegramCommandService {
             return text;
         }
 
-        String normalized = normalizeText(text);
+        String normalized = telegramTextNormalizer.normalize(text);
 
         String[] markers = {
                 " e o valor",
