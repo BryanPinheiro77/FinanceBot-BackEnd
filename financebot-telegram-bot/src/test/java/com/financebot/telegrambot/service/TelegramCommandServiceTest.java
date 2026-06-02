@@ -10,6 +10,7 @@ import com.financebot.telegrambot.dto.response.InstallmentPurchaseCapacityRespon
 import com.financebot.telegrambot.dto.response.TelegramDefaultAccountResponse;
 import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
 import com.financebot.telegrambot.handler.TelegramBasicCommandHandler;
+import com.financebot.telegrambot.handler.TelegramPendingOperationHandler;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import com.financebot.telegrambot.mapper.PendingTelegramTransactionMapper;
 import com.financebot.telegrambot.router.TelegramCommandRouter;
@@ -71,6 +72,14 @@ class TelegramCommandServiceTest {
                 telegramBotErrorMapper
         );
 
+        TelegramPendingOperationHandler telegramPendingOperationHandler = new TelegramPendingOperationHandler(
+                financeBotApiClient,
+                telegramPendingConfirmationService,
+                telegramPendingQueryService,
+                telegramMessageFormatter,
+                telegramBotErrorMapper
+        );
+
         TelegramCommandRouter telegramCommandRouter = new TelegramCommandRouter(
                 financeBotApiClient,
                 telegramIntentService,
@@ -82,7 +91,8 @@ class TelegramCommandServiceTest {
                 new TelegramCommandMatcher(telegramTextNormalizer),
                 telegramBotErrorMapper,
                 telegramTextNormalizer,
-                telegramBasicCommandHandler
+                telegramBasicCommandHandler,
+                telegramPendingOperationHandler
         );
 
         telegramCommandService = new TelegramCommandService(telegramCommandRouter);

@@ -6,8 +6,6 @@ import com.financebot.telegrambot.dto.PendingTelegramTransaction;
 import com.financebot.telegrambot.dto.request.InstallmentPurchaseCapacityRequest;
 import com.financebot.telegrambot.dto.request.TelegramInstallmentCountRequest;
 import com.financebot.telegrambot.dto.request.TelegramTransactionSummaryRequest;
-import com.financebot.telegrambot.dto.request.CreateInstallmentTransactionFromTelegramRequest;
-import com.financebot.telegrambot.dto.request.CreateTransactionFromTelegramRequest;
 import com.financebot.telegrambot.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.telegrambot.dto.response.MonthlyAmountSummaryResponse;
 import com.financebot.telegrambot.dto.response.TelegramActiveInstallmentSummaryResponse;
@@ -16,13 +14,14 @@ import com.financebot.telegrambot.dto.response.TelegramDefaultAccountResponse;
 import com.financebot.telegrambot.dto.response.TelegramInstallmentCountResponse;
 import com.financebot.telegrambot.dto.response.TelegramTransactionSummaryResponse;
 import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
+import com.financebot.telegrambot.handler.TelegramPendingOperationHandler;
+import com.financebot.telegrambot.handler.TelegramBasicCommandHandler;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import com.financebot.telegrambot.mapper.PendingTelegramTransactionMapper;
 import com.financebot.telegrambot.service.TelegramIntentService;
 import com.financebot.telegrambot.service.TelegramPendingConfirmationService;
 import com.financebot.telegrambot.service.TelegramPendingQueryService;
 import com.financebot.telegrambot.service.TelegramQueryContextService;
-import com.financebot.telegrambot.handler.TelegramBasicCommandHandler;
 import com.financebot.telegrambot.support.TelegramBotErrorMapper;
 import com.financebot.telegrambot.support.TelegramCommandMatcher;
 import com.financebot.telegrambot.support.TelegramTextNormalizer;
@@ -55,6 +54,7 @@ public class TelegramCommandRouter {
     private final TelegramBotErrorMapper telegramBotErrorMapper;
     private final TelegramTextNormalizer telegramTextNormalizer;
     private final TelegramBasicCommandHandler telegramBasicCommandHandler;
+    private final TelegramPendingOperationHandler telegramPendingOperationHandler;
 
     public String route(
             String messageText,
@@ -109,11 +109,11 @@ public class TelegramCommandRouter {
         }
 
         if (telegramCommandMatcher.isConfirmationMessage(normalizedMessage)) {
-            return handleConfirmation(telegramId);
+            return telegramPendingOperationHandler.handleConfirmation(telegramId);
         }
 
         if (telegramCommandMatcher.isCancellationMessage(normalizedMessage)) {
-            return handleCancellation(telegramId);
+            return telegramPendingOperationHandler.handleCancellation(telegramId);
         }
 
         if (telegramPendingConfirmationService.hasPending(telegramId)
@@ -402,69 +402,6 @@ public class TelegramCommandRouter {
         );
     }
 
-    private String handleConfirmation(Long telegramId) {
-        PendingTelegramTransaction pending = telegramPendingConfirmationService.getPending(telegramId);
-
-        if (pending == null) {
-            return "Não há nenhuma operação pendente para confirmar.";
-        }
-
-        try {
-            if (pending.isInstallment()) {
-                CreateInstallmentTransactionFromTelegramRequest request =
-                        new CreateInstallmentTransactionFromTelegramRequest(
-                                telegramId,
-                                pending.amount(),
-                                pending.description(),
-                                pending.date(),
-                                pending.accountName(),
-                                pending.categoryName(),
-                                pending.totalInstallments()
-                        );
-
-                financeBotApiClient.createInstallmentTransaction(request);
-            } else {
-                CreateTransactionFromTelegramRequest request =
-                        new CreateTransactionFromTelegramRequest(
-                                telegramId,
-                                mapIntentToTransactionType(pending.intentType()),
-                                pending.amount(),
-                                pending.description(),
-                                pending.date(),
-                                pending.categoryName(),
-                                pending.accountName()
-                        );
-
-                financeBotApiClient.createTransaction(request);
-            }
-
-            telegramPendingConfirmationService.clearPending(telegramId);
-
-            return telegramMessageFormatter.formatTransactionSuccess(pending.intentType());
-        } catch (RestClientResponseException e) {
-            return telegramBotErrorMapper.mapDefaultBotErrors(e);
-        } catch (Exception e) {
-            return """
-        Não foi possível salvar sua transação agora.
-        Você pode tentar confirmar novamente em instantes.
-        """;
-        }
-    }
-
-    private String handleCancellation(Long telegramId) {
-        boolean hasPendingConfirmation = telegramPendingConfirmationService.hasPending(telegramId);
-        boolean hasPendingQuery = telegramPendingQueryService.hasPending(telegramId);
-
-        if (!hasPendingConfirmation && !hasPendingQuery) {
-            return "Não há nenhuma operação pendente para cancelar.";
-        }
-
-        telegramPendingConfirmationService.clearPending(telegramId);
-        telegramPendingQueryService.clearPending(telegramId);
-
-        return "❌ Operação cancelada com sucesso.";
-    }
-
     private String handlePendingEdit(Long telegramId, String messageText) {
         PendingTelegramTransaction pending = telegramPendingConfirmationService.getPending(telegramId);
 
@@ -596,14 +533,6 @@ public class TelegramCommandRouter {
         }
 
         return new BigDecimal(normalized);
-    }
-
-    private String mapIntentToTransactionType(TelegramIntentType intentType) {
-        return switch (intentType) {
-            case CREATE_EXPENSE, CREATE_INSTALLMENT_EXPENSE -> "EXPENSE";
-            case CREATE_INCOME -> "INCOME";
-            default -> throw new IllegalArgumentException("Intento inválido para criação de transação.");
-        };
     }
 
     private BigDecimal extractAmountFromEdit(String text) {
