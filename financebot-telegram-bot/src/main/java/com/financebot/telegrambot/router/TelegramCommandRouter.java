@@ -2,7 +2,6 @@ package com.financebot.telegrambot.router;
 
 import com.financebot.telegrambot.client.FinanceBotApiClient;
 import com.financebot.telegrambot.dto.ParsedTelegramMessage;
-import com.financebot.telegrambot.dto.PendingTelegramTransaction;
 import com.financebot.telegrambot.dto.request.InstallmentPurchaseCapacityRequest;
 import com.financebot.telegrambot.dto.request.TelegramInstallmentCountRequest;
 import com.financebot.telegrambot.dto.request.TelegramTransactionSummaryRequest;
@@ -13,6 +12,7 @@ import com.financebot.telegrambot.dto.response.TelegramActiveInstallmentsRespons
 import com.financebot.telegrambot.dto.response.TelegramInstallmentCountResponse;
 import com.financebot.telegrambot.dto.response.TelegramTransactionSummaryResponse;
 import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
+import com.financebot.telegrambot.handler.TelegramPendingEditHandler;
 import com.financebot.telegrambot.handler.TelegramPendingOperationHandler;
 import com.financebot.telegrambot.handler.TelegramBasicCommandHandler;
 import com.financebot.telegrambot.handler.TelegramTransactionPreviewHandler;
@@ -23,8 +23,6 @@ import com.financebot.telegrambot.service.TelegramPendingQueryService;
 import com.financebot.telegrambot.service.TelegramQueryContextService;
 import com.financebot.telegrambot.support.TelegramBotErrorMapper;
 import com.financebot.telegrambot.support.TelegramCommandMatcher;
-import com.financebot.telegrambot.support.TelegramPendingEditParser;
-import com.financebot.telegrambot.support.TelegramPreviewAccountResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientResponseException;
@@ -41,11 +39,10 @@ public class TelegramCommandRouter {
     private final TelegramMessageFormatter telegramMessageFormatter;
     private final TelegramCommandMatcher telegramCommandMatcher;
     private final TelegramBotErrorMapper telegramBotErrorMapper;
-    private final TelegramPreviewAccountResolver telegramPreviewAccountResolver;
     private final TelegramBasicCommandHandler telegramBasicCommandHandler;
     private final TelegramPendingOperationHandler telegramPendingOperationHandler;
     private final TelegramTransactionPreviewHandler telegramTransactionPreviewHandler;
-    private final TelegramPendingEditParser telegramPendingEditParser;
+    private final TelegramPendingEditHandler telegramPendingEditHandler;
 
     public String route(
             String messageText,
@@ -109,7 +106,7 @@ public class TelegramCommandRouter {
 
         if (telegramPendingConfirmationService.hasPending(telegramId)
                 && telegramCommandMatcher.looksLikeEditMessage(normalizedMessage)) {
-            return handlePendingEdit(telegramId, normalizedMessage);
+            return telegramPendingEditHandler.handleEdit(telegramId, normalizedMessage);
         }
 
         ParsedTelegramMessage pendingQuery = telegramPendingQueryService.getPending(telegramId);
@@ -323,36 +320,6 @@ public class TelegramCommandRouter {
         }
     }
 
-    private String handlePendingEdit(Long telegramId, String messageText) {
-        PendingTelegramTransaction pending = telegramPendingConfirmationService.getPending(telegramId);
-
-        if (pending == null) {
-            return "Não há nenhuma operação pendente para editar.";
-        }
-
-        TelegramPendingEditParser.PendingEditResult editResult =
-                telegramPendingEditParser.parse(messageText);
-
-        if (!editResult.changed()) {
-            return "Entendi que você quer editar a operação, mas não consegui identificar alterações válidas.";
-        }
-
-        PendingTelegramTransaction updated = new PendingTelegramTransaction(
-                pending.intentType(),
-                editResult.amount() != null ? editResult.amount() : pending.amount(),
-                editResult.description() != null ? editResult.description() : pending.description(),
-                editResult.date() != null ? editResult.date() : pending.date(),
-                editResult.categoryName() != null ? editResult.categoryName() : pending.categoryName(),
-                editResult.accountName() != null ? editResult.accountName() : pending.accountName(),
-                pending.totalInstallments(),
-                pending.originalMessage()
-        );
-
-        telegramPendingConfirmationService.savePending(telegramId, updated);
-
-        return buildUpdatedPendingMessage(telegramId, updated);
-    }
-
     private String handlePendingInstallmentQuerySelection(
             Long telegramId,
             String messageText,
@@ -380,16 +347,6 @@ public class TelegramCommandRouter {
 
         telegramPendingQueryService.clearPending(telegramId);
         return handleNaturalLanguageQuery(updated, telegramId);
-    }
-
-    private String buildUpdatedPendingMessage(Long telegramId, PendingTelegramTransaction pendingTransaction) {
-        TelegramPreviewAccountResolver.ResolvedPreviewAccount resolvedAccount =
-                telegramPreviewAccountResolver.resolve(pendingTransaction, telegramId);
-
-        return telegramMessageFormatter.formatUpdatedPendingMessage(
-                pendingTransaction,
-                resolvedAccount.displayName()
-        );
     }
 
 }
