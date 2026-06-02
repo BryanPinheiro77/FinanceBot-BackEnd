@@ -9,6 +9,7 @@ import com.financebot.telegrambot.dto.request.InstallmentPurchaseCapacityRequest
 import com.financebot.telegrambot.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.telegrambot.dto.response.TelegramDefaultAccountResponse;
 import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
+import com.financebot.telegrambot.handler.TelegramBasicCommandHandler;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import com.financebot.telegrambot.mapper.PendingTelegramTransactionMapper;
 import com.financebot.telegrambot.router.TelegramCommandRouter;
@@ -60,6 +61,15 @@ class TelegramCommandServiceTest {
     void setUp() {
         TelegramMessageFormatter telegramMessageFormatter = new TelegramMessageFormatter();
         TelegramTextNormalizer telegramTextNormalizer = new TelegramTextNormalizer();
+        TelegramBotErrorMapper telegramBotErrorMapper = new TelegramBotErrorMapper(telegramMessageFormatter);
+
+        TelegramBasicCommandHandler telegramBasicCommandHandler = new TelegramBasicCommandHandler(
+                financeBotApiClient,
+                telegramPendingConfirmationService,
+                telegramPendingQueryService,
+                telegramMessageFormatter,
+                telegramBotErrorMapper
+        );
 
         TelegramCommandRouter telegramCommandRouter = new TelegramCommandRouter(
                 financeBotApiClient,
@@ -70,8 +80,9 @@ class TelegramCommandServiceTest {
                 telegramMessageFormatter,
                 new PendingTelegramTransactionMapper(),
                 new TelegramCommandMatcher(telegramTextNormalizer),
-                new TelegramBotErrorMapper(telegramMessageFormatter),
-                telegramTextNormalizer
+                telegramBotErrorMapper,
+                telegramTextNormalizer,
+                telegramBasicCommandHandler
         );
 
         telegramCommandService = new TelegramCommandService(telegramCommandRouter);

@@ -3,23 +3,18 @@ package com.financebot.telegrambot.router;
 import com.financebot.telegrambot.client.FinanceBotApiClient;
 import com.financebot.telegrambot.dto.ParsedTelegramMessage;
 import com.financebot.telegrambot.dto.PendingTelegramTransaction;
-import com.financebot.telegrambot.dto.request.CreateInstallmentTransactionFromTelegramRequest;
-import com.financebot.telegrambot.dto.request.CreateTransactionFromTelegramRequest;
 import com.financebot.telegrambot.dto.request.InstallmentPurchaseCapacityRequest;
 import com.financebot.telegrambot.dto.request.TelegramInstallmentCountRequest;
-import com.financebot.telegrambot.dto.request.TelegramLinkConfirmRequest;
 import com.financebot.telegrambot.dto.request.TelegramTransactionSummaryRequest;
-import com.financebot.telegrambot.dto.request.UpdateMonthlyBaseIncomeRequest;
-import com.financebot.telegrambot.dto.response.FinancialCommitmentResponse;
+import com.financebot.telegrambot.dto.request.CreateInstallmentTransactionFromTelegramRequest;
+import com.financebot.telegrambot.dto.request.CreateTransactionFromTelegramRequest;
 import com.financebot.telegrambot.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.telegrambot.dto.response.MonthlyAmountSummaryResponse;
 import com.financebot.telegrambot.dto.response.TelegramActiveInstallmentSummaryResponse;
 import com.financebot.telegrambot.dto.response.TelegramActiveInstallmentsResponse;
 import com.financebot.telegrambot.dto.response.TelegramDefaultAccountResponse;
 import com.financebot.telegrambot.dto.response.TelegramInstallmentCountResponse;
-import com.financebot.telegrambot.dto.response.TelegramLinkConfirmResponse;
 import com.financebot.telegrambot.dto.response.TelegramTransactionSummaryResponse;
-import com.financebot.telegrambot.dto.response.UserProfileResponse;
 import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import com.financebot.telegrambot.mapper.PendingTelegramTransactionMapper;
@@ -27,6 +22,7 @@ import com.financebot.telegrambot.service.TelegramIntentService;
 import com.financebot.telegrambot.service.TelegramPendingConfirmationService;
 import com.financebot.telegrambot.service.TelegramPendingQueryService;
 import com.financebot.telegrambot.service.TelegramQueryContextService;
+import com.financebot.telegrambot.handler.TelegramBasicCommandHandler;
 import com.financebot.telegrambot.support.TelegramBotErrorMapper;
 import com.financebot.telegrambot.support.TelegramCommandMatcher;
 import com.financebot.telegrambot.support.TelegramTextNormalizer;
@@ -58,6 +54,7 @@ public class TelegramCommandRouter {
     private final TelegramCommandMatcher telegramCommandMatcher;
     private final TelegramBotErrorMapper telegramBotErrorMapper;
     private final TelegramTextNormalizer telegramTextNormalizer;
+    private final TelegramBasicCommandHandler telegramBasicCommandHandler;
 
     public String route(
             String messageText,
@@ -72,43 +69,43 @@ public class TelegramCommandRouter {
         String normalizedMessage = messageText.trim();
 
         if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/start", "/iniciar")) {
-            return handleStart(telegramFirstName, telegramUsername);
+            return telegramBasicCommandHandler.handleStart(telegramFirstName, telegramUsername);
         }
 
         if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/help", "/ajuda")) {
-            return handleHelp();
+            return telegramBasicCommandHandler.handleHelp();
         }
 
         if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/connect", "/conectar")) {
-            return handleConnect(normalizedMessage, telegramId, telegramUsername);
+            return telegramBasicCommandHandler.handleConnect(normalizedMessage, telegramId, telegramUsername);
         }
 
         if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/me", "/perfil")) {
-            return handleMe(telegramId);
+            return telegramBasicCommandHandler.handleMe(telegramId);
         }
 
         if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/disconnect", "/desconectar")) {
-            return handleDisconnect(telegramId);
+            return telegramBasicCommandHandler.handleDisconnect(telegramId);
         }
 
         if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/setincome", "/definirrenda")) {
-            return handleSetIncome(normalizedMessage, telegramId);
+            return telegramBasicCommandHandler.handleSetIncome(normalizedMessage, telegramId);
         }
 
         if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/analysis", "/analise")) {
-            return handleAnalysis(telegramId);
+            return telegramBasicCommandHandler.handleAnalysis(telegramId);
         }
 
         if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/status", "/resumo")) {
-            return handleStatus(telegramId);
+            return telegramBasicCommandHandler.handleStatus(telegramId);
         }
 
         if (telegramCommandMatcher.containsGreeting(normalizedMessage)) {
-            return handleGreeting(telegramFirstName, telegramUsername);
+            return telegramBasicCommandHandler.handleGreeting(telegramFirstName, telegramUsername);
         }
 
         if (telegramCommandMatcher.looksLikeConnectionIntent(normalizedMessage)) {
-            return telegramMessageFormatter.formatConnectInstructionsMessage();
+            return telegramBasicCommandHandler.handleConnectionIntent();
         }
 
         if (telegramCommandMatcher.isConfirmationMessage(normalizedMessage)) {
@@ -164,144 +161,6 @@ public class TelegramCommandRouter {
             - quanto gastei esse mês?
             - me dá a análise desse mês
             """;
-    }
-
-    private String handleStart(String telegramFirstName, String telegramUsername) {
-        String name = resolveDisplayName(telegramFirstName, telegramUsername);
-        return telegramMessageFormatter.formatStartMessage(name);
-    }
-
-    private String handleHelp() {
-        return telegramMessageFormatter.formatHelpMessage();
-    }
-
-    private String handleGreeting(String telegramFirstName, String telegramUsername) {
-        String name = resolveDisplayName(telegramFirstName, telegramUsername);
-        return telegramMessageFormatter.formatGreetingMessage(name);
-    }
-
-    private String handleConnect(String messageText, Long telegramId, String telegramUsername) {
-        String[] parts = messageText.split("\\s+", 2);
-
-        if (parts.length < 2 || parts[1].isBlank()) {
-            return telegramMessageFormatter.formatConnectCodeRequiredMessage();
-        }
-
-        String linkCode = parts[1].trim();
-
-        try {
-            TelegramLinkConfirmResponse response = financeBotApiClient.confirmTelegramLink(
-                    new TelegramLinkConfirmRequest(linkCode, telegramId, telegramUsername)
-            );
-
-            return telegramMessageFormatter.formatConnectSuccessMessage(response.message());
-        } catch (RestClientResponseException e) {
-            return telegramMessageFormatter.formatConnectErrorMessage(e.getStatusCode().value());
-        } catch (Exception e) {
-            return telegramMessageFormatter.formatGenericConnectFailureMessage();
-        }
-    }
-
-    private String handleDisconnect(Long telegramId) {
-        try {
-            financeBotApiClient.disconnectTelegram(telegramId);
-            telegramPendingConfirmationService.clearPending(telegramId);
-            telegramPendingQueryService.clearPending(telegramId);
-
-            return telegramMessageFormatter.formatDisconnectSuccessMessage();
-        } catch (RestClientResponseException e) {
-            return telegramBotErrorMapper.mapDefaultBotErrors(e);
-        } catch (Exception e) {
-            return telegramMessageFormatter.formatGenericDisconnectFailureMessage();
-        }
-    }
-
-    private String handleMe(Long telegramId) {
-        try {
-            UserProfileResponse response = financeBotApiClient.getMe(telegramId);
-
-            return telegramMessageFormatter.formatProfileMessage(
-                    response.name(),
-                    response.email(),
-                    response.monthlyBaseIncome(),
-                    response.telegramId() != null
-            );
-        } catch (RestClientResponseException e) {
-            return telegramBotErrorMapper.mapDefaultBotErrors(e);
-        } catch (Exception e) {
-            return telegramMessageFormatter.formatGenericProfileFailureMessage();
-        }
-    }
-
-    private String handleSetIncome(String messageText, Long telegramId) {
-        String[] parts = messageText.split("\\s+", 2);
-
-        if (parts.length < 2 || parts[1].isBlank()) {
-            return telegramMessageFormatter.formatSetIncomeValueRequiredMessage();
-        }
-
-        try {
-            BigDecimal income = parseBrazilianNumber(parts[1]);
-
-            if (income.compareTo(BigDecimal.ZERO) <= 0) {
-                return telegramMessageFormatter.formatSetIncomeNonPositiveMessage();
-            }
-
-            UserProfileResponse response = financeBotApiClient.updateMonthlyBaseIncome(
-                    telegramId,
-                    new UpdateMonthlyBaseIncomeRequest(income)
-            );
-
-            return telegramMessageFormatter.formatSetIncomeSuccessMessage(response.monthlyBaseIncome());
-        } catch (NumberFormatException e) {
-            return telegramMessageFormatter.formatSetIncomeInvalidValueMessage();
-        } catch (RestClientResponseException e) {
-            return telegramBotErrorMapper.mapDefaultBotErrors(e);
-        } catch (Exception e) {
-            return telegramMessageFormatter.formatGenericSetIncomeFailureMessage();
-        }
-    }
-
-    private String handleAnalysis(Long telegramId) {
-        try {
-            FinancialCommitmentResponse response = financeBotApiClient.getFinancialAnalysis(telegramId);
-
-            return telegramMessageFormatter.formatAnalysisMessage(
-                    response.monthlyBaseIncome(),
-                    response.monthlyIncomeReference(),
-                    response.projectedRecurringIncomeNextMonth(),
-                    response.projectedRecurringExpenseNextMonth(),
-                    response.nextMonthProjectedIncome(),
-                    response.nextMonthProjectedExpense(),
-                    response.projectedNetNextMonth(),
-                    response.commitmentPercentage(),
-                    response.activeInstallmentCount(),
-                    translateRiskLevel(response.riskLevel()),
-                    response.message()
-            );
-        } catch (RestClientResponseException e) {
-            return telegramBotErrorMapper.mapDefaultBotErrors(e);
-        } catch (Exception e) {
-            return "Não foi possível gerar sua análise financeira agora.";
-        }
-    }
-
-    private String handleStatus(Long telegramId) {
-        try {
-            UserProfileResponse profile = financeBotApiClient.getMe(telegramId);
-            FinancialCommitmentResponse analysis = financeBotApiClient.getFinancialAnalysis(telegramId);
-
-            return telegramMessageFormatter.formatStatusMessage(
-                    profile.email(),
-                    profile.monthlyBaseIncome(),
-                    analysis.projectedNetNextMonth(),
-                    translateRiskLevel(analysis.riskLevel())
-            );
-        } catch (RestClientResponseException e) {
-            return telegramBotErrorMapper.mapDefaultBotErrors(e);
-        } catch (Exception e) {
-            return "Não foi possível buscar o status da sua conta agora.";
-        }
     }
 
     private String handleNaturalLanguageTransactionPreview(Long telegramId, ParsedTelegramMessage parsedMessage) {
@@ -361,7 +220,7 @@ public class TelegramCommandRouter {
                     MonthlyAmountSummaryResponse response = financeBotApiClient.getCurrentMonthIncomeSummary(telegramId);
                     yield telegramMessageFormatter.formatMonthIncomeSummary(response.totalAmount());
                 }
-                case QUERY_MONTH_ANALYSIS -> handleAnalysis(telegramId);
+                case QUERY_MONTH_ANALYSIS -> telegramBasicCommandHandler.handleAnalysis(telegramId);
 
                 case QUERY_TRANSACTION_TOTAL -> {
                     String type = parsedMessage.originalMessage().toLowerCase().contains("recebi")
@@ -586,9 +445,9 @@ public class TelegramCommandRouter {
             return telegramBotErrorMapper.mapDefaultBotErrors(e);
         } catch (Exception e) {
             return """
-            Não foi possível salvar sua transação agora.
-            Você pode tentar confirmar novamente em instantes.
-            """;
+        Não foi possível salvar sua transação agora.
+        Você pode tentar confirmar novamente em instantes.
+        """;
         }
     }
 
@@ -604,35 +463,6 @@ public class TelegramCommandRouter {
         telegramPendingQueryService.clearPending(telegramId);
 
         return "❌ Operação cancelada com sucesso.";
-    }
-
-    private String handlePendingInstallmentQuerySelection(
-            Long telegramId,
-            String messageText,
-            ParsedTelegramMessage pending
-    ) {
-        ParsedTelegramMessage reparsed = telegramIntentService.parse(messageText);
-        String selectedTarget = reparsed.installmentQueryTarget() != null
-                ? reparsed.installmentQueryTarget()
-                : messageText.trim();
-
-        ParsedTelegramMessage updated = new ParsedTelegramMessage(
-                pending.intentType(),
-                pending.amount(),
-                pending.description(),
-                pending.date(),
-                pending.originalMessage(),
-                pending.categoryName(),
-                pending.accountName(),
-                pending.startDate(),
-                pending.endDate(),
-                pending.totalInstallments(),
-                selectedTarget,
-                pending.totalAmount()
-        );
-
-        telegramPendingQueryService.clearPending(telegramId);
-        return handleNaturalLanguageQuery(updated, telegramId);
     }
 
     private String handlePendingEdit(Long telegramId, String messageText) {
@@ -717,37 +547,41 @@ public class TelegramCommandRouter {
         return buildUpdatedPendingMessage(telegramId, updated);
     }
 
+    private String handlePendingInstallmentQuerySelection(
+            Long telegramId,
+            String messageText,
+            ParsedTelegramMessage pending
+    ) {
+        ParsedTelegramMessage reparsed = telegramIntentService.parse(messageText);
+        String selectedTarget = reparsed.installmentQueryTarget() != null
+                ? reparsed.installmentQueryTarget()
+                : messageText.trim();
+
+        ParsedTelegramMessage updated = new ParsedTelegramMessage(
+                pending.intentType(),
+                pending.amount(),
+                pending.description(),
+                pending.date(),
+                pending.originalMessage(),
+                pending.categoryName(),
+                pending.accountName(),
+                pending.startDate(),
+                pending.endDate(),
+                pending.totalInstallments(),
+                selectedTarget,
+                pending.totalAmount()
+        );
+
+        telegramPendingQueryService.clearPending(telegramId);
+        return handleNaturalLanguageQuery(updated, telegramId);
+    }
+
     private String buildUpdatedPendingMessage(Long telegramId, PendingTelegramTransaction pendingTransaction) {
         ResolvedPreviewAccount resolvedAccount = resolvePreviewAccount(pendingTransaction, telegramId);
         return telegramMessageFormatter.formatUpdatedPendingMessage(
                 pendingTransaction,
                 resolvedAccount.displayName()
         );
-    }
-
-    private String translateRiskLevel(String riskLevel) {
-        if (riskLevel == null || riskLevel.isBlank()) {
-            return "Não informado";
-        }
-
-        return switch (riskLevel.toUpperCase()) {
-            case "LOW" -> "Baixo";
-            case "MEDIUM" -> "Médio";
-            case "HIGH" -> "Alto";
-            default -> riskLevel;
-        };
-    }
-
-    private String resolveDisplayName(String telegramFirstName, String telegramUsername) {
-        if (telegramFirstName != null && !telegramFirstName.isBlank()) {
-            return telegramFirstName.trim();
-        }
-
-        if (telegramUsername != null && !telegramUsername.isBlank()) {
-            return "@" + telegramUsername.trim();
-        }
-
-        return null;
     }
 
     private BigDecimal parseBrazilianNumber(String value) {
