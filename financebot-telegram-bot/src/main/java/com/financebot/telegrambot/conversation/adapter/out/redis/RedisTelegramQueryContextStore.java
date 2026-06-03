@@ -1,8 +1,8 @@
 package com.financebot.telegrambot.conversation.adapter.out.redis;
 
-import com.financebot.telegrambot.conversation.application.port.out.TelegramConversationContextStore;
+import com.financebot.telegrambot.conversation.application.port.out.TelegramQueryContextStore;
 import com.financebot.telegrambot.conversation.config.TelegramConversationProperties;
-import com.financebot.telegrambot.conversation.domain.TelegramConversationContext;
+import com.financebot.telegrambot.dto.ParsedTelegramMessage;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -16,15 +16,15 @@ import java.util.Optional;
         name = "telegram.state.store",
         havingValue = "redis"
 )
-public class RedisTelegramConversationContextStore implements TelegramConversationContextStore {
+public class RedisTelegramQueryContextStore implements TelegramQueryContextStore {
 
-    private static final String KEY_PREFIX = "financebot:telegram:conversation:";
+    private static final String KEY_PREFIX = "financebot:telegram:query-context:";
 
     private final StringRedisTemplate stringRedisTemplate;
     private final JsonMapper jsonMapper;
     private final TelegramConversationProperties telegramConversationProperties;
 
-    public RedisTelegramConversationContextStore(
+    public RedisTelegramQueryContextStore(
             StringRedisTemplate stringRedisTemplate,
             JsonMapper jsonMapper,
             TelegramConversationProperties telegramConversationProperties
@@ -35,22 +35,21 @@ public class RedisTelegramConversationContextStore implements TelegramConversati
     }
 
     @Override
-    public void save(Long telegramId, TelegramConversationContext context) {
+    public void save(Long telegramId, ParsedTelegramMessage parsedMessage) {
         try {
-            String json = jsonMapper.writeValueAsString(context);
+            String json = jsonMapper.writeValueAsString(parsedMessage);
             stringRedisTemplate.opsForValue().set(
                     buildKey(telegramId),
                     json,
-                    telegramConversationProperties.contextTtl()
+                    telegramConversationProperties.queryContextTtl()
             );
         } catch (JacksonException exception) {
-            throw new IllegalStateException("Failed to serialize Telegram conversation context",
-                    exception);
+            throw new IllegalStateException("Failed to serialize Telegram query context", exception);
         }
     }
 
     @Override
-    public Optional<TelegramConversationContext> findByTelegramId(Long telegramId) {
+    public Optional<ParsedTelegramMessage> findByTelegramId(Long telegramId) {
         String json = stringRedisTemplate.opsForValue().get(buildKey(telegramId));
 
         if (json == null || json.isBlank()) {
@@ -58,10 +57,9 @@ public class RedisTelegramConversationContextStore implements TelegramConversati
         }
 
         try {
-            return Optional.of(jsonMapper.readValue(json, TelegramConversationContext.class));
+            return Optional.of(jsonMapper.readValue(json, ParsedTelegramMessage.class));
         } catch (JacksonException exception) {
-            throw new IllegalStateException("Failed to deserialize Telegram conversation context",
-                    exception);
+            throw new IllegalStateException("Failed to deserialize Telegram query context", exception);
         }
     }
 

@@ -6,6 +6,7 @@ import java.time.Duration;
 
 @ConfigurationProperties(prefix = "telegram.conversation")
 public record TelegramConversationProperties(
-        Duration contextTtl
+        Duration contextTtl,
+        Duration queryContextTtl
 ) {
 }

@@ -1,9 +1,6 @@
 package com.financebot.telegrambot.conversation.adapter.out.redis;
 
 import com.financebot.telegrambot.conversation.config.TelegramConversationProperties;
-import com.financebot.telegrambot.conversation.domain.TelegramConversationContext;
-import com.financebot.telegrambot.conversation.domain.TelegramConversationContextType;
-import com.financebot.telegrambot.conversation.domain.TelegramConversationMissingField;
 import com.financebot.telegrambot.dto.ParsedTelegramMessage;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,10 +14,8 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -29,11 +24,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class RedisTelegramConversationContextStoreTest {
+class RedisTelegramQueryContextStoreTest {
 
     private static final Long TELEGRAM_ID = 123L;
-    private static final String KEY = "financebot:telegram:conversation:123";
-    private static final String JSON = "{\"type\":\"PENDING_MISSING_INFORMATION\"}";
+    private static final String KEY = "financebot:telegram:query-context:123";
+    private static final String JSON = "{\"intentType\":\"QUERY_TRANSACTION_TOTAL\"}";
     private static final Duration CONTEXT_TTL = Duration.ofMinutes(30);
     private static final Duration QUERY_CONTEXT_TTL = Duration.ofMinutes(10);
 
@@ -46,7 +41,7 @@ class RedisTelegramConversationContextStoreTest {
     @Mock
     private JsonMapper jsonMapper;
 
-    private RedisTelegramConversationContextStore store;
+    private RedisTelegramQueryContextStore store;
 
     @BeforeEach
     void setUp() {
@@ -54,92 +49,92 @@ class RedisTelegramConversationContextStoreTest {
                 CONTEXT_TTL,
                 QUERY_CONTEXT_TTL
         );
-        store = new RedisTelegramConversationContextStore(stringRedisTemplate, jsonMapper, properties);
+        store = new RedisTelegramQueryContextStore(stringRedisTemplate, jsonMapper, properties);
     }
 
     @Test
-    void shouldSaveContextWithTtl() throws JacksonException {
-        TelegramConversationContext context = createContext();
-        when(jsonMapper.writeValueAsString(context)).thenReturn(JSON);
+    void shouldSaveQueryContextWithTtl() throws JacksonException {
+        ParsedTelegramMessage parsedMessage = parsedMessage();
+        when(jsonMapper.writeValueAsString(parsedMessage)).thenReturn(JSON);
         when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
 
-        store.save(TELEGRAM_ID, context);
+        store.save(TELEGRAM_ID, parsedMessage);
 
-        verify(valueOperations).set(KEY, JSON, CONTEXT_TTL);
+        verify(valueOperations).set(KEY, JSON, QUERY_CONTEXT_TTL);
     }
 
     @Test
-    void shouldThrowWhenContextSerializationFails() throws JacksonException {
-        TelegramConversationContext context = createContext();
+    void shouldThrowWhenQueryContextSerializationFails() throws JacksonException {
+        ParsedTelegramMessage parsedMessage = parsedMessage();
         JacksonException exception = new JacksonException("serialization error") {
         };
-        when(jsonMapper.writeValueAsString(context)).thenThrow(exception);
+        when(jsonMapper.writeValueAsString(parsedMessage)).thenThrow(exception);
 
-        assertThatThrownBy(() -> store.save(TELEGRAM_ID, context))
+        assertThatThrownBy(() -> store.save(TELEGRAM_ID, parsedMessage))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Failed to serialize Telegram conversation context")
+                .hasMessage("Failed to serialize Telegram query context")
                 .hasCause(exception);
 
         verify(stringRedisTemplate, never()).opsForValue();
     }
 
     @Test
-    void shouldFindContextByTelegramId() throws JacksonException {
-        TelegramConversationContext context = createContext();
+    void shouldFindQueryContextByTelegramId() throws JacksonException {
+        ParsedTelegramMessage parsedMessage = parsedMessage();
         when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.get(KEY)).thenReturn(JSON);
-        when(jsonMapper.readValue(JSON, TelegramConversationContext.class)).thenReturn(context);
+        when(jsonMapper.readValue(JSON, ParsedTelegramMessage.class)).thenReturn(parsedMessage);
 
-        Optional<TelegramConversationContext> result = store.findByTelegramId(TELEGRAM_ID);
+        Optional<ParsedTelegramMessage> result = store.findByTelegramId(TELEGRAM_ID);
 
-        assertThat(result).contains(context);
+        assertThat(result).contains(parsedMessage);
     }
 
     @Test
-    void shouldReturnEmptyWhenContextDoesNotExist() throws JacksonException {
+    void shouldReturnEmptyWhenQueryContextDoesNotExist() throws JacksonException {
         when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.get(KEY)).thenReturn(null);
 
-        Optional<TelegramConversationContext> result = store.findByTelegramId(TELEGRAM_ID);
+        Optional<ParsedTelegramMessage> result = store.findByTelegramId(TELEGRAM_ID);
 
         assertThat(result).isEmpty();
-        verify(jsonMapper, never()).readValue(JSON, TelegramConversationContext.class);
+        verify(jsonMapper, never()).readValue(JSON, ParsedTelegramMessage.class);
     }
 
     @Test
-    void shouldReturnEmptyWhenStoredContextIsBlank() throws JacksonException {
+    void shouldReturnEmptyWhenStoredQueryContextIsBlank() throws JacksonException {
         when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.get(KEY)).thenReturn(" ");
 
-        Optional<TelegramConversationContext> result = store.findByTelegramId(TELEGRAM_ID);
+        Optional<ParsedTelegramMessage> result = store.findByTelegramId(TELEGRAM_ID);
 
         assertThat(result).isEmpty();
-        verify(jsonMapper, never()).readValue(JSON, TelegramConversationContext.class);
+        verify(jsonMapper, never()).readValue(JSON, ParsedTelegramMessage.class);
     }
 
     @Test
-    void shouldThrowWhenContextDeserializationFails() throws JacksonException {
+    void shouldThrowWhenQueryContextDeserializationFails() throws JacksonException {
         JacksonException exception = new JacksonException("deserialization error") {
         };
         when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.get(KEY)).thenReturn(JSON);
-        when(jsonMapper.readValue(JSON, TelegramConversationContext.class)).thenThrow(exception);
+        when(jsonMapper.readValue(JSON, ParsedTelegramMessage.class)).thenThrow(exception);
 
         assertThatThrownBy(() -> store.findByTelegramId(TELEGRAM_ID))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Failed to deserialize Telegram conversation context")
+                .hasMessage("Failed to deserialize Telegram query context")
                 .hasCause(exception);
     }
 
     @Test
-    void shouldDeleteContextByTelegramId() {
+    void shouldDeleteQueryContextByTelegramId() {
         store.deleteByTelegramId(TELEGRAM_ID);
 
         verify(stringRedisTemplate).delete(KEY);
     }
 
     @Test
-    void shouldCheckIfContextExistsByTelegramId() {
+    void shouldCheckIfQueryContextExistsByTelegramId() {
         when(stringRedisTemplate.hasKey(KEY)).thenReturn(true);
 
         boolean exists = store.existsByTelegramId(TELEGRAM_ID);
@@ -156,29 +151,20 @@ class RedisTelegramConversationContextStoreTest {
         assertThat(exists).isFalse();
     }
 
-    private TelegramConversationContext createContext() {
-        ParsedTelegramMessage parsedMessage = new ParsedTelegramMessage(
-                TelegramIntentType.CREATE_INSTALLMENT_EXPENSE,
+    private ParsedTelegramMessage parsedMessage() {
+        return new ParsedTelegramMessage(
+                TelegramIntentType.QUERY_TRANSACTION_TOTAL,
                 null,
-                "iPhone",
+                null,
                 LocalDate.now(),
-                "comprei um iPhone de 6000 em 10x",
+                "quanto gastei com alimentação esse mês?",
+                "Alimentação",
                 null,
+                LocalDate.of(2026, 6, 1),
+                LocalDate.of(2026, 6, 30),
                 null,
-                null,
-                null,
-                10,
                 null,
                 null
-        );
-
-        return new TelegramConversationContext(
-                TelegramConversationContextType.PENDING_MISSING_INFORMATION,
-                TelegramIntentType.CREATE_INSTALLMENT_EXPENSE,
-                parsedMessage,
-                "comprei um iPhone de 6000 em 10x",
-                Set.of(TelegramConversationMissingField.INSTALLMENT_DUE_DAY),
-                Instant.now()
         );
     }
 }
