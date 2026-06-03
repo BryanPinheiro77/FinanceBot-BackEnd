@@ -1,22 +1,36 @@
 package com.financebot.telegrambot.conversation.adapter.out.memory;
 
+import com.financebot.telegrambot.conversation.config.TelegramConversationProperties;
 import com.financebot.telegrambot.dto.ParsedTelegramMessage;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class InMemoryTelegramQueryContextStoreTest {
 
+    private static final Instant NOW = Instant.parse("2026-06-03T12:00:00Z");
+    private static final TelegramConversationProperties PROPERTIES = new TelegramConversationProperties(
+            Duration.ofMinutes(30),
+            Duration.ofMinutes(10)
+    );
+
     private InMemoryTelegramQueryContextStore store;
 
     @BeforeEach
     void setUp() {
-        store = new InMemoryTelegramQueryContextStore();
+        store = new InMemoryTelegramQueryContextStore(
+                PROPERTIES,
+                Clock.fixed(NOW, ZoneOffset.UTC)
+        );
     }
 
     @Test
@@ -57,6 +71,21 @@ class InMemoryTelegramQueryContextStoreTest {
         store.save(telegramId, parsedMessage());
 
         assertThat(store.existsByTelegramId(telegramId)).isTrue();
+    }
+
+    @Test
+    void shouldExpireQueryContextWhenTtlIsReached() {
+        InMemoryTelegramQueryContextStore expiredStore =
+                new InMemoryTelegramQueryContextStore(
+                        new TelegramConversationProperties(Duration.ofMinutes(30), Duration.ZERO),
+                        Clock.fixed(NOW, ZoneOffset.UTC)
+                );
+        Long telegramId = 123L;
+
+        expiredStore.save(telegramId, parsedMessage());
+
+        assertThat(expiredStore.findByTelegramId(telegramId)).isEmpty();
+        assertThat(expiredStore.existsByTelegramId(telegramId)).isFalse();
     }
 
     private ParsedTelegramMessage parsedMessage() {
