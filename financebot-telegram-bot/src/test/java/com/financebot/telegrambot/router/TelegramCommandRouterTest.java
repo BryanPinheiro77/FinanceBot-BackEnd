@@ -1,5 +1,6 @@
 package com.financebot.telegrambot.router;
 
+import com.financebot.telegrambot.conversation.application.TelegramConversationContinuationService;
 import com.financebot.telegrambot.handler.TelegramBasicCommandHandler;
 import com.financebot.telegrambot.handler.TelegramNaturalLanguageHandler;
 import com.financebot.telegrambot.handler.TelegramPendingEditHandler;
@@ -40,6 +41,9 @@ class TelegramCommandRouterTest {
     @Mock
     private TelegramNaturalLanguageHandler telegramNaturalLanguageHandler;
 
+    @Mock
+    private TelegramConversationContinuationService telegramConversationContinuationService;
+
     private TelegramCommandRouter telegramCommandRouter;
 
     @BeforeEach
@@ -51,7 +55,8 @@ class TelegramCommandRouterTest {
                 telegramPendingOperationHandler,
                 telegramPendingEditHandler,
                 telegramPendingQueryHandler,
-                telegramNaturalLanguageHandler
+                telegramNaturalLanguageHandler,
+                telegramConversationContinuationService
         );
     }
 
@@ -114,8 +119,21 @@ class TelegramCommandRouterTest {
     }
 
     @Test
+    @DisplayName("deve rotear continuacao quando existe contexto conversacional pendente")
+    void shouldRouteConversationContinuationWhenThereIsPendingContext() {
+        when(telegramConversationContinuationService.hasPendingContext(123L)).thenReturn(true);
+        when(telegramConversationContinuationService.handle(123L, "dia 15")).thenReturn("preview");
+
+        String result = telegramCommandRouter.route("dia 15", 123L, "bryan", "Bryan");
+
+        assertThat(result).isEqualTo("preview");
+        verify(telegramConversationContinuationService).handle(123L, "dia 15");
+    }
+
+    @Test
     @DisplayName("deve usar linguagem natural como fallback")
     void shouldRouteFallbackToNaturalLanguageHandler() {
+        when(telegramConversationContinuationService.hasPendingContext(123L)).thenReturn(false);
         when(telegramNaturalLanguageHandler.handle("gastei 50 no mercado", 123L)).thenReturn("preview");
 
         String result = telegramCommandRouter.route("gastei 50 no mercado", 123L, "bryan", "Bryan");

@@ -1,6 +1,7 @@
 package com.financebot.telegrambot.service;
 
 import com.financebot.telegrambot.client.FinanceBotApiClient;
+import com.financebot.telegrambot.conversation.application.TelegramConversationContinuationService;
 import com.financebot.telegrambot.dto.ParsedTelegramMessage;
 import com.financebot.telegrambot.dto.PendingTelegramTransaction;
 import com.financebot.telegrambot.dto.request.CreateInstallmentTransactionFromTelegramRequest;
@@ -58,6 +59,9 @@ class TelegramCommandServiceTest {
 
     @Mock
     private TelegramQueryContextService telegramQueryContextService;
+
+    @Mock
+    private TelegramConversationContinuationService telegramConversationContinuationService;
 
     private TelegramCommandService telegramCommandService;
 
@@ -131,7 +135,8 @@ class TelegramCommandServiceTest {
                 telegramPendingOperationHandler,
                 telegramPendingEditHandler,
                 telegramPendingQueryHandler,
-                telegramNaturalLanguageHandler
+                telegramNaturalLanguageHandler,
+                telegramConversationContinuationService
         );
 
         telegramCommandService = new TelegramCommandService(telegramCommandRouter);

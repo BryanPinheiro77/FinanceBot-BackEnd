@@ -1,5 +1,6 @@
 package com.financebot.telegrambot.router;
 
+import com.financebot.telegrambot.conversation.application.TelegramConversationContinuationService;
 import com.financebot.telegrambot.handler.TelegramBasicCommandHandler;
 import com.financebot.telegrambot.handler.TelegramPendingEditHandler;
 import com.financebot.telegrambot.handler.TelegramPendingOperationHandler;
@@ -21,6 +22,7 @@ public class TelegramCommandRouter {
     private final TelegramPendingEditHandler telegramPendingEditHandler;
     private final TelegramPendingQueryHandler telegramPendingQueryHandler;
     private final TelegramNaturalLanguageHandler telegramNaturalLanguageHandler;
+    private final TelegramConversationContinuationService telegramConversationContinuationService;
 
     public String route(
             String messageText,
@@ -92,6 +94,10 @@ public class TelegramCommandRouter {
                     telegramId,
                     normalizedMessage
             );
+        }
+
+        if (telegramConversationContinuationService.hasPendingContext(telegramId)) {
+            return telegramConversationContinuationService.handle(telegramId, normalizedMessage);
         }
 
         return telegramNaturalLanguageHandler.handle(normalizedMessage, telegramId);
