@@ -99,7 +99,11 @@ class TelegramConversationContinuationServiceTest {
                 .thenReturn(Optional.of(context));
         when(telegramInstallmentDueDayResolver.resolve("dia 15"))
                 .thenReturn(Optional.of(dueDate));
-        when(telegramTransactionPreviewHandler.handlePreview(org.mockito.Mockito.eq(TELEGRAM_ID), org.mockito.Mockito.any()))
+        when(telegramTransactionPreviewHandler.handlePreview(
+                org.mockito.Mockito.eq(TELEGRAM_ID),
+                org.mockito.Mockito.any(),
+                org.mockito.Mockito.eq(false)
+        ))
                 .thenReturn("preview");
 
         String result = service.handle(TELEGRAM_ID, "dia 15");
@@ -111,7 +115,8 @@ class TelegramConversationContinuationServiceTest {
                 ArgumentCaptor.forClass(ParsedTelegramMessage.class);
         verify(telegramTransactionPreviewHandler).handlePreview(
                 org.mockito.Mockito.eq(TELEGRAM_ID),
-                parsedCaptor.capture()
+                parsedCaptor.capture(),
+                org.mockito.Mockito.eq(false)
         );
 
         ParsedTelegramMessage completedMessage = parsedCaptor.getValue();

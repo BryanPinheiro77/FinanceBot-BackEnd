@@ -68,7 +68,7 @@ public class TelegramConversationContinuationService {
         ParsedTelegramMessage completedMessage = withDate(context.parsedMessage(), dueDate.get());
         telegramConversationContextService.clearPendingContext(telegramId);
 
-        return telegramTransactionPreviewHandler.handlePreview(telegramId, completedMessage);
+        return telegramTransactionPreviewHandler.handlePreview(telegramId, completedMessage, false);
     }
 
     private ParsedTelegramMessage withDate(

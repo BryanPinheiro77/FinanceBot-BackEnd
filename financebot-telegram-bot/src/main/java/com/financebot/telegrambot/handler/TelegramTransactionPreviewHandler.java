@@ -1,5 +1,9 @@
 package com.financebot.telegrambot.handler;
 
+import com.financebot.telegrambot.conversation.application.TelegramConversationContextService;
+import com.financebot.telegrambot.conversation.domain.TelegramConversationContext;
+import com.financebot.telegrambot.conversation.domain.TelegramConversationContextType;
+import com.financebot.telegrambot.conversation.domain.TelegramConversationMissingField;
 import com.financebot.telegrambot.dto.ParsedTelegramMessage;
 import com.financebot.telegrambot.dto.PendingTelegramTransaction;
 import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
@@ -10,6 +14,9 @@ import com.financebot.telegrambot.support.TelegramPreviewAccountResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
+import java.util.Set;
+
 @Component
 @RequiredArgsConstructor
 public class TelegramTransactionPreviewHandler {
@@ -18,8 +25,17 @@ public class TelegramTransactionPreviewHandler {
     private final TelegramMessageFormatter telegramMessageFormatter;
     private final PendingTelegramTransactionMapper pendingTelegramTransactionMapper;
     private final TelegramPreviewAccountResolver telegramPreviewAccountResolver;
+    private final TelegramConversationContextService telegramConversationContextService;
 
     public String handlePreview(Long telegramId, ParsedTelegramMessage parsedMessage) {
+        return handlePreview(telegramId, parsedMessage, true);
+    }
+
+    public String handlePreview(
+            Long telegramId,
+            ParsedTelegramMessage parsedMessage,
+            boolean allowConversationPrompt
+    ) {
         if (parsedMessage.amount() == null && parsedMessage.totalAmount() == null) {
             return """
                     Entendi a intenção, mas não consegui identificar o valor.
@@ -54,6 +70,18 @@ public class TelegramTransactionPreviewHandler {
                         """;
             }
 
+            if (allowConversationPrompt) {
+                saveInstallmentDueDayContext(telegramId, parsedMessage);
+                return """
+                        Entendi o parcelamento.
+
+                        Qual o dia de vencimento da primeira parcela?
+
+                        Exemplo:
+                        - dia 15
+                        """;
+            }
+
             telegramPendingConfirmationService.savePending(telegramId, pendingTransaction);
 
             return telegramMessageFormatter.formatInstallmentTransactionPreview(
@@ -67,6 +95,23 @@ public class TelegramTransactionPreviewHandler {
         return telegramMessageFormatter.formatTransactionPreview(
                 pendingTransaction,
                 resolvedAccount.displayName()
+        );
+    }
+
+    private void saveInstallmentDueDayContext(
+            Long telegramId,
+            ParsedTelegramMessage parsedMessage
+    ) {
+        telegramConversationContextService.savePendingContext(
+                telegramId,
+                new TelegramConversationContext(
+                        TelegramConversationContextType.PENDING_MISSING_INFORMATION,
+                        parsedMessage.intentType(),
+                        parsedMessage,
+                        parsedMessage.originalMessage(),
+                        Set.of(TelegramConversationMissingField.INSTALLMENT_DUE_DAY),
+                        Instant.now()
+                )
         );
     }
 
