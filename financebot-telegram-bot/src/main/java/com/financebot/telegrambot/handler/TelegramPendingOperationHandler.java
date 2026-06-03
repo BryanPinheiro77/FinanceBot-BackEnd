@@ -1,6 +1,7 @@
 package com.financebot.telegrambot.handler;
 
 import com.financebot.telegrambot.client.FinanceBotApiClient;
+import com.financebot.telegrambot.conversation.application.TelegramConversationContextService;
 import com.financebot.telegrambot.dto.PendingTelegramTransaction;
 import com.financebot.telegrambot.dto.request.CreateInstallmentTransactionFromTelegramRequest;
 import com.financebot.telegrambot.dto.request.CreateTransactionFromTelegramRequest;
@@ -22,6 +23,7 @@ public class TelegramPendingOperationHandler {
     private final TelegramPendingQueryService telegramPendingQueryService;
     private final TelegramMessageFormatter telegramMessageFormatter;
     private final TelegramBotErrorMapper telegramBotErrorMapper;
+    private final TelegramConversationContextService telegramConversationContextService;
 
     public String handleConfirmation(Long telegramId) {
         PendingTelegramTransaction pending = telegramPendingConfirmationService.getPending(telegramId);
@@ -75,13 +77,15 @@ public class TelegramPendingOperationHandler {
     public String handleCancellation(Long telegramId) {
         boolean hasPendingConfirmation = telegramPendingConfirmationService.hasPending(telegramId);
         boolean hasPendingQuery = telegramPendingQueryService.hasPending(telegramId);
+        boolean hasConversationContext = telegramConversationContextService.hasPendingContext(telegramId);
 
-        if (!hasPendingConfirmation && !hasPendingQuery) {
+        if (!hasPendingConfirmation && !hasPendingQuery && !hasConversationContext) {
             return "Não há nenhuma operação pendente para cancelar.";
         }
 
         telegramPendingConfirmationService.clearPending(telegramId);
         telegramPendingQueryService.clearPending(telegramId);
+        telegramConversationContextService.clearPendingContext(telegramId);
 
         return "❌ Operação cancelada com sucesso.";
     }

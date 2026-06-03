@@ -92,7 +92,8 @@ class TelegramCommandServiceTest {
                 telegramPendingConfirmationService,
                 telegramPendingQueryService,
                 telegramMessageFormatter,
-                telegramBotErrorMapper
+                telegramBotErrorMapper,
+                telegramConversationContextService
         );
 
         TelegramTransactionPreviewHandler telegramTransactionPreviewHandler = new TelegramTransactionPreviewHandler(
