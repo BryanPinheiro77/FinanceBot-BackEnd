@@ -104,6 +104,9 @@ public class TelegramPendingEditParser {
                 || lower.contains("amanha")
                 || EDIT_DATE_SLASH_PATTERN.matcher(lower).find()
                 || EDIT_DATE_DASH_PATTERN.matcher(lower).find()
+                || EDIT_DATE_SLASH_WITHOUT_YEAR_PATTERN.matcher(lower).find()
+                || EDIT_DATE_DASH_WITHOUT_YEAR_PATTERN.matcher(lower).find()
+                || EDIT_DAY_AND_MONTH_PATTERN.matcher(lower).find()
                 || EDIT_DAY_ONLY_PATTERN.matcher(lower).find();
     }
 
@@ -180,6 +183,42 @@ public class TelegramPendingEditParser {
             }
         }
 
+        Matcher slashWithoutYearMatcher = EDIT_DATE_SLASH_WITHOUT_YEAR_PATTERN.matcher(lower);
+        if (slashWithoutYearMatcher.find()) {
+            LocalDate parsedDate = parseDateWithCurrentYear(
+                    slashWithoutYearMatcher.group(1),
+                    slashWithoutYearMatcher.group(2)
+            );
+
+            if (parsedDate != null) {
+                return parsedDate;
+            }
+        }
+
+        Matcher dashWithoutYearMatcher = EDIT_DATE_DASH_WITHOUT_YEAR_PATTERN.matcher(lower);
+        if (dashWithoutYearMatcher.find()) {
+            LocalDate parsedDate = parseDateWithCurrentYear(
+                    dashWithoutYearMatcher.group(1),
+                    dashWithoutYearMatcher.group(2)
+            );
+
+            if (parsedDate != null) {
+                return parsedDate;
+            }
+        }
+
+        Matcher dayAndMonthMatcher = EDIT_DAY_AND_MONTH_PATTERN.matcher(lower);
+        if (dayAndMonthMatcher.find()) {
+            LocalDate parsedDate = parseDateWithCurrentYear(
+                    dayAndMonthMatcher.group(1),
+                    dayAndMonthMatcher.group(2)
+            );
+
+            if (parsedDate != null) {
+                return parsedDate;
+            }
+        }
+
         Matcher dayOnlyMatcher = EDIT_DAY_ONLY_PATTERN.matcher(lower);
         if (dayOnlyMatcher.find()) {
             try {
@@ -191,6 +230,22 @@ public class TelegramPendingEditParser {
                 }
             } catch (Exception ignored) {
             }
+        }
+
+        return null;
+    }
+
+    private LocalDate parseDateWithCurrentYear(String dayValue, String monthValue) {
+        try {
+            int day = Integer.parseInt(dayValue);
+            int month = Integer.parseInt(monthValue);
+            int year = LocalDate.now().getYear();
+            YearMonth yearMonth = YearMonth.of(year, month);
+
+            if (day >= 1 && day <= yearMonth.lengthOfMonth()) {
+                return yearMonth.atDay(day);
+            }
+        } catch (Exception ignored) {
         }
 
         return null;
@@ -303,6 +358,12 @@ public class TelegramPendingEditParser {
 
     private static final Pattern EDIT_DATE_SLASH_PATTERN = Pattern.compile("(\\d{1,2}/\\d{1,2}/\\d{4})");
     private static final Pattern EDIT_DATE_DASH_PATTERN = Pattern.compile("(\\d{1,2}-\\d{1,2}-\\d{4})");
+    private static final Pattern EDIT_DATE_SLASH_WITHOUT_YEAR_PATTERN =
+            Pattern.compile("\\b(\\d{1,2})/(\\d{1,2})\\b");
+    private static final Pattern EDIT_DATE_DASH_WITHOUT_YEAR_PATTERN =
+            Pattern.compile("\\b(\\d{1,2})-(\\d{1,2})\\b");
+    private static final Pattern EDIT_DAY_AND_MONTH_PATTERN =
+            Pattern.compile("\\bdia\\s+(?:para\\s+|pra\\s+)?(\\d{1,2})\\s+(?:do|de)\\s+(\\d{1,2})\\b");
     private static final Pattern EDIT_DAY_ONLY_PATTERN = Pattern.compile("\\bdia\\s+(\\d{1,2})\\b");
 
     private static final DateTimeFormatter FLEXIBLE_SLASH_DATE_FORMATTER = new DateTimeFormatterBuilder()

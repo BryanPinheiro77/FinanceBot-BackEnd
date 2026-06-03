@@ -106,6 +106,30 @@ class TelegramCommandRouterTest {
     }
 
     @Test
+    @DisplayName("deve rotear edicao de dia quando existe operacao pendente")
+    void shouldRoutePendingDayEditWhenThereIsPendingConfirmation() {
+        when(telegramPendingConfirmationService.hasPending(123L)).thenReturn(true);
+        when(telegramPendingEditHandler.handleEdit(123L, "alterar pro dia 31 do 05")).thenReturn("updated");
+
+        String result = telegramCommandRouter.route("alterar pro dia 31 do 05", 123L, "bryan", "Bryan");
+
+        assertThat(result).isEqualTo("updated");
+        verify(telegramPendingEditHandler).handleEdit(123L, "alterar pro dia 31 do 05");
+    }
+
+    @Test
+    @DisplayName("deve rotear edicao de dia com muda o dia para quando existe operacao pendente")
+    void shouldRoutePendingDayEditWithChangeDayToWhenThereIsPendingConfirmation() {
+        when(telegramPendingConfirmationService.hasPending(123L)).thenReturn(true);
+        when(telegramPendingEditHandler.handleEdit(123L, "muda o dia para 10 do 06")).thenReturn("updated");
+
+        String result = telegramCommandRouter.route("muda o dia para 10 do 06", 123L, "bryan", "Bryan");
+
+        assertThat(result).isEqualTo("updated");
+        verify(telegramPendingEditHandler).handleEdit(123L, "muda o dia para 10 do 06");
+    }
+
+    @Test
     @DisplayName("deve rotear continuacao de query pendente de parcelamento")
     void shouldRoutePendingInstallmentQuerySelection() {
         when(telegramPendingQueryHandler.hasPendingInstallmentQuery(123L, "notebook")).thenReturn(true);
