@@ -68,6 +68,36 @@ class TelegramPendingEditParserTest {
     }
 
     @Test
+    @DisplayName("deve extrair nova data com dia e mes sem ano")
+    void shouldExtractDateWithDayAndMonthWithoutYear() {
+        TelegramPendingEditParser.PendingEditResult result =
+                telegramPendingEditParser.parse("alterar pro dia 31 do 05");
+
+        assertThat(result.changed()).isTrue();
+        assertThat(result.date()).isEqualTo(LocalDate.of(LocalDate.now().getYear(), 5, 31));
+    }
+
+    @Test
+    @DisplayName("deve extrair nova data com dia para e mes sem ano")
+    void shouldExtractDateWithDayToAndMonthWithoutYear() {
+        TelegramPendingEditParser.PendingEditResult result =
+                telegramPendingEditParser.parse("muda o dia para 10 do 06");
+
+        assertThat(result.changed()).isTrue();
+        assertThat(result.date()).isEqualTo(LocalDate.of(LocalDate.now().getYear(), 6, 10));
+    }
+
+    @Test
+    @DisplayName("deve extrair nova data com barra e sem ano")
+    void shouldExtractSlashDateWithoutYear() {
+        TelegramPendingEditParser.PendingEditResult result =
+                telegramPendingEditParser.parse("muda para 31/05");
+
+        assertThat(result.changed()).isTrue();
+        assertThat(result.date()).isEqualTo(LocalDate.of(LocalDate.now().getYear(), 5, 31));
+    }
+
+    @Test
     @DisplayName("deve extrair multiplas alteracoes da mesma mensagem")
     void shouldExtractMultipleEditsFromSameMessage() {
         TelegramPendingEditParser.PendingEditResult result =

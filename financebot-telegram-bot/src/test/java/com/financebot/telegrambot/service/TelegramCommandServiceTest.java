@@ -1,6 +1,10 @@
 package com.financebot.telegrambot.service;
 
 import com.financebot.telegrambot.client.FinanceBotApiClient;
+import com.financebot.telegrambot.conversation.application.TelegramConversationContinuationService;
+import com.financebot.telegrambot.conversation.application.TelegramConversationContextService;
+import com.financebot.telegrambot.conversation.domain.TelegramConversationContext;
+import com.financebot.telegrambot.conversation.domain.TelegramConversationMissingField;
 import com.financebot.telegrambot.dto.ParsedTelegramMessage;
 import com.financebot.telegrambot.dto.PendingTelegramTransaction;
 import com.financebot.telegrambot.dto.request.CreateInstallmentTransactionFromTelegramRequest;
@@ -59,6 +63,12 @@ class TelegramCommandServiceTest {
     @Mock
     private TelegramQueryContextService telegramQueryContextService;
 
+    @Mock
+    private TelegramConversationContinuationService telegramConversationContinuationService;
+
+    @Mock
+    private TelegramConversationContextService telegramConversationContextService;
+
     private TelegramCommandService telegramCommandService;
 
     @BeforeEach
@@ -82,14 +92,16 @@ class TelegramCommandServiceTest {
                 telegramPendingConfirmationService,
                 telegramPendingQueryService,
                 telegramMessageFormatter,
-                telegramBotErrorMapper
+                telegramBotErrorMapper,
+                telegramConversationContextService
         );
 
         TelegramTransactionPreviewHandler telegramTransactionPreviewHandler = new TelegramTransactionPreviewHandler(
                 telegramPendingConfirmationService,
                 telegramMessageFormatter,
                 new PendingTelegramTransactionMapper(),
-                telegramPreviewAccountResolver
+                telegramPreviewAccountResolver,
+                telegramConversationContextService
         );
 
         TelegramPendingEditParser telegramPendingEditParser =
@@ -131,7 +143,8 @@ class TelegramCommandServiceTest {
                 telegramPendingOperationHandler,
                 telegramPendingEditHandler,
                 telegramPendingQueryHandler,
-                telegramNaturalLanguageHandler
+                telegramNaturalLanguageHandler,
+                telegramConversationContinuationService
         );
 
         telegramCommandService = new TelegramCommandService(telegramCommandRouter);
@@ -323,8 +336,8 @@ class TelegramCommandServiceTest {
     }
 
     @Test
-    @DisplayName("deve gerar preview de parcelamento e salvar PendingTelegramTransaction")
-    void shouldGenerateInstallmentPreviewAndSavePendingTransaction() {
+    @DisplayName("deve salvar contexto e perguntar vencimento antes do preview de parcelamento")
+    void shouldSaveConversationContextAndAskDueDayBeforeInstallmentPreview() {
         ParsedTelegramMessage parsedMessage = new ParsedTelegramMessage(
                 TelegramIntentType.CREATE_INSTALLMENT_EXPENSE,
                 new BigDecimal("1200.00"),
@@ -351,24 +364,21 @@ class TelegramCommandServiceTest {
                 "Bryan"
         );
 
-        ArgumentCaptor<PendingTelegramTransaction> pendingCaptor =
-                ArgumentCaptor.forClass(PendingTelegramTransaction.class);
+        ArgumentCaptor<TelegramConversationContext> contextCaptor =
+                ArgumentCaptor.forClass(TelegramConversationContext.class);
 
-        verify(telegramPendingConfirmationService).savePending(eq(123L), pendingCaptor.capture());
+        verify(telegramConversationContextService).savePendingContext(eq(123L), contextCaptor.capture());
+        verify(telegramPendingConfirmationService, never()).savePending(any(), any());
 
-        PendingTelegramTransaction pending = pendingCaptor.getValue();
+        TelegramConversationContext context = contextCaptor.getValue();
 
-        assertThat(pending.intentType()).isEqualTo(TelegramIntentType.CREATE_INSTALLMENT_EXPENSE);
-        assertThat(pending.amount()).isEqualByComparingTo("1200.00");
-        assertThat(pending.description()).isEqualTo("notebook");
-        assertThat(pending.date()).isEqualTo(LocalDate.of(2026, 6, 1));
-        assertThat(pending.categoryName()).isEqualTo("Eletrônicos");
-        assertThat(pending.accountName()).isEqualTo("Nubank");
-        assertThat(pending.totalInstallments()).isEqualTo(12);
+        assertThat(context.intentType()).isEqualTo(TelegramIntentType.CREATE_INSTALLMENT_EXPENSE);
+        assertThat(context.parsedMessage()).isEqualTo(parsedMessage);
+        assertThat(context.missingFields()).containsExactly(TelegramConversationMissingField.INSTALLMENT_DUE_DAY);
 
-        assertThat(result).contains("Entendi este parcelamento");
-        assertThat(result).contains("12x");
-        assertThat(result).contains("Nubank");
+        assertThat(result).contains("Entendi o parcelamento");
+        assertThat(result).contains("Qual o dia de vencimento da primeira parcela?");
+        assertThat(result).contains("dia 15");
     }
 
     @Test

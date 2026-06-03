@@ -1,13 +1,12 @@
 package com.financebot.telegrambot.service;
 
+import com.financebot.telegrambot.conversation.application.port.out.TelegramQueryContextStore;
 import com.financebot.telegrambot.dto.ParsedDateRange;
 import com.financebot.telegrambot.dto.ParsedTelegramMessage;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class TelegramQueryContextService {
@@ -15,16 +14,18 @@ public class TelegramQueryContextService {
     private final TelegramIntentService telegramIntentService;
     private final TelegramDateRangeResolver telegramDateRangeResolver;
     private final TelegramNaturalLanguageVocabulary telegramNaturalLanguageVocabulary;
-    private final Map<Long, ParsedTelegramMessage> queryContexts = new ConcurrentHashMap<>();
+    private final TelegramQueryContextStore telegramQueryContextStore;
 
     public TelegramQueryContextService(
             TelegramIntentService telegramIntentService,
             TelegramDateRangeResolver telegramDateRangeResolver,
-            TelegramNaturalLanguageVocabulary telegramNaturalLanguageVocabulary
+            TelegramNaturalLanguageVocabulary telegramNaturalLanguageVocabulary,
+            TelegramQueryContextStore telegramQueryContextStore
     ) {
         this.telegramIntentService = telegramIntentService;
         this.telegramDateRangeResolver = telegramDateRangeResolver;
         this.telegramNaturalLanguageVocabulary = telegramNaturalLanguageVocabulary;
+        this.telegramQueryContextStore = telegramQueryContextStore;
     }
 
     public ParsedTelegramMessage applyQueryContext(
@@ -36,7 +37,9 @@ public class TelegramQueryContextService {
             return currentParse;
         }
 
-        ParsedTelegramMessage previous = queryContexts.get(telegramId);
+        ParsedTelegramMessage previous = telegramQueryContextStore
+                .findByTelegramId(telegramId)
+                .orElse(null);
         if (previous == null) {
             return currentParse;
         }
@@ -56,7 +59,7 @@ public class TelegramQueryContextService {
             return;
         }
 
-        queryContexts.put(telegramId, parsedMessage);
+        telegramQueryContextStore.save(telegramId, parsedMessage);
     }
 
     private ParsedTelegramMessage mergeTransactionSummaryContext(

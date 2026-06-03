@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+## v1.4.0
+
+### Added
+
+- Adicionado suporte a Redis para contexto conversacional temporário do bot Telegram.
+- Adicionados stores configuráveis em memória e Redis para contexto ativo de conversa e contexto passivo de consultas.
+- Adicionado fluxo multi-etapas para criação de parcelamentos no Telegram, perguntando o dia de vencimento antes do preview.
+
+### Changed
+
+- Migrado o contexto de consultas do Telegram para ports/adapters com TTL configurável.
+- Extraído o armazenamento de contexto conversacional do bot para contratos neutros, mantendo Redis restrito aos adapters de infraestrutura.
+- Ajustado o cancelamento de operações pendentes para limpar também o contexto conversacional ativo.
+
+### Tests
+
+- Adicionada cobertura para stores em memória e Redis de contexto conversacional e contexto de consultas.
+- Adicionada cobertura para continuação de conversa, resolução de vencimento de parcelamento e limpeza de contexto no cancelamento.
+
 ## v1.3.0
 
 ### Changed

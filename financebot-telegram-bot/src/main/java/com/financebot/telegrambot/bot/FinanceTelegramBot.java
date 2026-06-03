@@ -59,14 +59,23 @@ public class FinanceTelegramBot implements LongPollingUpdateConsumer {
                     : null;
             String messageText = update.getMessage().getText();
 
-            String responseText = telegramCommandService.handleMessage(
-                    messageText,
-                    telegramId,
-                    telegramUsername,
-                    telegramFirstName
-            );
+            try {
+                String responseText = telegramCommandService.handleMessage(
+                        messageText,
+                        telegramId,
+                        telegramUsername,
+                        telegramFirstName
+                );
 
-            sendMessage(chatId, responseText);
+                sendMessage(chatId, responseText);
+            } catch (Exception e) {
+                System.err.println("Erro ao processar mensagem no Telegram: " + e.getMessage());
+                sendMessage(chatId, """
+                        Não consegui processar sua mensagem agora.
+
+                        Tente novamente em alguns instantes.
+                        """);
+            }
         }
     }
 
