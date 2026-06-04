@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Added
+
+- Adicionado suporte a novos aliases de categorias e contas no vocabulário de linguagem natural do bot Telegram.
+- Adicionado suporte a novas expressões de período nas consultas do Telegram, incluindo semana atual e últimos 30 dias.
+- Adicionado suporte a novas variações de perguntas sobre término de parcelamentos.
+
+### Changed
+
+- Melhorada a detecção de intenções de despesa e receita em mensagens naturais do Telegram.
+- Melhorada a limpeza da descrição de transações interpretadas pelo Telegram, evitando sobras como preposições após remoção de valores.
+- Centralizados termos e padrões de limpeza do parser em constantes para facilitar manutenção.
+
 ## v1.4.0
 
 ### Added
