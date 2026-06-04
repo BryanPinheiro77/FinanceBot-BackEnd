@@ -80,6 +80,11 @@ public class TelegramNaturalLanguageVocabulary {
         aliases.put("mercado", "Mercado");
         aliases.put("atacadao", "Mercado");
         aliases.put("atacado", "Mercado");
+        aliases.put("mercadinho", "Mercado");
+        aliases.put("extra", "Mercado");
+        aliases.put("carrefour", "Mercado");
+        aliases.put("assai", "Mercado");
+
         aliases.put("mcdonalds", "Alimentação");
         aliases.put("mc donalds", "Alimentação");
         aliases.put("restaurante", "Alimentação");
@@ -89,30 +94,72 @@ public class TelegramNaturalLanguageVocabulary {
         aliases.put("lanche", "Alimentação");
         aliases.put("pizza", "Alimentação");
         aliases.put("comida", "Alimentação");
-        aliases.put("combustivel", "Combustível");
-        aliases.put("gasolina", "Combustível");
-        aliases.put("shell", "Combustível");
-        aliases.put("posto", "Combustível");
-        aliases.put("etanol", "Combustível");
-        aliases.put("diesel", "Combustível");
+        aliases.put("padaria", "Alimentação");
+        aliases.put("hamburguer", "Alimentação");
+        aliases.put("hamburgueria", "Alimentação");
+        aliases.put("sushi", "Alimentação");
+        aliases.put("japones", "Alimentação");
+        aliases.put("acai", "Alimentação");
+        aliases.put("cafe", "Alimentação");
+        aliases.put("bebida", "Alimentação");
+
+        aliases.put("combustivel", "Transporte");
+        aliases.put("gasolina", "Transporte");
+        aliases.put("shell", "Transporte");
+        aliases.put("posto", "Transporte");
+        aliases.put("etanol", "Transporte");
+        aliases.put("diesel", "Transporte");
         aliases.put("transporte", "Transporte");
         aliases.put("uber", "Transporte");
-        aliases.put("99", "Transporte");
+        aliases.put("99 app", "Transporte");
+        aliases.put("99app", "Transporte");
+        aliases.put("99 pop", "Transporte");
+        aliases.put("99pop", "Transporte");
         aliases.put("taxi", "Transporte");
         aliases.put("onibus", "Transporte");
         aliases.put("metro", "Transporte");
+
         aliases.put("farmacia", "Saúde");
         aliases.put("saude", "Saúde");
         aliases.put("remedio", "Saúde");
         aliases.put("medico", "Saúde");
         aliases.put("consulta", "Saúde");
+        aliases.put("academia", "Saúde");
+        aliases.put("dentista", "Saúde");
+        aliases.put("hospital", "Saúde");
+        aliases.put("exame", "Saúde");
+
         aliases.put("moradia", "Moradia");
         aliases.put("aluguel", "Moradia");
         aliases.put("condominio", "Moradia");
+        aliases.put("internet", "Moradia");
+        aliases.put("luz", "Moradia");
+        aliases.put("agua", "Moradia");
+        aliases.put("energia", "Moradia");
+        aliases.put("iptu", "Moradia");
+
+        aliases.put("netflix", "Lazer");
+        aliases.put("spotify", "Lazer");
+        aliases.put("cinema", "Lazer");
+        aliases.put("game", "Lazer");
+        aliases.put("games", "Lazer");
+        aliases.put("videogame", "Lazer");
+        aliases.put("playstation", "Lazer");
+        aliases.put("xbox", "Lazer");
+        aliases.put("nintendo", "Lazer");
+        aliases.put("steam", "Lazer");
+
         aliases.put("salario", "Salário");
+
         aliases.put("freela", "Freelance");
         aliases.put("freelance", "Freelance");
+
         aliases.put("outros", "Outros");
+        aliases.put("presente", "Outros");
+        aliases.put("roupa", "Outros");
+        aliases.put("tenis", "Outros");
+        aliases.put("celular", "Outros");
+        aliases.put("iphone", "Outros");
         return aliases;
     }
 
