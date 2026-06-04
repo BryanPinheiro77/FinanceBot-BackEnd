@@ -16,9 +16,11 @@ import com.financebot.telegrambot.service.TelegramPendingQueryService;
 import com.financebot.telegrambot.service.TelegramQueryContextService;
 import com.financebot.telegrambot.support.TelegramBotErrorMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientResponseException;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class TelegramFinancialQueryHandler {
@@ -34,18 +36,26 @@ public class TelegramFinancialQueryHandler {
         try {
             String resultMessage = switch (parsedMessage.intentType()) {
                 case QUERY_MONTH_EXPENSE_TOTAL -> {
-                    MonthlyAmountSummaryResponse response = financeBotApiClient.getCurrentMonthExpenseSummary(telegramId);
+                    MonthlyAmountSummaryResponse response =
+                            financeBotApiClient.getCurrentMonthExpenseSummary(telegramId);
+
                     yield telegramMessageFormatter.formatMonthExpenseSummary(response.totalAmount());
                 }
+
                 case QUERY_MONTH_INCOME_TOTAL -> {
-                    MonthlyAmountSummaryResponse response = financeBotApiClient.getCurrentMonthIncomeSummary(telegramId);
+                    MonthlyAmountSummaryResponse response =
+                            financeBotApiClient.getCurrentMonthIncomeSummary(telegramId);
+
                     yield telegramMessageFormatter.formatMonthIncomeSummary(response.totalAmount());
                 }
+
                 case QUERY_MONTH_ANALYSIS -> telegramBasicCommandHandler.handleAnalysis(telegramId);
 
                 case QUERY_TRANSACTION_TOTAL -> {
-                    String type = parsedMessage.originalMessage().toLowerCase().contains("recebi")
-                            || parsedMessage.originalMessage().toLowerCase().contains("entrou")
+                    String originalMessage = parsedMessage.originalMessage().toLowerCase();
+
+                    String type = originalMessage.contains("recebi")
+                            || originalMessage.contains("entrou")
                             ? "INCOME"
                             : "EXPENSE";
 
@@ -63,9 +73,11 @@ public class TelegramFinancialQueryHandler {
                     String label = "EXPENSE".equals(type) ? "gasto" : "recebido";
 
                     StringBuilder complemento = new StringBuilder();
+
                     if (response.categoryName() != null) {
                         complemento.append(" em ").append(response.categoryName());
                     }
+
                     if (response.accountName() != null) {
                         complemento.append(" na conta ").append(response.accountName());
                     }
@@ -113,7 +125,8 @@ public class TelegramFinancialQueryHandler {
                 }
 
                 case QUERY_ACTIVE_INSTALLMENTS -> {
-                    TelegramActiveInstallmentsResponse response = financeBotApiClient.getActiveInstallments(telegramId);
+                    TelegramActiveInstallmentsResponse response =
+                            financeBotApiClient.getActiveInstallments(telegramId);
 
                     yield telegramMessageFormatter.formatActiveInstallmentsMessage(
                             response.activeInstallmentGroupCount()
@@ -127,12 +140,36 @@ public class TelegramFinancialQueryHandler {
                 default -> "Não consegui interpretar sua consulta.";
             };
 
-            telegramQueryContextService.saveQueryContext(telegramId, parsedMessage);
+            saveQueryContextWithoutBlockingResponse(telegramId, parsedMessage);
+
             return resultMessage;
         } catch (RestClientResponseException e) {
             return telegramBotErrorMapper.mapDefaultBotErrors(e);
         } catch (Exception e) {
+            log.error(
+                    "Erro ao processar consulta financeira. intentType={}, telegramId={}, categoryName={}, accountName={}, startDate={}, endDate={}",
+                    parsedMessage != null ? parsedMessage.intentType() : null,
+                    telegramId,
+                    parsedMessage != null ? parsedMessage.categoryName() : null,
+                    parsedMessage != null ? parsedMessage.accountName() : null,
+                    parsedMessage != null ? parsedMessage.startDate() : null,
+                    parsedMessage != null ? parsedMessage.endDate() : null,
+                    e
+            );
+
             return "Não foi possível consultar essas informações agora.";
+        }
+    }
+
+    private void saveQueryContextWithoutBlockingResponse( Long telegramId, ParsedTelegramMessage parsedMessage) {
+        try {
+            telegramQueryContextService.saveQueryContext(telegramId, parsedMessage);
+        } catch (Exception e) {
+            log.warn(
+                    "Não foi possível salvar contexto da consulta, mas a resposta será enviada normalmente. telegramId={}",
+                    telegramId,
+                    e
+            );
         }
     }
 
