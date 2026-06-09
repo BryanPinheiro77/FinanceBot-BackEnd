@@ -3,7 +3,7 @@ package com.financebot.transaction.application.usecase;
 import com.financebot.account.domain.Account;
 import com.financebot.category.domain.Category;
 import com.financebot.category.domain.CategoryType;
-import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
+import com.financebot.transaction.application.command.CreateExistingInstallmentTransactionCommand;
 import com.financebot.transaction.application.dto.response.InstallmentTransactionResponse;
 import com.financebot.transaction.application.dto.response.TransactionResponse;
 import com.financebot.transaction.application.port.out.SaveTransactionPort;
@@ -43,7 +43,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class CreateInstallmentTransactionUseCaseTest {
+class CreateExistingInstallmentTransactionUseCaseTest {
 
     private static final String INSTALLMENT_GROUP_ID = "installment-group-123";
 
@@ -66,83 +66,58 @@ class CreateInstallmentTransactionUseCaseTest {
     private InstallmentTransactionBuilder installmentTransactionBuilder;
 
     @InjectMocks
-    private CreateInstallmentTransactionUseCase createInstallmentTransactionUseCase;
+    private CreateExistingInstallmentTransactionUseCase createExistingInstallmentTransactionUseCase;
 
     @Test
-    @DisplayName("deve criar parcelamento com sucesso a partir do plano de domínio")
-    void shouldCreateInstallmentSuccessfullyFromDomainPlan() {
+    @DisplayName("deve criar parcelamento existente com sucesso a partir do plano de parcelas restantes")
+    void shouldCreateExistingInstallmentSuccessfullyFromRemainingPlan() {
         User user = buildUser(1L, "bryan@email.com");
         Account account = buildAccount(10L);
         Category category = buildCategory(20L, CategoryType.EXPENSE);
 
-        CreateInstallmentTransactionCommand command = buildInstallmentCommand(user);
+        CreateExistingInstallmentTransactionCommand command = buildExistingInstallmentCommand(user);
 
         TransactionResponse response1 = mock(TransactionResponse.class);
         TransactionResponse response2 = mock(TransactionResponse.class);
         TransactionResponse response3 = mock(TransactionResponse.class);
 
-        mockInstallmentCreationDependencies(user, account, category, command, response1, response2, response3);
+        mockExistingInstallmentCreationDependencies(
+                user,
+                account,
+                category,
+                command,
+                response1,
+                response2,
+                response3
+        );
 
-        InstallmentTransactionResponse result = createInstallmentTransactionUseCase.execute(command);
+        InstallmentTransactionResponse result = createExistingInstallmentTransactionUseCase.execute(command);
 
         List<Transaction> savedTransactions = captureSavedInstallments();
 
-        assertInstallmentAmounts(savedTransactions);
-        assertInstallmentDescriptions(savedTransactions);
-        assertInstallmentDates(savedTransactions);
-        assertInstallmentCommonData(savedTransactions, user, account, category);
-        assertInstallmentMetadata(savedTransactions, result);
-        assertInstallmentResponse(result, response1, response2, response3);
+        assertRemainingInstallmentAmounts(savedTransactions);
+        assertRemainingInstallmentDescriptions(savedTransactions);
+        assertRemainingInstallmentDates(savedTransactions);
+        assertRemainingInstallmentCommonData(savedTransactions, user, account, category);
+        assertRemainingInstallmentMetadata(savedTransactions, result);
+        assertRemainingInstallmentResponse(result, response1, response2, response3);
 
-        verify(installmentPlanFactory).create(
+        verify(installmentPlanFactory).createRemaining(
                 command.totalAmount(),
                 command.description(),
-                command.firstInstallmentDate(),
+                command.firstRemainingInstallmentDate(),
                 command.type(),
-                command.totalInstallments()
+                command.totalInstallments(),
+                command.firstRemainingInstallmentNumber()
         );
         verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
     }
 
     @Test
-    @DisplayName("deve lançar erro quando plano de parcelamento rejeitar receita")
-    void shouldThrowWhenInstallmentPlanRejectsIncomeTransaction() {
+    @DisplayName("deve lançar erro quando plano restante rejeitar primeira parcela inválida")
+    void shouldThrowWhenRemainingPlanRejectsInvalidFirstRemainingInstallment() {
         User user = buildUser(1L, "bryan@email.com");
-
-        CreateInstallmentTransactionCommand command = new CreateInstallmentTransactionCommand(
-                new BigDecimal("1000.00"),
-                "Salário parcelado",
-                LocalDate.of(2026, 4, 10),
-                TransactionType.INCOME,
-                SourceType.WEB,
-                10L,
-                20L,
-                3,
-                user
-        );
-
-        when(installmentPlanFactory.create(
-                command.totalAmount(),
-                command.description(),
-                command.firstInstallmentDate(),
-                command.type(),
-                command.totalInstallments()
-        )).thenThrow(new IllegalArgumentException("Installment transactions are allowed only for expenses"));
-
-        assertThatThrownBy(() -> createInstallmentTransactionUseCase.execute(command))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Installment transactions are allowed only for expenses");
-
-        verifyNoInteractions(userResourceResolver, transactionCategoryValidator, transactionMapper);
-        verify(saveTransactionPort, never()).saveAll(anyList());
-    }
-
-    @Test
-    @DisplayName("deve lançar erro quando plano de parcelamento rejeitar total menor que dois")
-    void shouldThrowWhenInstallmentPlanRejectsTotalInstallmentsLessThanTwo() {
-        User user = buildUser(1L, "bryan@email.com");
-
-        CreateInstallmentTransactionCommand command = new CreateInstallmentTransactionCommand(
+        CreateExistingInstallmentTransactionCommand command = new CreateExistingInstallmentTransactionCommand(
                 new BigDecimal("1000.00"),
                 "Notebook",
                 LocalDate.of(2026, 4, 10),
@@ -150,45 +125,49 @@ class CreateInstallmentTransactionUseCaseTest {
                 SourceType.WEB,
                 10L,
                 20L,
-                1,
+                3,
+                4,
                 user
         );
 
-        when(installmentPlanFactory.create(
+        when(installmentPlanFactory.createRemaining(
                 command.totalAmount(),
                 command.description(),
-                command.firstInstallmentDate(),
+                command.firstRemainingInstallmentDate(),
                 command.type(),
-                command.totalInstallments()
-        )).thenThrow(new IllegalArgumentException("Total installments must be at least 2"));
+                command.totalInstallments(),
+                command.firstRemainingInstallmentNumber()
+        )).thenThrow(new IllegalArgumentException(
+                "First remaining installment number cannot be greater than total installments"
+        ));
 
-        assertThatThrownBy(() -> createInstallmentTransactionUseCase.execute(command))
+        assertThatThrownBy(() -> createExistingInstallmentTransactionUseCase.execute(command))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Total installments must be at least 2");
+                .hasMessage("First remaining installment number cannot be greater than total installments");
 
         verifyNoInteractions(userResourceResolver, transactionCategoryValidator, transactionMapper);
         verify(saveTransactionPort, never()).saveAll(anyList());
     }
 
     @Test
-    @DisplayName("deve lançar erro quando conta não pertencer ao usuário no parcelamento")
-    void shouldThrowWhenAccountIsNotFoundForUserOnCreateInstallment() {
+    @DisplayName("deve lançar erro quando conta não pertencer ao usuário no parcelamento existente")
+    void shouldThrowWhenAccountIsNotFoundForUserOnCreateExistingInstallment() {
         User user = buildUser(1L, "bryan@email.com");
+        CreateExistingInstallmentTransactionCommand command = buildExistingInstallmentCommand(user);
+        InstallmentPlan plan = buildRemainingInstallmentPlan();
 
-        CreateInstallmentTransactionCommand command = buildInstallmentCommand(user);
-        InstallmentPlan plan = buildInstallmentPlan();
-
-        when(installmentPlanFactory.create(
+        when(installmentPlanFactory.createRemaining(
                 command.totalAmount(),
                 command.description(),
-                command.firstInstallmentDate(),
+                command.firstRemainingInstallmentDate(),
                 command.type(),
-                command.totalInstallments()
+                command.totalInstallments(),
+                command.firstRemainingInstallmentNumber()
         )).thenReturn(plan);
         when(userResourceResolver.resolveAccount(10L, 1L))
                 .thenThrow(new EntityNotFoundException("Account not found"));
 
-        assertThatThrownBy(() -> createInstallmentTransactionUseCase.execute(command))
+        assertThatThrownBy(() -> createExistingInstallmentTransactionUseCase.execute(command))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Account not found");
 
@@ -198,26 +177,26 @@ class CreateInstallmentTransactionUseCaseTest {
     }
 
     @Test
-    @DisplayName("deve lançar erro quando categoria não pertencer ao usuário no parcelamento")
-    void shouldThrowWhenCategoryIsNotFoundForUserOnCreateInstallment() {
+    @DisplayName("deve lançar erro quando categoria não pertencer ao usuário no parcelamento existente")
+    void shouldThrowWhenCategoryIsNotFoundForUserOnCreateExistingInstallment() {
         User user = buildUser(1L, "bryan@email.com");
         Account account = buildAccount(10L);
+        CreateExistingInstallmentTransactionCommand command = buildExistingInstallmentCommand(user);
+        InstallmentPlan plan = buildRemainingInstallmentPlan();
 
-        CreateInstallmentTransactionCommand command = buildInstallmentCommand(user);
-        InstallmentPlan plan = buildInstallmentPlan();
-
-        when(installmentPlanFactory.create(
+        when(installmentPlanFactory.createRemaining(
                 command.totalAmount(),
                 command.description(),
-                command.firstInstallmentDate(),
+                command.firstRemainingInstallmentDate(),
                 command.type(),
-                command.totalInstallments()
+                command.totalInstallments(),
+                command.firstRemainingInstallmentNumber()
         )).thenReturn(plan);
         when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
         when(userResourceResolver.resolveCategory(20L, 1L))
                 .thenThrow(new EntityNotFoundException("Category not found"));
 
-        assertThatThrownBy(() -> createInstallmentTransactionUseCase.execute(command))
+        assertThatThrownBy(() -> createExistingInstallmentTransactionUseCase.execute(command))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Category not found");
 
@@ -226,21 +205,21 @@ class CreateInstallmentTransactionUseCaseTest {
     }
 
     @Test
-    @DisplayName("deve lançar erro quando categoria não combinar com o tipo no parcelamento")
-    void shouldThrowWhenCategoryTypeDoesNotMatchTransactionTypeOnCreateInstallment() {
+    @DisplayName("deve lançar erro quando categoria não combinar com tipo no parcelamento existente")
+    void shouldThrowWhenCategoryTypeDoesNotMatchTransactionTypeOnCreateExistingInstallment() {
         User user = buildUser(1L, "bryan@email.com");
         Account account = buildAccount(10L);
         Category category = buildCategory(20L, CategoryType.INCOME);
+        CreateExistingInstallmentTransactionCommand command = buildExistingInstallmentCommand(user);
+        InstallmentPlan plan = buildRemainingInstallmentPlan();
 
-        CreateInstallmentTransactionCommand command = buildInstallmentCommand(user);
-        InstallmentPlan plan = buildInstallmentPlan();
-
-        when(installmentPlanFactory.create(
+        when(installmentPlanFactory.createRemaining(
                 command.totalAmount(),
                 command.description(),
-                command.firstInstallmentDate(),
+                command.firstRemainingInstallmentDate(),
                 command.type(),
-                command.totalInstallments()
+                command.totalInstallments(),
+                command.firstRemainingInstallmentNumber()
         )).thenReturn(plan);
         when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
         when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
@@ -249,7 +228,7 @@ class CreateInstallmentTransactionUseCaseTest {
                 .when(transactionCategoryValidator)
                 .validate(category, TransactionType.EXPENSE);
 
-        assertThatThrownBy(() -> createInstallmentTransactionUseCase.execute(command))
+        assertThatThrownBy(() -> createExistingInstallmentTransactionUseCase.execute(command))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Category type does not match transaction type");
 
@@ -257,37 +236,39 @@ class CreateInstallmentTransactionUseCaseTest {
         verify(saveTransactionPort, never()).saveAll(anyList());
     }
 
-    private CreateInstallmentTransactionCommand buildInstallmentCommand(User user) {
-        return new CreateInstallmentTransactionCommand(
-                new BigDecimal("1000.00"),
-                "Notebook",
-                LocalDate.of(2026, 4, 10),
+    private CreateExistingInstallmentTransactionCommand buildExistingInstallmentCommand(User user) {
+        return new CreateExistingInstallmentTransactionCommand(
+                new BigDecimal("6000.00"),
+                "iPhone",
+                LocalDate.of(2026, 6, 15),
                 TransactionType.EXPENSE,
                 SourceType.WEB,
                 10L,
                 20L,
-                3,
+                10,
+                6,
                 user
         );
     }
 
-    private void mockInstallmentCreationDependencies(
+    private void mockExistingInstallmentCreationDependencies(
             User user,
             Account account,
             Category category,
-            CreateInstallmentTransactionCommand command,
+            CreateExistingInstallmentTransactionCommand command,
             TransactionResponse response1,
             TransactionResponse response2,
             TransactionResponse response3
     ) {
-        InstallmentPlan plan = buildInstallmentPlan();
+        InstallmentPlan plan = buildRemainingInstallmentPlan();
 
-        when(installmentPlanFactory.create(
+        when(installmentPlanFactory.createRemaining(
                 command.totalAmount(),
                 command.description(),
-                command.firstInstallmentDate(),
+                command.firstRemainingInstallmentDate(),
                 command.type(),
-                command.totalInstallments()
+                command.totalInstallments(),
+                command.firstRemainingInstallmentNumber()
         )).thenReturn(plan);
 
         when(userResourceResolver.resolveAccount(command.accountId(), user.getId())).thenReturn(account);
@@ -299,37 +280,37 @@ class CreateInstallmentTransactionUseCaseTest {
                 .thenReturn(response1, response2, response3);
     }
 
-    private InstallmentPlan buildInstallmentPlan() {
+    private InstallmentPlan buildRemainingInstallmentPlan() {
         List<InstallmentPlanItem> items = List.of(
                 new InstallmentPlanItem(
-                        new BigDecimal("333.33"),
-                        "Notebook - 1/3",
-                        LocalDate.of(2026, 4, 10),
-                        1,
-                        3,
+                        new BigDecimal("600.00"),
+                        "iPhone - 6/10",
+                        LocalDate.of(2026, 6, 15),
+                        6,
+                        10,
                         INSTALLMENT_GROUP_ID
                 ),
                 new InstallmentPlanItem(
-                        new BigDecimal("333.33"),
-                        "Notebook - 2/3",
-                        LocalDate.of(2026, 5, 10),
-                        2,
-                        3,
+                        new BigDecimal("600.00"),
+                        "iPhone - 7/10",
+                        LocalDate.of(2026, 7, 15),
+                        7,
+                        10,
                         INSTALLMENT_GROUP_ID
                 ),
                 new InstallmentPlanItem(
-                        new BigDecimal("333.34"),
-                        "Notebook - 3/3",
-                        LocalDate.of(2026, 6, 10),
-                        3,
-                        3,
+                        new BigDecimal("600.00"),
+                        "iPhone - 8/10",
+                        LocalDate.of(2026, 8, 15),
+                        8,
+                        10,
                         INSTALLMENT_GROUP_ID
                 )
         );
 
         return new InstallmentPlan(
                 INSTALLMENT_GROUP_ID,
-                3,
+                10,
                 items
         );
     }
@@ -342,26 +323,26 @@ class CreateInstallmentTransactionUseCaseTest {
         return captor.getValue();
     }
 
-    private void assertInstallmentAmounts(List<Transaction> savedTransactions) {
+    private void assertRemainingInstallmentAmounts(List<Transaction> savedTransactions) {
         assertThat(savedTransactions).hasSize(3);
-        assertThat(savedTransactions.get(0).getAmount()).isEqualByComparingTo("333.33");
-        assertThat(savedTransactions.get(1).getAmount()).isEqualByComparingTo("333.33");
-        assertThat(savedTransactions.get(2).getAmount()).isEqualByComparingTo("333.34");
+        assertThat(savedTransactions.get(0).getAmount()).isEqualByComparingTo("600.00");
+        assertThat(savedTransactions.get(1).getAmount()).isEqualByComparingTo("600.00");
+        assertThat(savedTransactions.get(2).getAmount()).isEqualByComparingTo("600.00");
     }
 
-    private void assertInstallmentDescriptions(List<Transaction> savedTransactions) {
-        assertThat(savedTransactions.get(0).getDescription()).isEqualTo("Notebook - 1/3");
-        assertThat(savedTransactions.get(1).getDescription()).isEqualTo("Notebook - 2/3");
-        assertThat(savedTransactions.get(2).getDescription()).isEqualTo("Notebook - 3/3");
+    private void assertRemainingInstallmentDescriptions(List<Transaction> savedTransactions) {
+        assertThat(savedTransactions.get(0).getDescription()).isEqualTo("iPhone - 6/10");
+        assertThat(savedTransactions.get(1).getDescription()).isEqualTo("iPhone - 7/10");
+        assertThat(savedTransactions.get(2).getDescription()).isEqualTo("iPhone - 8/10");
     }
 
-    private void assertInstallmentDates(List<Transaction> savedTransactions) {
-        assertThat(savedTransactions.get(0).getDate()).isEqualTo(LocalDate.of(2026, 4, 10));
-        assertThat(savedTransactions.get(1).getDate()).isEqualTo(LocalDate.of(2026, 5, 10));
-        assertThat(savedTransactions.get(2).getDate()).isEqualTo(LocalDate.of(2026, 6, 10));
+    private void assertRemainingInstallmentDates(List<Transaction> savedTransactions) {
+        assertThat(savedTransactions.get(0).getDate()).isEqualTo(LocalDate.of(2026, 6, 15));
+        assertThat(savedTransactions.get(1).getDate()).isEqualTo(LocalDate.of(2026, 7, 15));
+        assertThat(savedTransactions.get(2).getDate()).isEqualTo(LocalDate.of(2026, 8, 15));
     }
 
-    private void assertInstallmentCommonData(
+    private void assertRemainingInstallmentCommonData(
             List<Transaction> savedTransactions,
             User user,
             Account account,
@@ -376,7 +357,7 @@ class CreateInstallmentTransactionUseCaseTest {
         assertThat(first.getCategory()).isEqualTo(category);
     }
 
-    private void assertInstallmentMetadata(
+    private void assertRemainingInstallmentMetadata(
             List<Transaction> savedTransactions,
             InstallmentTransactionResponse result
     ) {
@@ -388,13 +369,13 @@ class CreateInstallmentTransactionUseCaseTest {
         assertThat(second.getInstallment()).isTrue();
         assertThat(third.getInstallment()).isTrue();
 
-        assertThat(first.getInstallmentNumber()).isEqualTo(1);
-        assertThat(second.getInstallmentNumber()).isEqualTo(2);
-        assertThat(third.getInstallmentNumber()).isEqualTo(3);
+        assertThat(first.getInstallmentNumber()).isEqualTo(6);
+        assertThat(second.getInstallmentNumber()).isEqualTo(7);
+        assertThat(third.getInstallmentNumber()).isEqualTo(8);
 
-        assertThat(first.getTotalInstallments()).isEqualTo(3);
-        assertThat(second.getTotalInstallments()).isEqualTo(3);
-        assertThat(third.getTotalInstallments()).isEqualTo(3);
+        assertThat(first.getTotalInstallments()).isEqualTo(10);
+        assertThat(second.getTotalInstallments()).isEqualTo(10);
+        assertThat(third.getTotalInstallments()).isEqualTo(10);
 
         assertThat(first.getInstallmentGroupId()).isEqualTo(INSTALLMENT_GROUP_ID);
         assertThat(second.getInstallmentGroupId()).isEqualTo(INSTALLMENT_GROUP_ID);
@@ -403,14 +384,14 @@ class CreateInstallmentTransactionUseCaseTest {
         assertThat(result.installmentGroupId()).isEqualTo(INSTALLMENT_GROUP_ID);
     }
 
-    private void assertInstallmentResponse(
+    private void assertRemainingInstallmentResponse(
             InstallmentTransactionResponse result,
             TransactionResponse response1,
             TransactionResponse response2,
             TransactionResponse response3
     ) {
         assertThat(result.installmentGroupId()).isEqualTo(INSTALLMENT_GROUP_ID);
-        assertThat(result.totalInstallments()).isEqualTo(3);
+        assertThat(result.totalInstallments()).isEqualTo(10);
         assertThat(result.transactions()).containsExactly(response1, response2, response3);
     }
 

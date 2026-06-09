@@ -2,7 +2,7 @@ package com.financebot.transaction.application.usecase;
 
 import com.financebot.account.domain.Account;
 import com.financebot.category.domain.Category;
-import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
+import com.financebot.transaction.application.command.CreateExistingInstallmentTransactionCommand;
 import com.financebot.transaction.application.dto.response.InstallmentTransactionResponse;
 import com.financebot.transaction.application.dto.response.TransactionResponse;
 import com.financebot.transaction.application.port.out.SaveTransactionPort;
@@ -20,7 +20,7 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class CreateInstallmentTransactionUseCase {
+public class CreateExistingInstallmentTransactionUseCase {
 
     private final SaveTransactionPort saveTransactionPort;
     private final UserResourceResolver userResourceResolver;
@@ -30,13 +30,14 @@ public class CreateInstallmentTransactionUseCase {
     private final InstallmentTransactionBuilder installmentTransactionBuilder;
 
     @Transactional
-    public InstallmentTransactionResponse execute(CreateInstallmentTransactionCommand command) {
-        InstallmentPlan plan = installmentPlanFactory.create(
+    public InstallmentTransactionResponse execute(CreateExistingInstallmentTransactionCommand command) {
+        InstallmentPlan plan = installmentPlanFactory.createRemaining(
                 command.totalAmount(),
                 command.description(),
-                command.firstInstallmentDate(),
+                command.firstRemainingInstallmentDate(),
                 command.type(),
-                command.totalInstallments()
+                command.totalInstallments(),
+                command.firstRemainingInstallmentNumber()
         );
 
         Account account = userResourceResolver.resolveAccount(command.accountId(), command.user().getId());
