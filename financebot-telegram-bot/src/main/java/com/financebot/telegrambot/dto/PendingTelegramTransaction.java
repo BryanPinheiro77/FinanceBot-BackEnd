@@ -21,4 +21,8 @@ public record PendingTelegramTransaction(
         return intentType == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE
                 || intentType == TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE;
     }
+
+    public boolean isExistingInstallment() {
+        return intentType == TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE;
+    }
 }

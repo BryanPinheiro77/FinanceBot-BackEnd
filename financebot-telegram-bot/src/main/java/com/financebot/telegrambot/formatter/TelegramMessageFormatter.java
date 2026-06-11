@@ -165,6 +165,52 @@ public class TelegramMessageFormatter {
         );
     }
 
+    public String formatExistingInstallmentTransactionPreview(
+            PendingTelegramTransaction pendingTransaction,
+            String accountName
+    ) {
+        String category = pendingTransaction.categoryName() != null
+                ? pendingTransaction.categoryName()
+                : "Automática";
+        Integer firstRemainingInstallmentNumber = pendingTransaction.firstRemainingInstallmentNumber();
+        Integer paidInstallments = firstRemainingInstallmentNumber != null
+                ? firstRemainingInstallmentNumber - 1
+                : null;
+        String nextInstallment = firstRemainingInstallmentNumber != null && pendingTransaction.totalInstallments() != null
+                ? firstRemainingInstallmentNumber + "/" + pendingTransaction.totalInstallments()
+                : "Não informada";
+
+        return """
+                💳 <b>Entendi este parcelamento em andamento:</b>
+                
+                <b>Valor total:</b> %s
+                <b>Descrição:</b> %s
+                <b>Parcelas:</b> %s
+                <b>Parcelas pagas:</b> %s
+                <b>Próxima parcela:</b> %s
+                <b>Vencimento da próxima parcela:</b> %s
+                <b>Conta:</b> %s
+                <b>Categoria:</b> %s
+                
+                Deseja confirmar e salvar?
+                """.formatted(
+                formatCurrency(pendingTransaction.amount()),
+                pendingTransaction.description() != null
+                        ? escapeHtml(pendingTransaction.description())
+                        : "Não informada",
+                pendingTransaction.totalInstallments() != null
+                        ? pendingTransaction.totalInstallments() + "x"
+                        : "Não informada",
+                paidInstallments != null
+                        ? paidInstallments
+                        : "Não informada",
+                nextInstallment,
+                formatDate(pendingTransaction.date()),
+                escapeHtml(accountName),
+                escapeHtml(category)
+        );
+    }
+
     public String formatUpdatedPendingMessage(
             PendingTelegramTransaction pendingTransaction,
             String accountName
