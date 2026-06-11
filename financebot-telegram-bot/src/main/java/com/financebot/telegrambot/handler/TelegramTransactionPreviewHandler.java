@@ -135,6 +135,7 @@ public class TelegramTransactionPreviewHandler {
                 pendingTransaction.categoryName(),
                 resolvedAccountName,
                 pendingTransaction.totalInstallments(),
+                pendingTransaction.firstRemainingInstallmentNumber(),
                 pendingTransaction.originalMessage()
         );
     }

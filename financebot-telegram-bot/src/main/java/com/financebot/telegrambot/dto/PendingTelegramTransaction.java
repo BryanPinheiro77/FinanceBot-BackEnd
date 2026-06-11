@@ -13,10 +13,12 @@ public record PendingTelegramTransaction(
         String categoryName,
         String accountName,
         Integer totalInstallments,
+        Integer firstRemainingInstallmentNumber,
         String originalMessage
 ) {
 
     public boolean isInstallment() {
-        return intentType == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE;
+        return intentType == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE
+                || intentType == TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE;
     }
 }

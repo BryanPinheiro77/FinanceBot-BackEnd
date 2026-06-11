@@ -86,6 +86,7 @@ public class TelegramConversationContinuationService {
                 parsedMessage.startDate(),
                 parsedMessage.endDate(),
                 parsedMessage.totalInstallments(),
+                parsedMessage.firstRemainingInstallmentNumber(),
                 parsedMessage.installmentQueryTarget(),
                 parsedMessage.totalAmount()
         );

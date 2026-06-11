@@ -91,6 +91,7 @@
                         dateRange.endDate(),
                         null,
                         null,
+                        null,
                         null
                 );
             }
@@ -110,6 +111,7 @@
                         dateRange.endDate(),
                         null,
                         null,
+                        null,
                         null
                 );
             }
@@ -121,6 +123,7 @@
                         null,
                         LocalDate.now(),
                         messageText,
+                        null,
                         null,
                         null,
                         null,
@@ -143,6 +146,7 @@
                         null,
                         null,
                         null,
+                        null,
                         extractInstallmentQueryTarget(normalized),
                         null
                 );
@@ -155,6 +159,7 @@
                         null,
                         LocalDate.now(),
                         messageText,
+                        null,
                         null,
                         null,
                         null,
@@ -182,6 +187,7 @@
                             null,
                             totalInstallments,
                             null,
+                            null,
                             totalAmount
                     );
                 }
@@ -202,6 +208,7 @@
                         dateRange.endDate(),
                         null,
                         null,
+                        null,
                         null
                 );
             }
@@ -219,6 +226,7 @@
                         null,
                         extractInstallmentCount(normalized),
                         null,
+                        null,
                         null
                 );
             }
@@ -232,6 +240,7 @@
                         messageText,
                         extractCategoryName(normalized),
                         extractAccountName(normalized),
+                        null,
                         null,
                         null,
                         null,
@@ -253,6 +262,7 @@
                         null,
                         null,
                         null,
+                        null,
                         null
                 );
             }
@@ -267,6 +277,7 @@
                     null,
                     null,
                     messageText,
+                    null,
                     null,
                     null,
                     null,

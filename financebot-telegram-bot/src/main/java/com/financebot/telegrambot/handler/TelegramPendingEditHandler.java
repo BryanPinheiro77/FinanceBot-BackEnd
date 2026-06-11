@@ -39,6 +39,7 @@ public class TelegramPendingEditHandler {
                 editResult.categoryName() != null ? editResult.categoryName() : pending.categoryName(),
                 editResult.accountName() != null ? editResult.accountName() : pending.accountName(),
                 pending.totalInstallments(),
+                pending.firstRemainingInstallmentNumber(),
                 pending.originalMessage()
         );
 

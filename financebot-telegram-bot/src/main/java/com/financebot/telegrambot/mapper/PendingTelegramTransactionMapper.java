@@ -18,6 +18,7 @@ public class PendingTelegramTransactionMapper {
                 parsedMessage.categoryName(),
                 parsedMessage.accountName(),
                 parsedMessage.totalInstallments(),
+                parsedMessage.firstRemainingInstallmentNumber(),
                 parsedMessage.originalMessage()
         );
     }
