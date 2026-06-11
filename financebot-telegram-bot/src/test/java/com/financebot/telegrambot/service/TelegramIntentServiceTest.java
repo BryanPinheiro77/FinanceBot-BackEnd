@@ -99,6 +99,47 @@ class TelegramIntentServiceTest {
     }
 
     @Test
+    @DisplayName("deve interpretar parcelamento existente com parcelas ja pagas")
+    void shouldParseExistingInstallmentWithPaidInstallments() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "comprei um iPhone de 6000 em 10x e já paguei 5 parcelas"
+        );
+
+        assertThat(parsed.intentType()).isEqualTo(TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE);
+        assertThat(parsed.amount()).isEqualByComparingTo(new BigDecimal("6000"));
+        assertThat(parsed.description()).isEqualTo("iphone");
+        assertThat(parsed.totalInstallments()).isEqualTo(10);
+        assertThat(parsed.firstRemainingInstallmentNumber()).isEqualTo(6);
+    }
+
+    @Test
+    @DisplayName("deve interpretar parcelamento existente com parcela atual por extenso")
+    void shouldParseExistingInstallmentWithCurrentInstallmentInWords() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "comprei um iPhone de 6000 em 10x e estou pagando a sexta parcela"
+        );
+
+        assertThat(parsed.intentType()).isEqualTo(TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE);
+        assertThat(parsed.amount()).isEqualByComparingTo(new BigDecimal("6000"));
+        assertThat(parsed.totalInstallments()).isEqualTo(10);
+        assertThat(parsed.firstRemainingInstallmentNumber()).isEqualTo(6);
+    }
+
+    @Test
+    @DisplayName("deve interpretar parcelamento existente com parcela atual numerica")
+    void shouldParseExistingInstallmentWithCurrentInstallmentNumber() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "tenho um financiamento de 3000 em 10x e estou na 6ª parcela"
+        );
+
+        assertThat(parsed.intentType()).isEqualTo(TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE);
+        assertThat(parsed.amount()).isEqualByComparingTo(new BigDecimal("3000"));
+        assertThat(parsed.description()).isEqualTo("Despesa parcelada");
+        assertThat(parsed.totalInstallments()).isEqualTo(10);
+        assertThat(parsed.firstRemainingInstallmentNumber()).isEqualTo(6);
+    }
+
+    @Test
     @DisplayName("nao deve interpretar pergunta ambigua fora do escopo")
     void shouldNotParseOutOfScopeAmbiguousInstallmentQuestion() {
         ParsedTelegramMessage parsed = telegramIntentService.parse(

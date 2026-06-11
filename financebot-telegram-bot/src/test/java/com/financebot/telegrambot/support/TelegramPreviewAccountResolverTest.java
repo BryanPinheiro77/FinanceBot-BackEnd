@@ -91,6 +91,7 @@ class TelegramPreviewAccountResolverTest {
                 "Mercado",
                 accountName,
                 null,
+                null,
                 "gastei 50 no mercado"
         );
     }

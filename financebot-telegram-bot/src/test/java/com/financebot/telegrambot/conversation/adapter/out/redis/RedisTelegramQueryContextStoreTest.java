@@ -164,6 +164,7 @@ class RedisTelegramQueryContextStoreTest {
                 LocalDate.of(2026, 6, 30),
                 null,
                 null,
+                null,
                 null
         );
     }

@@ -101,6 +101,7 @@ class TelegramPendingQueryHandlerTest {
                 null,
                 null,
                 null,
+                null,
                 target,
                 null
         );

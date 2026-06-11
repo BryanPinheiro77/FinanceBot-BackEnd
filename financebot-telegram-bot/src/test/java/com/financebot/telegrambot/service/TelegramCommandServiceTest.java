@@ -165,6 +165,7 @@ class TelegramCommandServiceTest {
                 null,
                 12,
                 null,
+                null,
                 new BigDecimal("2400")
         );
 
@@ -219,6 +220,7 @@ class TelegramCommandServiceTest {
                 null,
                 12,
                 null,
+                null,
                 new BigDecimal("2400")
         );
 
@@ -255,6 +257,7 @@ class TelegramCommandServiceTest {
                 "gastei 50 no mercado pelo nubank",
                 "Mercado",
                 "Nubank",
+                null,
                 null,
                 null,
                 null,
@@ -304,6 +307,7 @@ class TelegramCommandServiceTest {
                 "Mercado",
                 "Nubank",
                 null,
+                null,
                 "gastei 50 no mercado pelo nubank"
         );
 
@@ -350,6 +354,7 @@ class TelegramCommandServiceTest {
                 null,
                 12,
                 null,
+                null,
                 null
         );
 
@@ -392,6 +397,7 @@ class TelegramCommandServiceTest {
                 "Eletrônicos",
                 "Nubank",
                 12,
+                null,
                 "comprei notebook de 1200 em 12x no nubank"
         );
 
@@ -433,6 +439,7 @@ class TelegramCommandServiceTest {
                 LocalDate.of(2026, 6, 1),
                 "paguei 80 de gasolina",
                 "Combustível",
+                null,
                 null,
                 null,
                 null,

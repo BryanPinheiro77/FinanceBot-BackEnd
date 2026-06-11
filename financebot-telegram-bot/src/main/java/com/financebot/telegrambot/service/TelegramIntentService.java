@@ -38,6 +38,23 @@
 
         private static final Pattern INSTALLMENT_PATTERN = Pattern.compile("\\b(?:parcelad[oa]\\s+em\\s+|em\\s+)(\\d{1,3})x\\b");
 
+        private static final String INSTALLMENT_ORDINAL_WORDS =
+                "primeir[ao]|segund[ao]|terceir[ao]|quart[ao]|quint[ao]|sext[ao]|setim[ao]|oitav[ao]|non[ao]|decim[ao]";
+
+        private static final Pattern PAID_INSTALLMENTS_PATTERN = Pattern.compile(
+                "\\b(?:ja\\s+)?paguei\\s+(\\d{1,3})\\s+parcelas?\\b"
+        );
+
+        private static final Pattern CURRENT_INSTALLMENT_NUMBER_PATTERN = Pattern.compile(
+                "\\b(?:estou|to)\\s+(?:pagando|na|no)\\s+(?:a|o)?\\s*(\\d{1,3})(?:a|o|ª|º)?\\s+parcela\\b"
+        );
+
+        private static final Pattern CURRENT_INSTALLMENT_WORD_PATTERN = Pattern.compile(
+                "\\b(?:estou|to)\\s+(?:pagando|na|no)\\s+(?:a|o)?\\s*("
+                        + INSTALLMENT_ORDINAL_WORDS
+                        + ")\\s+parcela\\b"
+        );
+
         private static final Pattern INSTALLMENT_PURCHASE_AMOUNT_PATTERN = Pattern.compile(
                 "\\b(?:de|por|valor(?:\\s+de)?|parcelar)\\s+(\\d+[\\.,]?\\d{0,2})\\b(?!\\s*x\\b)"
         );
@@ -213,6 +230,24 @@
                 );
             }
 
+            if (looksLikeExistingInstallmentExpense(normalized)) {
+                return new ParsedTelegramMessage(
+                        TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE,
+                        extractAmount(normalized),
+                        extractInstallmentDescription(normalized),
+                        extractDate(normalized),
+                        messageText,
+                        extractCategoryName(normalized),
+                        extractAccountName(normalized),
+                        null,
+                        null,
+                        extractInstallmentCount(normalized),
+                        extractFirstRemainingInstallmentNumber(normalized),
+                        null,
+                        null
+                );
+            }
+
             if (looksLikeInstallmentExpense(normalized)) {
                 return new ParsedTelegramMessage(
                         TelegramIntentType.CREATE_INSTALLMENT_EXPENSE,
@@ -338,6 +373,24 @@
                     && installmentCount >= 2;
         }
 
+        private boolean looksLikeExistingInstallmentExpense(String text) {
+            Integer installmentCount = extractInstallmentCount(text);
+            Integer firstRemainingInstallmentNumber = extractFirstRemainingInstallmentNumber(text);
+
+            return looksLikeInstallmentSubject(text)
+                    && installmentCount != null
+                    && installmentCount >= 2
+                    && firstRemainingInstallmentNumber != null
+                    && firstRemainingInstallmentNumber <= installmentCount;
+        }
+
+        private boolean looksLikeInstallmentSubject(String text) {
+            return looksLikeExpense(text)
+                    || text.contains("parcelamento")
+                    || text.contains("financiamento")
+                    || text.contains("tenho");
+        }
+
         private boolean looksLikeIncome(String text) {
             return text.contains("recebi")
                     || text.contains("ganhei")
@@ -399,6 +452,13 @@
                 cleaned = cleaned.replaceAll("\\bcartao\\s+" + Pattern.quote(normalizedAccount) + "\\b", "");
             }
 
+            cleaned = cleaned
+                    .replaceAll("\\b(?:ja\\s+)?paguei\\s+\\d{1,3}\\s+parcelas?\\b", "")
+                    .replaceAll("\\b(?:estou|to)\\s+(?:pagando|na|no)\\s+(?:a|o)?\\s*(?:"
+                            + INSTALLMENT_ORDINAL_WORDS
+                            + "|\\d{1,3}(?:a|o|ª|º)?)\\s+parcela\\b", "")
+                    .replaceAll("\\b(?:tenho|financiamento|parcelamento)\\b", "");
+
             cleaned = TRANSACTION_NOISE_PATTERN.matcher(cleaned).replaceAll("");
             cleaned = DATE_NOISE_PATTERN.matcher(cleaned).replaceAll("");
 
@@ -410,6 +470,7 @@
 
             cleaned = cleaned
                     .replaceAll("\\b(?:da conta|do cartao|na conta|no cartao)\\b.*", "")
+                    .replaceAll("\\b(?:ja|parcelas?|e|um|uma|o|a|os|as)\\b", "")
                     .replaceAll("\\s+", " ")
                     .trim();
 
@@ -445,6 +506,72 @@
             } catch (NumberFormatException e) {
                 return null;
             }
+        }
+
+        private Integer extractFirstRemainingInstallmentNumber(String text) {
+            Integer currentInstallmentNumber = extractCurrentInstallmentNumber(text);
+
+            if (currentInstallmentNumber != null) {
+                return currentInstallmentNumber;
+            }
+
+            Integer paidInstallments = extractPaidInstallments(text);
+
+            if (paidInstallments == null) {
+                return null;
+            }
+
+            return paidInstallments + 1;
+        }
+
+        private Integer extractPaidInstallments(String text) {
+            Matcher matcher = PAID_INSTALLMENTS_PATTERN.matcher(text);
+
+            if (!matcher.find()) {
+                return null;
+            }
+
+            try {
+                return Integer.valueOf(matcher.group(1));
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+
+        private Integer extractCurrentInstallmentNumber(String text) {
+            Matcher numberMatcher = CURRENT_INSTALLMENT_NUMBER_PATTERN.matcher(text);
+
+            if (numberMatcher.find()) {
+                try {
+                    return Integer.valueOf(numberMatcher.group(1));
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            }
+
+            Matcher wordMatcher = CURRENT_INSTALLMENT_WORD_PATTERN.matcher(text);
+
+            if (!wordMatcher.find()) {
+                return null;
+            }
+
+            return parseInstallmentOrdinal(wordMatcher.group(1));
+        }
+
+        private Integer parseInstallmentOrdinal(String value) {
+            return switch (value) {
+                case "primeira", "primeiro" -> 1;
+                case "segunda", "segundo" -> 2;
+                case "terceira", "terceiro" -> 3;
+                case "quarta", "quarto" -> 4;
+                case "quinta", "quinto" -> 5;
+                case "sexta", "sexto" -> 6;
+                case "setima", "setimo" -> 7;
+                case "oitava", "oitavo" -> 8;
+                case "nona", "nono" -> 9;
+                case "decima", "decimo" -> 10;
+                default -> null;
+            };
         }
 
         public String extractInstallmentQueryTarget(String text) {
