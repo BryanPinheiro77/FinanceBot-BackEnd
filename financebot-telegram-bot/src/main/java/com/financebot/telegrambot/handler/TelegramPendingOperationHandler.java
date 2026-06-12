@@ -3,6 +3,7 @@ package com.financebot.telegrambot.handler;
 import com.financebot.telegrambot.client.FinanceBotApiClient;
 import com.financebot.telegrambot.conversation.application.TelegramConversationContextService;
 import com.financebot.telegrambot.dto.PendingTelegramTransaction;
+import com.financebot.telegrambot.dto.request.CreateExistingInstallmentTransactionFromTelegramRequest;
 import com.financebot.telegrambot.dto.request.CreateInstallmentTransactionFromTelegramRequest;
 import com.financebot.telegrambot.dto.request.CreateTransactionFromTelegramRequest;
 import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
@@ -33,7 +34,20 @@ public class TelegramPendingOperationHandler {
         }
 
         try {
-            if (pending.isInstallment()) {
+            if (pending.isExistingInstallment()) {
+                CreateExistingInstallmentTransactionFromTelegramRequest request =
+                        new CreateExistingInstallmentTransactionFromTelegramRequest(
+                                telegramId,
+                                pending.amount(),
+                                pending.description(),
+                                pending.date(),
+                                pending.accountName(),
+                                pending.categoryName(),
+                                pending.totalInstallments(),
+                                pending.firstRemainingInstallmentNumber()
+                        );
+                financeBotApiClient.createExistingInstallmentTransaction(request);
+            } else if (pending.isInstallment()) {
                 CreateInstallmentTransactionFromTelegramRequest request =
                         new CreateInstallmentTransactionFromTelegramRequest(
                                 telegramId,

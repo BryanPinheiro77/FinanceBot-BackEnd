@@ -419,7 +419,8 @@ public class TelegramMessageFormatter {
     }
 
     public String formatTransactionSuccess(TelegramIntentType intentType) {
-        if (intentType == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE) {
+        if (intentType == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE
+                || intentType == TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE) {
             return """
                     ✅ <b>Parcelamento registrado com sucesso!</b>
                     

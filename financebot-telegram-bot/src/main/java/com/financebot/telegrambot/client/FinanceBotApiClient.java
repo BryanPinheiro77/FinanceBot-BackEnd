@@ -34,6 +34,14 @@ public class FinanceBotApiClient {
                 .toBodilessEntity();
     }
 
+    public void createExistingInstallmentTransaction(CreateExistingInstallmentTransactionFromTelegramRequest request) {
+        restClient.post()
+                .uri("/telegram/transactions/installments/existing")
+                .body(request)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
     public TelegramLinkConfirmResponse confirmTelegramLink(TelegramLinkConfirmRequest request) {
         return restClient.post()
                 .uri("/users/telegram/confirm-link")
