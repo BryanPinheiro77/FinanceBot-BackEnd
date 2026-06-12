@@ -63,6 +63,13 @@ public class TelegramIntegrationController {
         telegramIntegrationService.createInstallmentTransactionFromTelegram(request);
     }
 
+    @PostMapping("/transactions/installments/existing")
+    public void createExistingInstallmentTransaction(
+            @RequestBody CreateExistingInstallmentTransactionFromTelegramRequest request
+    ) {
+        telegramIntegrationService.createExistingInstallmentTransactionFromTelegram(request);
+    }
+
     @PostMapping("/transactions/summary")
     public TelegramTransactionSummaryResponse getTransactionSummary(
             @RequestBody TelegramTransactionSummaryRequest request
