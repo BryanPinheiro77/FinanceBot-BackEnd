@@ -10,6 +10,7 @@
 - Adicionado suporte no bot Telegram para interpretar parcelamentos em andamento com parcelas pagas ou parcela atual.
 - Adicionada edição de progresso de parcelamento existente no preview do Telegram antes da confirmação.
 - Adicionado suporte a novos aliases de categorias e contas no vocabulário de linguagem natural do bot Telegram.
+- Adicionado `mc` `mac` para a categoria Alimentação no vocabulário de linguagem natural do bot Telegram.
 - Adicionado suporte a novas expressões de período nas consultas do Telegram, incluindo semana atual e últimos 30 dias.
 - Adicionado suporte a novas variações de perguntas sobre término de parcelamentos.
 
