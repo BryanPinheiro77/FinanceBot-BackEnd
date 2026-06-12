@@ -36,23 +36,23 @@
                         + ")\\b|,|\\?|$))"
         );
 
-        private static final Pattern INSTALLMENT_PATTERN = Pattern.compile("\\b(?:parcelad[oa]\\s+em\\s+|em\\s+)(\\d{1,3})x\\b");
+        private static final Pattern INSTALLMENT_PATTERN = Pattern.compile("\\b(?:parcelad[oa]\\s+em\\s+|em\\s+|de\\s+)(\\d{1,3})x\\b");
 
         private static final String INSTALLMENT_ORDINAL_WORDS =
                 "primeir[ao]|segund[ao]|terceir[ao]|quart[ao]|quint[ao]|sext[ao]|setim[ao]|oitav[ao]|non[ao]|decim[ao]";
 
         private static final Pattern PAID_INSTALLMENTS_PATTERN = Pattern.compile(
-                "\\b(?:ja\\s+)?paguei\\s+(\\d{1,3})\\s+parcelas?\\b"
+                "\\b(?:ja\\s+)?paguei\\s+(\\d{1,3})(?:\\s+parcelas?)?\\b"
         );
 
         private static final Pattern CURRENT_INSTALLMENT_NUMBER_PATTERN = Pattern.compile(
-                "\\b(?:estou|to)\\s+(?:pagando|na|no)\\s+(?:a|o)?\\s*(\\d{1,3})(?:a|o|ª|º)?\\s+parcela\\b"
+                "\\b(?:estou|to)\\s+(?:pagando|na|no)\\s+(?:a|o)?\\s*(\\d{1,3})(?:a|o|ª|º)?(?:\\s+parcela)?\\b"
         );
 
         private static final Pattern CURRENT_INSTALLMENT_WORD_PATTERN = Pattern.compile(
                 "\\b(?:estou|to)\\s+(?:pagando|na|no)\\s+(?:a|o)?\\s*("
                         + INSTALLMENT_ORDINAL_WORDS
-                        + ")\\s+parcela\\b"
+                        + ")(?:\\s+parcela)?\\b"
         );
 
         private static final Pattern INSTALLMENT_PURCHASE_AMOUNT_PATTERN = Pattern.compile(
@@ -233,7 +233,7 @@
             if (looksLikeExistingInstallmentExpense(normalized)) {
                 return new ParsedTelegramMessage(
                         TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE,
-                        extractAmount(normalized),
+                        null,
                         extractInstallmentDescription(normalized),
                         extractDate(normalized),
                         messageText,
@@ -244,7 +244,7 @@
                         extractInstallmentCount(normalized),
                         extractFirstRemainingInstallmentNumber(normalized),
                         null,
-                        null
+                        extractInstallmentPurchaseAmount(normalized)
                 );
             }
 
@@ -453,10 +453,10 @@
             }
 
             cleaned = cleaned
-                    .replaceAll("\\b(?:ja\\s+)?paguei\\s+\\d{1,3}\\s+parcelas?\\b", "")
+                    .replaceAll("\\b(?:ja\\s+)?paguei\\s+\\d{1,3}(?:\\s+parcelas?)?\\b", "")
                     .replaceAll("\\b(?:estou|to)\\s+(?:pagando|na|no)\\s+(?:a|o)?\\s*(?:"
                             + INSTALLMENT_ORDINAL_WORDS
-                            + "|\\d{1,3}(?:a|o|ª|º)?)\\s+parcela\\b", "")
+                            + "|\\d{1,3}(?:a|o|ª|º)?)(?:\\s+parcela)?\\b", "")
                     .replaceAll("\\b(?:tenho|financiamento|parcelamento)\\b", "");
 
             cleaned = TRANSACTION_NOISE_PATTERN.matcher(cleaned).replaceAll("");
