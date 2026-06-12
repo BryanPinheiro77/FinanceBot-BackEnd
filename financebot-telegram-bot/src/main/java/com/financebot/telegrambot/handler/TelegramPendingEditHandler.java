@@ -31,6 +31,17 @@ public class TelegramPendingEditHandler {
             return "Entendi que você quer editar a operação, mas não consegui identificar alterações válidas.";
         }
 
+        Integer firstRemainingInstallmentNumber = resolveFirstRemainingInstallmentNumber(pending, editResult);
+        if (firstRemainingInstallmentNumber == null && editResult.firstRemainingInstallmentNumber() != null) {
+            return """
+                    Entendi que você quer alterar a parcela atual, mas o valor informado não é válido para este parcelamento.
+
+                    Exemplo:
+                    - ja paguei 5 parcelas
+                    - estou pagando a 6 parcela
+                    """;
+        }
+
         PendingTelegramTransaction updated = new PendingTelegramTransaction(
                 pending.intentType(),
                 editResult.amount() != null ? editResult.amount() : pending.amount(),
@@ -39,7 +50,7 @@ public class TelegramPendingEditHandler {
                 editResult.categoryName() != null ? editResult.categoryName() : pending.categoryName(),
                 editResult.accountName() != null ? editResult.accountName() : pending.accountName(),
                 pending.totalInstallments(),
-                pending.firstRemainingInstallmentNumber(),
+                firstRemainingInstallmentNumber,
                 pending.originalMessage()
         );
 
@@ -56,5 +67,31 @@ public class TelegramPendingEditHandler {
                 pendingTransaction,
                 resolvedAccount.displayName()
         );
+    }
+
+    private Integer resolveFirstRemainingInstallmentNumber(
+            PendingTelegramTransaction pending,
+            TelegramPendingEditParser.PendingEditResult editResult
+    ) {
+        Integer editedFirstRemainingInstallmentNumber = editResult.firstRemainingInstallmentNumber();
+
+        if (editedFirstRemainingInstallmentNumber == null) {
+            return pending.firstRemainingInstallmentNumber();
+        }
+
+        if (!pending.isExistingInstallment()) {
+            return null;
+        }
+
+        if (editedFirstRemainingInstallmentNumber < 1) {
+            return null;
+        }
+
+        if (pending.totalInstallments() != null
+                && editedFirstRemainingInstallmentNumber > pending.totalInstallments()) {
+            return null;
+        }
+
+        return editedFirstRemainingInstallmentNumber;
     }
 }
