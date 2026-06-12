@@ -416,11 +416,11 @@ public class TelegramPendingEditParser {
             Pattern.compile("\\bdia\\s+(?:para\\s+|pra\\s+)?(\\d{1,2})\\s+(?:do|de)\\s+(\\d{1,2})\\b");
     private static final Pattern EDIT_DAY_ONLY_PATTERN = Pattern.compile("\\bdia\\s+(\\d{1,2})\\b");
     private static final Pattern PAID_INSTALLMENTS_PATTERN =
-            Pattern.compile("\\b(?:ja\\s+paguei\\s+|parcelas\\s+pagas\\s+(?:para\\s+|pra\\s+)?)(\\d{1,3})\\b");
+            Pattern.compile("\\b(?:ja\\s+paguei\\s+|parcelas?\\s+pagas?\\s+(?:para\\s+|pra\\s+)?|(?:muda|mude|altera|altere|troca|troque|corrige|corrija)\\s+(?:a\\s+)?parcela\\s+paga\\s+(?:para\\s+|pra\\s+)?)(\\d{1,3})\\b");
     private static final Pattern CURRENT_INSTALLMENT_NUMBER_PATTERN =
             Pattern.compile("\\b(?:estou\\s+pagando\\s+(?:a\\s+)?|estou\\s+na\\s+|parcela\\s+atual\\s+(?:para\\s+|pra\\s+)?)(\\d{1,3})(?:a|ª|º)?\\s+parcela?\\b");
     private static final Pattern DIRECT_INSTALLMENT_NUMBER_PATTERN =
-            Pattern.compile("\\b(?:muda|mude|altera|altere|troca|troque|corrige|corrija)\\s+(?:para\\s+|pra\\s+)?(?:a\\s+)?parcela\\s+(\\d{1,3})(?:a|ª|º)?\\b");
+            Pattern.compile("\\b(?:muda|mude|altera|altere|troca|troque|corrige|corrija)\\s+(?:para\\s+|pra\\s+)?(?:a\\s+)?parcela\\s+(?:para\\s+|pra\\s+)?(\\d{1,3})(?:a|ª|º)?\\b");
 
     private static final DateTimeFormatter FLEXIBLE_SLASH_DATE_FORMATTER = new DateTimeFormatterBuilder()
             .appendValue(ChronoField.DAY_OF_MONTH)

@@ -138,4 +138,24 @@ class TelegramPendingEditParserTest {
         assertThat(result.changed()).isTrue();
         assertThat(result.firstRemainingInstallmentNumber()).isEqualTo(8);
     }
+
+    @Test
+    @DisplayName("deve extrair primeira parcela restante ao editar parcela paga")
+    void shouldExtractFirstRemainingInstallmentFromPaidInstallmentEdit() {
+        TelegramPendingEditParser.PendingEditResult result =
+                telegramPendingEditParser.parse("muda a parcela paga para 1");
+
+        assertThat(result.changed()).isTrue();
+        assertThat(result.firstRemainingInstallmentNumber()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("deve extrair primeira parcela restante ao editar parcela diretamente")
+    void shouldExtractFirstRemainingInstallmentFromDirectInstallmentToEdit() {
+        TelegramPendingEditParser.PendingEditResult result =
+                telegramPendingEditParser.parse("muda a parcela para 1");
+
+        assertThat(result.changed()).isTrue();
+        assertThat(result.firstRemainingInstallmentNumber()).isEqualTo(1);
+    }
 }
