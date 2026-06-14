@@ -193,6 +193,7 @@ class TransactionControllerTest {
     void shouldCreateExistingInstallmentTransactionAndReturnFinancialAnalysis() {
         CreateExistingInstallmentTransactionRequest request = new CreateExistingInstallmentTransactionRequest(
                 new BigDecimal("6000.00"),
+                null,
                 "iPhone",
                 LocalDate.of(2026, 6, 15),
                 TransactionType.EXPENSE,
@@ -208,6 +209,7 @@ class TransactionControllerTest {
 
         CreateExistingInstallmentTransactionCommand command = new CreateExistingInstallmentTransactionCommand(
                 request.totalAmount(),
+                request.monthlyAmount(),
                 request.description(),
                 request.firstRemainingInstallmentDate(),
                 request.type(),

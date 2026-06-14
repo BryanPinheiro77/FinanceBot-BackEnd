@@ -214,6 +214,7 @@ public class TelegramIntegrationService {
 
         CreateExistingInstallmentTransactionCommand command = new CreateExistingInstallmentTransactionCommand(
                 request.totalAmount(),
+                request.monthlyAmount(),
                 request.description(),
                 request.firstRemainingInstallmentDate(),
                 TransactionType.EXPENSE,

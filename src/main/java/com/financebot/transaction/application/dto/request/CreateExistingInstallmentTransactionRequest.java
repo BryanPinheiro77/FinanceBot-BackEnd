@@ -2,11 +2,7 @@ package com.financebot.transaction.application.dto.request;
 
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.TransactionType;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,6 +11,9 @@ public record CreateExistingInstallmentTransactionRequest(
         @NotNull(message = "Total amount is required")
         @DecimalMin(value = "0.01", message = "Total amount must be greater than zero")
         BigDecimal totalAmount,
+
+        @Positive(message = "Monthly amount must be positive")
+        BigDecimal monthlyAmount,
 
         @NotBlank(message = "Description is required")
         @Size(max = 255, message = "Description must have at most 255 characters")

@@ -62,6 +62,7 @@ public class TransactionMapper {
     ) {
         return new CreateExistingInstallmentTransactionCommand(
                 request.totalAmount(),
+                request.monthlyAmount(),
                 request.description(),
                 request.firstRemainingInstallmentDate(),
                 request.type(),

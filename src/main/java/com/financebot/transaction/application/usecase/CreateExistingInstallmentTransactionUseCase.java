@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Component
@@ -31,8 +32,10 @@ public class CreateExistingInstallmentTransactionUseCase {
 
     @Transactional
     public InstallmentTransactionResponse execute(CreateExistingInstallmentTransactionCommand command) {
+        BigDecimal effectiveTotalAmount = resolveEffectiveTotalAmount(command);
+
         InstallmentPlan plan = installmentPlanFactory.createRemaining(
-                command.totalAmount(),
+                effectiveTotalAmount,
                 command.description(),
                 command.firstRemainingInstallmentDate(),
                 command.type(),
@@ -67,5 +70,30 @@ public class CreateExistingInstallmentTransactionUseCase {
                 plan.totalInstallments(),
                 responses
         );
+    }
+
+    private BigDecimal resolveEffectiveTotalAmount(CreateExistingInstallmentTransactionCommand command) {
+        boolean hasTotalAmount = command.totalAmount() != null;
+        boolean hasMonthlyAmount = command.monthlyAmount() != null;
+
+        if (hasTotalAmount == hasMonthlyAmount) {
+            throw new IllegalArgumentException("Exactly one of total amount or monthly amount must be provided");
+        }
+
+        if (hasTotalAmount) {
+            validatePositiveAmount(command.totalAmount(), "Total amount must be greater than zero");
+            return command.totalAmount();
+        }
+
+        validatePositiveAmount(command.monthlyAmount(), "Monthly amount must be greater than zero");
+
+        return command.monthlyAmount()
+                .multiply(BigDecimal.valueOf(command.totalInstallments()));
+    }
+
+    private void validatePositiveAmount(BigDecimal amount, String message) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(message);
+        }
     }
 }

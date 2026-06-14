@@ -9,6 +9,7 @@ import java.time.LocalDate;
 
 public record CreateExistingInstallmentTransactionCommand(
         BigDecimal totalAmount,
+        BigDecimal monthlyAmount,
         String description,
         LocalDate firstRemainingInstallmentDate,
         TransactionType type,

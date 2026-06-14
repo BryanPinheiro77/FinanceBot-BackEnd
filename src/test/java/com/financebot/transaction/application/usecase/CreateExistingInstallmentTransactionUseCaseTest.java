@@ -114,11 +114,117 @@ class CreateExistingInstallmentTransactionUseCaseTest {
     }
 
     @Test
+    @DisplayName("deve criar parcelamento existente usando valor mensal")
+    void shouldCreateExistingInstallmentFromMonthlyAmount() {
+        User user = buildUser(1L, "bryan@email.com");
+        Account account = buildAccount(10L);
+        Category category = buildCategory(20L, CategoryType.EXPENSE);
+        CreateExistingInstallmentTransactionCommand command = new CreateExistingInstallmentTransactionCommand(
+                null,
+                new BigDecimal("300.00"),
+                "Financiamento",
+                LocalDate.of(2026, 6, 15),
+                TransactionType.EXPENSE,
+                SourceType.BOT_TEXT,
+                10L,
+                20L,
+                10,
+                6,
+                user
+        );
+
+        TransactionResponse response1 = mock(TransactionResponse.class);
+        TransactionResponse response2 = mock(TransactionResponse.class);
+        TransactionResponse response3 = mock(TransactionResponse.class);
+        InstallmentPlan plan = buildRemainingInstallmentPlan();
+
+        when(installmentPlanFactory.createRemaining(
+                new BigDecimal("3000.00"),
+                command.description(),
+                command.firstRemainingInstallmentDate(),
+                command.type(),
+                command.totalInstallments(),
+                command.firstRemainingInstallmentNumber()
+        )).thenReturn(plan);
+        when(userResourceResolver.resolveAccount(10L, 1L)).thenReturn(account);
+        when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
+        when(saveTransactionPort.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(transactionMapper.toResponse(any(Transaction.class)))
+                .thenReturn(response1, response2, response3);
+
+        InstallmentTransactionResponse result = createExistingInstallmentTransactionUseCase.execute(command);
+
+        assertRemainingInstallmentResponse(result, response1, response2, response3);
+        verify(installmentPlanFactory).createRemaining(
+                new BigDecimal("3000.00"),
+                command.description(),
+                command.firstRemainingInstallmentDate(),
+                command.type(),
+                command.totalInstallments(),
+                command.firstRemainingInstallmentNumber()
+        );
+        verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
+    }
+
+    @Test
+    @DisplayName("deve lançar erro quando valor total e valor mensal forem informados juntos")
+    void shouldThrowWhenTotalAmountAndMonthlyAmountAreProvidedTogether() {
+        User user = buildUser(1L, "bryan@email.com");
+        CreateExistingInstallmentTransactionCommand command = new CreateExistingInstallmentTransactionCommand(
+                new BigDecimal("3000.00"),
+                new BigDecimal("300.00"),
+                "Financiamento",
+                LocalDate.of(2026, 6, 15),
+                TransactionType.EXPENSE,
+                SourceType.BOT_TEXT,
+                10L,
+                20L,
+                10,
+                6,
+                user
+        );
+
+        assertThatThrownBy(() -> createExistingInstallmentTransactionUseCase.execute(command))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Exactly one of total amount or monthly amount must be provided");
+
+        verifyNoInteractions(installmentPlanFactory, userResourceResolver, transactionCategoryValidator, transactionMapper);
+        verify(saveTransactionPort, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("deve lançar erro quando valor total e valor mensal nao forem informados")
+    void shouldThrowWhenNeitherTotalAmountNorMonthlyAmountIsProvided() {
+        User user = buildUser(1L, "bryan@email.com");
+        CreateExistingInstallmentTransactionCommand command = new CreateExistingInstallmentTransactionCommand(
+                null,
+                null,
+                "Financiamento",
+                LocalDate.of(2026, 6, 15),
+                TransactionType.EXPENSE,
+                SourceType.BOT_TEXT,
+                10L,
+                20L,
+                10,
+                6,
+                user
+        );
+
+        assertThatThrownBy(() -> createExistingInstallmentTransactionUseCase.execute(command))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Exactly one of total amount or monthly amount must be provided");
+
+        verifyNoInteractions(installmentPlanFactory, userResourceResolver, transactionCategoryValidator, transactionMapper);
+        verify(saveTransactionPort, never()).saveAll(anyList());
+    }
+
+    @Test
     @DisplayName("deve lançar erro quando plano restante rejeitar primeira parcela inválida")
     void shouldThrowWhenRemainingPlanRejectsInvalidFirstRemainingInstallment() {
         User user = buildUser(1L, "bryan@email.com");
         CreateExistingInstallmentTransactionCommand command = new CreateExistingInstallmentTransactionCommand(
                 new BigDecimal("1000.00"),
+                null,
                 "Notebook",
                 LocalDate.of(2026, 4, 10),
                 TransactionType.EXPENSE,
@@ -239,6 +345,7 @@ class CreateExistingInstallmentTransactionUseCaseTest {
     private CreateExistingInstallmentTransactionCommand buildExistingInstallmentCommand(User user) {
         return new CreateExistingInstallmentTransactionCommand(
                 new BigDecimal("6000.00"),
+                null,
                 "iPhone",
                 LocalDate.of(2026, 6, 15),
                 TransactionType.EXPENSE,

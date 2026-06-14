@@ -355,6 +355,7 @@ class TelegramIntegrationServiceTest {
                     new CreateExistingInstallmentTransactionFromTelegramRequest(
                             123L,
                             new BigDecimal("6000.00"),
+                            null,
                             "iPhone",
                             LocalDate.of(2026, 6, 15),
                             "Carteira",
@@ -376,6 +377,7 @@ class TelegramIntegrationServiceTest {
             verify(createExistingInstallmentTransactionUseCase).execute(
                     argThat(command ->
                             command.totalAmount().compareTo(new BigDecimal("6000.00")) == 0
+                                    && command.monthlyAmount() == null
                                     && command.description().equals("iPhone")
                                     && command.firstRemainingInstallmentDate().equals(LocalDate.of(2026, 6, 15))
                                     && command.type() == TransactionType.EXPENSE
@@ -385,6 +387,49 @@ class TelegramIntegrationServiceTest {
                                     && command.totalInstallments().equals(10)
                                     && command.firstRemainingInstallmentNumber().equals(6)
                                     && command.user().equals(user)
+                    )
+            );
+
+            verify(transactionRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("deve delegar criacao de parcelamento existente com valor mensal para o use case")
+        void shouldDelegateExistingInstallmentTransactionCreationWithMonthlyAmountToUseCase() {
+            User user = buildTelegramUser();
+            Account account = buildAccount();
+            Category category = buildCategory("Financiamento");
+
+            CreateExistingInstallmentTransactionFromTelegramRequest request =
+                    new CreateExistingInstallmentTransactionFromTelegramRequest(
+                            123L,
+                            null,
+                            new BigDecimal("300.00"),
+                            "Financiamento",
+                            LocalDate.of(2026, 6, 15),
+                            "Carteira",
+                            "Financiamento",
+                            10,
+                            6
+                    );
+
+            when(userRepository.findByTelegramId(123L)).thenReturn(Optional.of(user));
+            when(telegramAccountResolverService.resolve(user, "Carteira")).thenReturn(account);
+            when(telegramCategoryResolverService.resolveExplicitCategory(
+                    user,
+                    TransactionType.EXPENSE,
+                    "Financiamento"
+            )).thenReturn(category);
+
+            telegramIntegrationService.createExistingInstallmentTransactionFromTelegram(request);
+
+            verify(createExistingInstallmentTransactionUseCase).execute(
+                    argThat(command ->
+                            command.totalAmount() == null
+                                    && command.monthlyAmount().compareTo(new BigDecimal("300.00")) == 0
+                                    && command.description().equals("Financiamento")
+                                    && command.totalInstallments().equals(10)
+                                    && command.firstRemainingInstallmentNumber().equals(6)
                     )
             );
 
@@ -402,6 +447,7 @@ class TelegramIntegrationServiceTest {
                     new CreateExistingInstallmentTransactionFromTelegramRequest(
                             123L,
                             new BigDecimal("6000.00"),
+                            null,
                             "iPhone",
                             LocalDate.of(2026, 6, 15),
                             "Carteira",
@@ -440,6 +486,7 @@ class TelegramIntegrationServiceTest {
                     new CreateExistingInstallmentTransactionFromTelegramRequest(
                             123L,
                             new BigDecimal("6000.00"),
+                            null,
                             "iPhone",
                             LocalDate.of(2026, 6, 15),
                             "Carteira",
