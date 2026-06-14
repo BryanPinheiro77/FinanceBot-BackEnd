@@ -102,6 +102,7 @@ class InMemoryTelegramQueryContextStoreTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
     }

@@ -170,6 +170,7 @@ class RedisTelegramConversationContextStoreTest {
                 10,
                 null,
                 null,
+                null,
                 null
         );
 

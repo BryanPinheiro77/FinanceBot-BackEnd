@@ -107,6 +107,7 @@ class TelegramQueryContextServiceTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -129,6 +130,7 @@ class TelegramQueryContextServiceTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
     }
@@ -140,6 +142,7 @@ class TelegramQueryContextServiceTest {
                 null,
                 null,
                 originalMessage,
+                null,
                 null,
                 null,
                 null,

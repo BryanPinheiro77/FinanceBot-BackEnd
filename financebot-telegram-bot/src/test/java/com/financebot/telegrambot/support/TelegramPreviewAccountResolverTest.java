@@ -86,6 +86,7 @@ class TelegramPreviewAccountResolverTest {
         return new PendingTelegramTransaction(
                 TelegramIntentType.CREATE_EXPENSE,
                 new BigDecimal("50.00"),
+                null,
                 "mercado",
                 LocalDate.of(2026, 6, 1),
                 "Mercado",

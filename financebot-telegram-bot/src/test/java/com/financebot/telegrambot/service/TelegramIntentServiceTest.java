@@ -113,6 +113,34 @@ class TelegramIntentServiceTest {
     }
 
     @Test
+    @DisplayName("deve interpretar parcelamento existente com valor mensal")
+    void shouldParseExistingInstallmentWithMonthlyAmount() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "tenho um financiamento de 300 por mes em 10x e ja paguei 5 parcelas"
+        );
+
+        assertThat(parsed.intentType()).isEqualTo(TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE);
+        assertThat(parsed.totalAmount()).isNull();
+        assertThat(parsed.monthlyAmount()).isEqualByComparingTo(new BigDecimal("300"));
+        assertThat(parsed.totalInstallments()).isEqualTo(10);
+        assertThat(parsed.firstRemainingInstallmentNumber()).isEqualTo(6);
+    }
+
+    @Test
+    @DisplayName("deve interpretar parcelamento existente com valor mensal escrito em reais")
+    void shouldParseExistingInstallmentWithMonthlyAmountInReais() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "tenho um financiamento de 300 reais por mes em 10x e ja paguei 5 parcelas"
+        );
+
+        assertThat(parsed.intentType()).isEqualTo(TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE);
+        assertThat(parsed.totalAmount()).isNull();
+        assertThat(parsed.monthlyAmount()).isEqualByComparingTo(new BigDecimal("300"));
+        assertThat(parsed.totalInstallments()).isEqualTo(10);
+        assertThat(parsed.firstRemainingInstallmentNumber()).isEqualTo(6);
+    }
+
+    @Test
     @DisplayName("deve interpretar parcelamento existente com parcelas pagas sem palavra parcelas")
     void shouldParseExistingInstallmentWithPaidInstallmentsWithoutInstallmentWord() {
         ParsedTelegramMessage parsed = telegramIntentService.parse(

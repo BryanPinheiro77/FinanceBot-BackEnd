@@ -39,6 +39,7 @@ public class TelegramPendingOperationHandler {
                         new CreateExistingInstallmentTransactionFromTelegramRequest(
                                 telegramId,
                                 pending.amount(),
+                                pending.monthlyAmount(),
                                 pending.description(),
                                 pending.date(),
                                 pending.accountName(),

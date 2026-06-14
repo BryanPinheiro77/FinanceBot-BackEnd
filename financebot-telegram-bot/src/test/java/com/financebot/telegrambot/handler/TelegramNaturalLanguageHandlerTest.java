@@ -64,7 +64,8 @@ class TelegramNaturalLanguageHandlerTest {
                 10,
                 6,
                 null,
-                new BigDecimal("3000")
+                new BigDecimal("3000"),
+                null
         );
 
         when(telegramIntentService.parse(message)).thenReturn(parsedMessage);

@@ -88,7 +88,8 @@ public class TelegramConversationContinuationService {
                 parsedMessage.totalInstallments(),
                 parsedMessage.firstRemainingInstallmentNumber(),
                 parsedMessage.installmentQueryTarget(),
-                parsedMessage.totalAmount()
+                parsedMessage.totalAmount(),
+                parsedMessage.monthlyAmount()
         );
     }
 }

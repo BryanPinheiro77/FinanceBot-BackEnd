@@ -45,6 +45,7 @@ public class TelegramPendingEditHandler {
         PendingTelegramTransaction updated = new PendingTelegramTransaction(
                 pending.intentType(),
                 editResult.amount() != null ? editResult.amount() : pending.amount(),
+                pending.monthlyAmount(),
                 editResult.description() != null ? editResult.description() : pending.description(),
                 editResult.date() != null ? editResult.date() : pending.date(),
                 editResult.categoryName() != null ? editResult.categoryName() : pending.categoryName(),

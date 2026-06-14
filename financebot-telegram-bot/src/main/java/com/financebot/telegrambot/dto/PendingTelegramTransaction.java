@@ -8,6 +8,7 @@ import java.time.LocalDate;
 public record PendingTelegramTransaction(
         TelegramIntentType intentType,
         BigDecimal amount,
+        BigDecimal monthlyAmount,
         String description,
         LocalDate date,
         String categoryName,

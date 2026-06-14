@@ -183,6 +183,7 @@ class TelegramConversationContinuationServiceTest {
                 10,
                 null,
                 null,
+                null,
                 null
         );
     }

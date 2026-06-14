@@ -36,7 +36,9 @@ public class TelegramTransactionPreviewHandler {
             boolean allowConversationPrompt
     ) {
 
-        if (parsedMessage.amount() == null && parsedMessage.totalAmount() == null) {
+        if (parsedMessage.amount() == null
+                && parsedMessage.totalAmount() == null
+                && parsedMessage.monthlyAmount() == null) {
             return """
                     Entendi a intenção, mas não consegui identificar o valor.
                     
@@ -196,6 +198,7 @@ public class TelegramTransactionPreviewHandler {
         return new PendingTelegramTransaction(
                 pendingTransaction.intentType(),
                 pendingTransaction.amount(),
+                pendingTransaction.monthlyAmount(),
                 pendingTransaction.description(),
                 pendingTransaction.date(),
                 pendingTransaction.categoryName(),

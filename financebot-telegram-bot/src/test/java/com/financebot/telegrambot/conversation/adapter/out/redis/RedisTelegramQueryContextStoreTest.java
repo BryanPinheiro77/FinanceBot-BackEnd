@@ -165,6 +165,7 @@ class RedisTelegramQueryContextStoreTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
     }

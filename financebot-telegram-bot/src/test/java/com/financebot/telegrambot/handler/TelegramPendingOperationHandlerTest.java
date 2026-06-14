@@ -93,6 +93,7 @@ class TelegramPendingOperationHandlerTest {
         CreateExistingInstallmentTransactionFromTelegramRequest request = requestCaptor.getValue();
         assertThat(request.telegramId()).isEqualTo(TELEGRAM_ID);
         assertThat(request.totalAmount()).isEqualByComparingTo("6000.00");
+        assertThat(request.monthlyAmount()).isNull();
         assertThat(request.description()).isEqualTo("iPhone");
         assertThat(request.firstRemainingInstallmentDate()).isEqualTo(LocalDate.of(2026, 6, 15));
         assertThat(request.accountName()).isEqualTo("Nubank");
@@ -100,6 +101,26 @@ class TelegramPendingOperationHandlerTest {
         assertThat(request.totalInstallments()).isEqualTo(10);
         assertThat(request.firstRemainingInstallmentNumber()).isEqualTo(6);
         assertThat(result).contains("Parcelamento registrado com sucesso");
+    }
+
+    @Test
+    @DisplayName("deve confirmar parcelamento existente usando somente valor mensal")
+    void shouldConfirmExistingInstallmentUsingOnlyMonthlyAmount() {
+        PendingTelegramTransaction pending = existingInstallmentPendingWithMonthlyAmount();
+        when(telegramPendingConfirmationService.getPending(TELEGRAM_ID)).thenReturn(pending);
+
+        handler.handleConfirmation(TELEGRAM_ID);
+
+        ArgumentCaptor<CreateExistingInstallmentTransactionFromTelegramRequest> requestCaptor =
+                ArgumentCaptor.forClass(CreateExistingInstallmentTransactionFromTelegramRequest.class);
+
+        verify(financeBotApiClient).createExistingInstallmentTransaction(requestCaptor.capture());
+
+        CreateExistingInstallmentTransactionFromTelegramRequest request = requestCaptor.getValue();
+        assertThat(request.totalAmount()).isNull();
+        assertThat(request.monthlyAmount()).isEqualByComparingTo("300.00");
+        assertThat(request.totalInstallments()).isEqualTo(10);
+        assertThat(request.firstRemainingInstallmentNumber()).isEqualTo(6);
     }
 
     @Test
@@ -162,6 +183,7 @@ class TelegramPendingOperationHandlerTest {
         return new PendingTelegramTransaction(
                 TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE,
                 new BigDecimal("6000.00"),
+                null,
                 "iPhone",
                 LocalDate.of(2026, 6, 15),
                 "Eletrônicos",
@@ -169,6 +191,21 @@ class TelegramPendingOperationHandlerTest {
                 10,
                 6,
                 "comprei um iPhone de 6000 em 10x e ja paguei 5 parcelas"
+        );
+    }
+
+    private PendingTelegramTransaction existingInstallmentPendingWithMonthlyAmount() {
+        return new PendingTelegramTransaction(
+                TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE,
+                null,
+                new BigDecimal("300.00"),
+                "Financiamento",
+                LocalDate.of(2026, 6, 15),
+                "Casa",
+                "Nubank",
+                10,
+                6,
+                "tenho um financiamento de 300 por mes em 10x e ja paguei 5 parcelas"
         );
     }
 }

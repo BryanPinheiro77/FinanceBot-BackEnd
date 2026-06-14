@@ -166,7 +166,8 @@ class TelegramCommandServiceTest {
                 12,
                 null,
                 null,
-                new BigDecimal("2400")
+                new BigDecimal("2400"),
+                null
         );
 
         when(telegramIntentService.parse(any())).thenReturn(parsedMessage);
@@ -221,7 +222,8 @@ class TelegramCommandServiceTest {
                 12,
                 null,
                 null,
-                new BigDecimal("2400")
+                new BigDecimal("2400"),
+                null
         );
 
         when(telegramIntentService.parse(any())).thenReturn(parsedMessage);
@@ -257,6 +259,7 @@ class TelegramCommandServiceTest {
                 "gastei 50 no mercado pelo nubank",
                 "Mercado",
                 "Nubank",
+                null,
                 null,
                 null,
                 null,
@@ -302,6 +305,7 @@ class TelegramCommandServiceTest {
         PendingTelegramTransaction pending = new PendingTelegramTransaction(
                 TelegramIntentType.CREATE_EXPENSE,
                 new BigDecimal("50.00"),
+                null,
                 "mercado",
                 LocalDate.of(2026, 6, 1),
                 "Mercado",
@@ -355,6 +359,7 @@ class TelegramCommandServiceTest {
                 12,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -392,6 +397,7 @@ class TelegramCommandServiceTest {
         PendingTelegramTransaction pending = new PendingTelegramTransaction(
                 TelegramIntentType.CREATE_INSTALLMENT_EXPENSE,
                 new BigDecimal("1200.00"),
+                null,
                 "notebook",
                 LocalDate.of(2026, 6, 1),
                 "Eletrônicos",
@@ -439,6 +445,7 @@ class TelegramCommandServiceTest {
                 LocalDate.of(2026, 6, 1),
                 "paguei 80 de gasolina",
                 "Combustível",
+                null,
                 null,
                 null,
                 null,
