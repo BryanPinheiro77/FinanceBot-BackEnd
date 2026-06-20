@@ -25,6 +25,40 @@ class TelegramPendingEditParserTest {
 
         assertThat(result.changed()).isTrue();
         assertThat(result.amount()).isEqualByComparingTo("80.50");
+        assertThat(result.amountKind()).isEqualTo(TelegramPendingEditParser.EditedAmountKind.UNSPECIFIED);
+    }
+
+    @Test
+    @DisplayName("deve identificar edicao explicita de valor total")
+    void shouldIdentifyTotalAmountEdit() {
+        TelegramPendingEditParser.PendingEditResult result =
+                telegramPendingEditParser.parse("muda o valor total para 6200");
+
+        assertThat(result.changed()).isTrue();
+        assertThat(result.amount()).isEqualByComparingTo("6200");
+        assertThat(result.amountKind()).isEqualTo(TelegramPendingEditParser.EditedAmountKind.TOTAL);
+    }
+
+    @Test
+    @DisplayName("deve identificar edicao explicita de valor mensal")
+    void shouldIdentifyMonthlyAmountEdit() {
+        TelegramPendingEditParser.PendingEditResult result =
+                telegramPendingEditParser.parse("muda o valor mensal para 620");
+
+        assertThat(result.changed()).isTrue();
+        assertThat(result.amount()).isEqualByComparingTo("620");
+        assertThat(result.amountKind()).isEqualTo(TelegramPendingEditParser.EditedAmountKind.MONTHLY);
+    }
+
+    @Test
+    @DisplayName("deve tratar edicao direta de numero como valor ambiguo")
+    void shouldTreatBareNumberEditAsUnspecifiedAmount() {
+        TelegramPendingEditParser.PendingEditResult result =
+                telegramPendingEditParser.parse("muda pra 6200");
+
+        assertThat(result.changed()).isTrue();
+        assertThat(result.amount()).isEqualByComparingTo("6200");
+        assertThat(result.amountKind()).isEqualTo(TelegramPendingEditParser.EditedAmountKind.UNSPECIFIED);
     }
 
     @Test

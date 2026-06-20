@@ -23,6 +23,7 @@ public class TelegramPendingEditParser {
         String lower = telegramTextNormalizer.normalize(messageText);
 
         BigDecimal amount = null;
+        EditedAmountKind amountKind = EditedAmountKind.UNSPECIFIED;
         String description = null;
         LocalDate date = null;
         String categoryName = null;
@@ -36,6 +37,7 @@ public class TelegramPendingEditParser {
 
             if (newAmount != null && newAmount.compareTo(BigDecimal.ZERO) > 0) {
                 amount = newAmount;
+                amountKind = resolveAmountKind(lower);
                 changed = true;
             }
         }
@@ -88,6 +90,7 @@ public class TelegramPendingEditParser {
         return new PendingEditResult(
                 changed,
                 amount,
+                amountKind,
                 description,
                 date,
                 categoryName,
@@ -97,7 +100,40 @@ public class TelegramPendingEditParser {
     }
 
     private boolean containsAmountEditHint(String lower) {
-        return lower.contains("valor");
+        return lower.contains("valor")
+                || lower.contains("total")
+                || lower.contains("mensal")
+                || containsBareAmountEditHint(lower);
+    }
+
+    private boolean containsBareAmountEditHint(String lower) {
+        return BARE_AMOUNT_EDIT_PATTERN.matcher(lower).find()
+                && !lower.contains("parcela")
+                && !lower.contains("data")
+                && !lower.contains("dia")
+                && !lower.contains("conta")
+                && !lower.contains("categoria")
+                && !lower.contains("descricao");
+    }
+
+    private EditedAmountKind resolveAmountKind(String lower) {
+        if (lower.contains("valor total")
+                || lower.contains("total do parcelamento")
+                || lower.contains("total da compra")
+                || lower.contains("total para")
+                || lower.contains("total pra")) {
+            return EditedAmountKind.TOTAL;
+        }
+
+        if (lower.contains("valor mensal")
+                || lower.contains("por mes")
+                || lower.contains("mensal")
+                || lower.contains("valor da parcela")
+                || lower.contains("valor de parcela")) {
+            return EditedAmountKind.MONTHLY;
+        }
+
+        return EditedAmountKind.UNSPECIFIED;
     }
 
     private boolean containsDescriptionEditHint(String lower) {
@@ -421,6 +457,8 @@ public class TelegramPendingEditParser {
             Pattern.compile("\\b(?:estou\\s+pagando\\s+(?:a\\s+)?|estou\\s+na\\s+|parcela\\s+atual\\s+(?:para\\s+|pra\\s+)?)(\\d{1,3})(?:a|ª|º)?\\s+parcela?\\b");
     private static final Pattern DIRECT_INSTALLMENT_NUMBER_PATTERN =
             Pattern.compile("\\b(?:muda|mude|altera|altere|troca|troque|corrige|corrija)\\s+(?:para\\s+|pra\\s+)?(?:a\\s+)?parcela\\s+(?:para\\s+|pra\\s+)?(\\d{1,3})(?:a|ª|º)?\\b");
+    private static final Pattern BARE_AMOUNT_EDIT_PATTERN =
+            Pattern.compile("\\b(?:muda|mude|altera|altere|troca|troque|corrige|corrija)\\s+(?:para\\s+|pra\\s+)?(?:r\\$\\s*)?\\d+[\\.,]?\\d{0,2}\\b");
 
     private static final DateTimeFormatter FLEXIBLE_SLASH_DATE_FORMATTER = new DateTimeFormatterBuilder()
             .appendValue(ChronoField.DAY_OF_MONTH)
@@ -441,11 +479,18 @@ public class TelegramPendingEditParser {
     public record PendingEditResult(
             boolean changed,
             BigDecimal amount,
+            EditedAmountKind amountKind,
             String description,
             LocalDate date,
             String categoryName,
             String accountName,
             Integer firstRemainingInstallmentNumber
     ) {
+    }
+
+    public enum EditedAmountKind {
+        TOTAL,
+        MONTHLY,
+        UNSPECIFIED
     }
 }

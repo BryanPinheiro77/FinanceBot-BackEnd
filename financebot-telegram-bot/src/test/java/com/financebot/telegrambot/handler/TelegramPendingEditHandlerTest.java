@@ -96,6 +96,90 @@ class TelegramPendingEditHandlerTest {
     }
 
     @Test
+    @DisplayName("deve preservar valor mensal quando edicao direta de numero for ambigua")
+    void shouldPreserveMonthlyAmountSemanticsWhenBareAmountEditIsAmbiguous() {
+        when(telegramPendingConfirmationService.getPending(TELEGRAM_ID))
+                .thenReturn(existingInstallmentPendingWithMonthlyAmount());
+
+        handler.handleEdit(TELEGRAM_ID, "muda pra 6200");
+
+        ArgumentCaptor<PendingTelegramTransaction> pendingCaptor =
+                ArgumentCaptor.forClass(PendingTelegramTransaction.class);
+        verify(telegramPendingConfirmationService).savePending(
+                eq(TELEGRAM_ID),
+                pendingCaptor.capture()
+        );
+
+        PendingTelegramTransaction updated = pendingCaptor.getValue();
+        assertThat(updated.amount()).isNull();
+        assertThat(updated.monthlyAmount()).isEqualByComparingTo("6200");
+    }
+
+    @Test
+    @DisplayName("deve trocar parcelamento existente mensal para valor total quando edicao for explicita")
+    void shouldSwitchMonthlyExistingInstallmentToTotalAmountWhenEditIsExplicit() {
+        when(telegramPendingConfirmationService.getPending(TELEGRAM_ID))
+                .thenReturn(existingInstallmentPendingWithMonthlyAmount());
+
+        String result = handler.handleEdit(TELEGRAM_ID, "muda o valor total para 6200");
+
+        ArgumentCaptor<PendingTelegramTransaction> pendingCaptor =
+                ArgumentCaptor.forClass(PendingTelegramTransaction.class);
+        verify(telegramPendingConfirmationService).savePending(
+                eq(TELEGRAM_ID),
+                pendingCaptor.capture()
+        );
+
+        PendingTelegramTransaction updated = pendingCaptor.getValue();
+        assertThat(updated.amount()).isEqualByComparingTo("6200");
+        assertThat(updated.monthlyAmount()).isNull();
+        assertThat(result).contains("Valor total:</b> R$ 6.200,00");
+        assertThat(result).contains("Valor da parcela:</b> R$ 620,00");
+    }
+
+    @Test
+    @DisplayName("deve trocar parcelamento existente total para valor mensal quando edicao for explicita")
+    void shouldSwitchTotalExistingInstallmentToMonthlyAmountWhenEditIsExplicit() {
+        when(telegramPendingConfirmationService.getPending(TELEGRAM_ID))
+                .thenReturn(existingInstallmentPending());
+
+        String result = handler.handleEdit(TELEGRAM_ID, "muda o valor mensal para 650");
+
+        ArgumentCaptor<PendingTelegramTransaction> pendingCaptor =
+                ArgumentCaptor.forClass(PendingTelegramTransaction.class);
+        verify(telegramPendingConfirmationService).savePending(
+                eq(TELEGRAM_ID),
+                pendingCaptor.capture()
+        );
+
+        PendingTelegramTransaction updated = pendingCaptor.getValue();
+        assertThat(updated.amount()).isNull();
+        assertThat(updated.monthlyAmount()).isEqualByComparingTo("650");
+        assertThat(result).contains("Valor total:</b> R$ 6.500,00");
+        assertThat(result).contains("Valor da parcela:</b> R$ 650,00");
+    }
+
+    @Test
+    @DisplayName("deve preservar valor total quando edicao de valor for ambigua")
+    void shouldPreserveTotalAmountSemanticsWhenAmountEditIsAmbiguous() {
+        when(telegramPendingConfirmationService.getPending(TELEGRAM_ID))
+                .thenReturn(existingInstallmentPending());
+
+        handler.handleEdit(TELEGRAM_ID, "muda valor para 5000");
+
+        ArgumentCaptor<PendingTelegramTransaction> pendingCaptor =
+                ArgumentCaptor.forClass(PendingTelegramTransaction.class);
+        verify(telegramPendingConfirmationService).savePending(
+                eq(TELEGRAM_ID),
+                pendingCaptor.capture()
+        );
+
+        PendingTelegramTransaction updated = pendingCaptor.getValue();
+        assertThat(updated.amount()).isEqualByComparingTo("5000");
+        assertThat(updated.monthlyAmount()).isNull();
+    }
+
+    @Test
     @DisplayName("deve rejeitar primeira parcela restante maior que o total")
     void shouldRejectFirstRemainingInstallmentGreaterThanTotalInstallments() {
         when(telegramPendingConfirmationService.getPending(TELEGRAM_ID))

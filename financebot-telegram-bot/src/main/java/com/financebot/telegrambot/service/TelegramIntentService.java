@@ -60,7 +60,7 @@
         );
 
         private static final Pattern MONTHLY_INSTALLMENT_AMOUNT_PATTERN = Pattern.compile(
-                "\\b(?:de|por|valor(?:\\s+de)?|parcela(?:\\s+de)?|parcelas?\\s+de)?\\s*(\\d+[\\.,]?\\d{0,2})\\s*(?:por\\s+mes|ao\\s+mes|mensais|mensal|/mes|por\\s+parcela|cada\\s+parcela)\\b"
+                "\\b(?:de|por|valor(?:\\s+de)?|parcela(?:\\s+de)?|parcelas?\\s+de)?\\s*(\\d+[\\.,]?\\d{0,2})\\s*(?:reais?|rs)?\\s*(?:por\\s+mes|ao\\s+mes|mensais|mensal|/mes|por\\s+parcela|cada\\s+parcela)\\b"
         );
 
         private static final Pattern TRANSACTION_NOISE_PATTERN = Pattern.compile(
