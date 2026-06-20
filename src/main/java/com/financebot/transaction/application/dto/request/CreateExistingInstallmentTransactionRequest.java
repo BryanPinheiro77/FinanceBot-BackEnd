@@ -8,7 +8,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record CreateExistingInstallmentTransactionRequest(
-        @NotNull(message = "Total amount is required")
         @DecimalMin(value = "0.01", message = "Total amount must be greater than zero")
         BigDecimal totalAmount,
 
@@ -42,4 +41,9 @@ public record CreateExistingInstallmentTransactionRequest(
         @Min(value = 1, message = "First remaining installment number must be at least 1")
         Integer firstRemainingInstallmentNumber
 ) {
+
+    @AssertTrue(message = "Exactly one of total amount or monthly amount must be provided")
+    public boolean isAmountSelectionValid() {
+        return (totalAmount != null) ^ (monthlyAmount != null);
+    }
 }
