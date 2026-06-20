@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+ ## [v1.5.0]
+
 ### Added
 
 - Adicionado suporte para registro de parcelamentos existentes, gerando apenas parcelas restantes a partir da parcela atual.
