@@ -4,12 +4,15 @@ import com.financebot.account.domain.Account;
 import com.financebot.analysis.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.analysis.service.FinancialAnalysisService;
 import com.financebot.category.domain.Category;
+import com.financebot.telegram.dto.request.CreateExistingInstallmentTransactionFromTelegramRequest;
 import com.financebot.telegram.dto.request.CreateInstallmentTransactionFromTelegramRequest;
 import com.financebot.telegram.dto.request.CreateTransactionFromTelegramRequest;
 import com.financebot.telegram.dto.request.InstallmentPurchaseCapacityRequest;
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
+import com.financebot.transaction.application.command.CreateExistingInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateTransactionCommand;
+import com.financebot.transaction.application.usecase.CreateExistingInstallmentTransactionUseCase;
 import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
 import com.financebot.transaction.application.usecase.CreateTransactionUseCase;
 import com.financebot.transaction.domain.SourceType;
@@ -53,6 +56,9 @@ class TelegramIntegrationServiceTest {
 
     @Mock
     private CreateInstallmentTransactionUseCase createInstallmentTransactionUseCase;
+
+    @Mock
+    private CreateExistingInstallmentTransactionUseCase createExistingInstallmentTransactionUseCase;
 
     @Mock
     private CreateTransactionUseCase createTransactionUseCase;
@@ -329,6 +335,173 @@ class TelegramIntegrationServiceTest {
 
             verify(createInstallmentTransactionUseCase, never())
                     .execute(any(CreateInstallmentTransactionCommand.class));
+
+            verify(transactionRepository, never()).save(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("createExistingInstallmentTransactionFromTelegram")
+    class CreateExistingInstallmentTransactionFromTelegramTests {
+
+        @Test
+        @DisplayName("deve delegar criacao de parcelamento existente para o use case")
+        void shouldDelegateExistingInstallmentTransactionCreationToUseCase() {
+            User user = buildTelegramUser();
+            Account account = buildAccount();
+            Category category = buildCategory("Eletrônicos");
+
+            CreateExistingInstallmentTransactionFromTelegramRequest request =
+                    new CreateExistingInstallmentTransactionFromTelegramRequest(
+                            123L,
+                            new BigDecimal("6000.00"),
+                            null,
+                            "iPhone",
+                            LocalDate.of(2026, 6, 15),
+                            "Carteira",
+                            "Eletrônicos",
+                            10,
+                            6
+                    );
+
+            when(userRepository.findByTelegramId(123L)).thenReturn(Optional.of(user));
+            when(telegramAccountResolverService.resolve(user, "Carteira")).thenReturn(account);
+            when(telegramCategoryResolverService.resolveExplicitCategory(
+                    user,
+                    TransactionType.EXPENSE,
+                    "Eletrônicos"
+            )).thenReturn(category);
+
+            telegramIntegrationService.createExistingInstallmentTransactionFromTelegram(request);
+
+            verify(createExistingInstallmentTransactionUseCase).execute(
+                    argThat(command ->
+                            command.totalAmount().compareTo(new BigDecimal("6000.00")) == 0
+                                    && command.monthlyAmount() == null
+                                    && command.description().equals("iPhone")
+                                    && command.firstRemainingInstallmentDate().equals(LocalDate.of(2026, 6, 15))
+                                    && command.type() == TransactionType.EXPENSE
+                                    && command.sourceType() == SourceType.BOT_TEXT
+                                    && command.accountId().equals(10L)
+                                    && command.categoryId().equals(20L)
+                                    && command.totalInstallments().equals(10)
+                                    && command.firstRemainingInstallmentNumber().equals(6)
+                                    && command.user().equals(user)
+                    )
+            );
+
+            verify(transactionRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("deve delegar criacao de parcelamento existente com valor mensal para o use case")
+        void shouldDelegateExistingInstallmentTransactionCreationWithMonthlyAmountToUseCase() {
+            User user = buildTelegramUser();
+            Account account = buildAccount();
+            Category category = buildCategory("Financiamento");
+
+            CreateExistingInstallmentTransactionFromTelegramRequest request =
+                    new CreateExistingInstallmentTransactionFromTelegramRequest(
+                            123L,
+                            null,
+                            new BigDecimal("300.00"),
+                            "Financiamento",
+                            LocalDate.of(2026, 6, 15),
+                            "Carteira",
+                            "Financiamento",
+                            10,
+                            6
+                    );
+
+            when(userRepository.findByTelegramId(123L)).thenReturn(Optional.of(user));
+            when(telegramAccountResolverService.resolve(user, "Carteira")).thenReturn(account);
+            when(telegramCategoryResolverService.resolveExplicitCategory(
+                    user,
+                    TransactionType.EXPENSE,
+                    "Financiamento"
+            )).thenReturn(category);
+
+            telegramIntegrationService.createExistingInstallmentTransactionFromTelegram(request);
+
+            verify(createExistingInstallmentTransactionUseCase).execute(
+                    argThat(command ->
+                            command.totalAmount() == null
+                                    && command.monthlyAmount().compareTo(new BigDecimal("300.00")) == 0
+                                    && command.description().equals("Financiamento")
+                                    && command.totalInstallments().equals(10)
+                                    && command.firstRemainingInstallmentNumber().equals(6)
+                    )
+            );
+
+            verify(transactionRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("deve usar categoria automatica no parcelamento existente quando categoria nao for informada")
+        void shouldUseAutomaticCategoryForExistingInstallmentWhenCategoryNameIsNotProvided() {
+            User user = buildTelegramUser();
+            Account account = buildAccount();
+            Category category = buildCategory("Eletrônicos");
+
+            CreateExistingInstallmentTransactionFromTelegramRequest request =
+                    new CreateExistingInstallmentTransactionFromTelegramRequest(
+                            123L,
+                            new BigDecimal("6000.00"),
+                            null,
+                            "iPhone",
+                            LocalDate.of(2026, 6, 15),
+                            "Carteira",
+                            null,
+                            10,
+                            6
+                    );
+
+            when(userRepository.findByTelegramId(123L)).thenReturn(Optional.of(user));
+            when(telegramAccountResolverService.resolve(user, "Carteira")).thenReturn(account);
+            when(telegramCategoryResolverService.resolveCategory(
+                    user,
+                    TransactionType.EXPENSE,
+                    "iPhone"
+            )).thenReturn(category);
+
+            telegramIntegrationService.createExistingInstallmentTransactionFromTelegram(request);
+
+            verify(telegramCategoryResolverService).resolveCategory(
+                    user,
+                    TransactionType.EXPENSE,
+                    "iPhone"
+            );
+
+            verify(createExistingInstallmentTransactionUseCase).execute(
+                    any(CreateExistingInstallmentTransactionCommand.class)
+            );
+
+            verify(transactionRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("deve lancar erro quando usuario do telegram nao existir no parcelamento existente")
+        void shouldThrowWhenTelegramUserDoesNotExistOnCreateExistingInstallmentTransaction() {
+            CreateExistingInstallmentTransactionFromTelegramRequest request =
+                    new CreateExistingInstallmentTransactionFromTelegramRequest(
+                            123L,
+                            new BigDecimal("6000.00"),
+                            null,
+                            "iPhone",
+                            LocalDate.of(2026, 6, 15),
+                            "Carteira",
+                            "Eletrônicos",
+                            10,
+                            6
+                    );
+
+            when(userRepository.findByTelegramId(123L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> telegramIntegrationService.createExistingInstallmentTransactionFromTelegram(request))
+                    .isInstanceOf(TelegramUserNotFoundException.class);
+
+            verify(createExistingInstallmentTransactionUseCase, never())
+                    .execute(any(CreateExistingInstallmentTransactionCommand.class));
 
             verify(transactionRepository, never()).save(any());
         }

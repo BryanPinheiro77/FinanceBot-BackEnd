@@ -87,6 +87,8 @@ public class TelegramNaturalLanguageVocabulary {
 
         aliases.put("mcdonalds", "Alimentação");
         aliases.put("mc donalds", "Alimentação");
+        aliases.put("mc", "Alimentação");
+        aliases.put("mac", "Alimentação");
         aliases.put("restaurante", "Alimentação");
         aliases.put("lanchonete", "Alimentação");
         aliases.put("alimentacao", "Alimentação");

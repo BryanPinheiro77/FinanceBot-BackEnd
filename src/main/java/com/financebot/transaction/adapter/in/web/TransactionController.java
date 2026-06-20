@@ -7,14 +7,17 @@ import com.financebot.analysis.service.FinancialAnalysisService;
 import com.financebot.common.pagination.PageQuery;
 import com.financebot.common.pagination.PageResult;
 import com.financebot.transaction.adapter.in.web.mapper.SpringPageMapper;
+import com.financebot.transaction.application.command.CreateExistingInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateTransactionCommand;
 import com.financebot.transaction.application.command.UpdateTransactionCommand;
+import com.financebot.transaction.application.dto.request.CreateExistingInstallmentTransactionRequest;
 import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
 import com.financebot.transaction.application.dto.request.UpdateTransactionRequest;
 import com.financebot.transaction.application.dto.response.InstallmentTransactionResponse;
 import com.financebot.transaction.application.dto.response.TransactionResponse;
+import com.financebot.transaction.application.usecase.CreateExistingInstallmentTransactionUseCase;
 import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
 import com.financebot.transaction.application.usecase.CreateTransactionUseCase;
 import com.financebot.transaction.application.usecase.DeleteTransactionUseCase;
@@ -49,6 +52,7 @@ public class TransactionController {
 
     private final CreateTransactionUseCase createTransactionUseCase;
     private final CreateInstallmentTransactionUseCase createInstallmentTransactionUseCase;
+    private final CreateExistingInstallmentTransactionUseCase createExistingInstallmentTransactionUseCase;
     private final ListTransactionsUseCase listTransactionsUseCase;
     private final FindTransactionByIdUseCase findTransactionByIdUseCase;
     private final UpdateTransactionUseCase updateTransactionUseCase;
@@ -80,6 +84,23 @@ public class TransactionController {
 
         InstallmentTransactionResponse installment =
                 createInstallmentTransactionUseCase.execute(command);
+
+        FinancialCommitmentResponse analysis = financialAnalysisService.getFinancialCommitment(authentication);
+
+        return new InstallmentTransactionCreationResponse(installment, analysis);
+    }
+
+    @PostMapping("/installments/existing")
+    @ResponseStatus(HttpStatus.CREATED)
+    public InstallmentTransactionCreationResponse createExistingInstallment(
+            @RequestBody @Valid CreateExistingInstallmentTransactionRequest request,
+            Authentication authentication
+    ) {
+        User user = authenticatedUserResolver.resolve(authentication);
+        CreateExistingInstallmentTransactionCommand command = transactionMapper.toCommand(request, user);
+
+        InstallmentTransactionResponse installment =
+                createExistingInstallmentTransactionUseCase.execute(command);
 
         FinancialCommitmentResponse analysis = financialAnalysisService.getFinancialCommitment(authentication);
 

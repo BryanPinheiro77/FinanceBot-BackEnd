@@ -33,6 +33,7 @@ public class TelegramNaturalLanguageHandler {
 
         if (parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE
                 || parsedMessage.intentType() == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE
+                || parsedMessage.intentType() == TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE
                 || parsedMessage.intentType() == TelegramIntentType.CREATE_INCOME) {
             return telegramTransactionPreviewHandler.handlePreview(telegramId, parsedMessage);
         }

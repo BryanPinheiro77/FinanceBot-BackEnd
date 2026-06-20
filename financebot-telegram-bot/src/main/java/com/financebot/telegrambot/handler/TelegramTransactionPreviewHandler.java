@@ -7,7 +7,6 @@ import com.financebot.telegrambot.conversation.domain.TelegramConversationMissin
 import com.financebot.telegrambot.dto.ParsedTelegramMessage;
 import com.financebot.telegrambot.dto.PendingTelegramTransaction;
 import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
-import com.financebot.telegrambot.intent.TelegramIntentType;
 import com.financebot.telegrambot.mapper.PendingTelegramTransactionMapper;
 import com.financebot.telegrambot.service.TelegramPendingConfirmationService;
 import com.financebot.telegrambot.support.TelegramPreviewAccountResolver;
@@ -36,10 +35,13 @@ public class TelegramTransactionPreviewHandler {
             ParsedTelegramMessage parsedMessage,
             boolean allowConversationPrompt
     ) {
-        if (parsedMessage.amount() == null && parsedMessage.totalAmount() == null) {
+
+        if (parsedMessage.amount() == null
+                && parsedMessage.totalAmount() == null
+                && parsedMessage.monthlyAmount() == null) {
             return """
                     Entendi a intenção, mas não consegui identificar o valor.
-
+                    
                     Exemplos:
                     - gastei 50 no mercado
                     - paguei 120 de gasolina
@@ -58,35 +60,13 @@ public class TelegramTransactionPreviewHandler {
                 resolvedAccount.persistedName()
         );
 
-        if (pendingTransaction.intentType() == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE) {
-            if (pendingTransaction.totalInstallments() == null || pendingTransaction.totalInstallments() < 2) {
-                return """
-                        Entendi a intenção de parcelamento, mas não consegui identificar uma quantidade válida de parcelas.
-
-                        Exemplos:
-                        - gastei 1200 parcelado em 10x
-                        - comprei um celular por 2400 em 12x
-                        - gastei 300 no inter parcelado em 3x
-                        """;
-            }
-
-            if (allowConversationPrompt) {
-                saveInstallmentDueDayContext(telegramId, parsedMessage);
-                return """
-                        Entendi o parcelamento.
-
-                        Qual o dia de vencimento da primeira parcela?
-
-                        Exemplo:
-                        - dia 15
-                        """;
-            }
-
-            telegramPendingConfirmationService.savePending(telegramId, pendingTransaction);
-
-            return telegramMessageFormatter.formatInstallmentTransactionPreview(
+        if (pendingTransaction.isInstallment()) {
+            return handleInstallmentPreview(
+                    telegramId,
+                    parsedMessage,
                     pendingTransaction,
-                    resolvedAccount.displayName()
+                    resolvedAccount.displayName(),
+                    allowConversationPrompt
             );
         }
 
@@ -95,6 +75,94 @@ public class TelegramTransactionPreviewHandler {
         return telegramMessageFormatter.formatTransactionPreview(
                 pendingTransaction,
                 resolvedAccount.displayName()
+        );
+
+    }
+
+    private String handleInstallmentPreview(
+            Long telegramId,
+            ParsedTelegramMessage parsedMessage,
+            PendingTelegramTransaction pendingTransaction,
+            String accountName,
+            boolean allowConversationPrompt
+    ) {
+        String validationError = validateInstallment(pendingTransaction);
+
+        if (validationError != null) {
+            return validationError;
+        }
+
+        if (allowConversationPrompt) {
+            saveInstallmentDueDayContext(telegramId, parsedMessage);
+            return buildInstallmentDueDayQuestion(pendingTransaction);
+        }
+
+        telegramPendingConfirmationService.savePending(telegramId, pendingTransaction);
+
+        return formatInstallmentPreview(pendingTransaction, accountName);
+    }
+
+    private String validateInstallment(PendingTelegramTransaction pendingTransaction) {
+        if (pendingTransaction.totalInstallments() == null || pendingTransaction.totalInstallments() < 2) {
+            return """
+                    Entendi a intenção de parcelamento, mas não consegui identificar uma quantidade válida de parcelas.
+                    
+                    Exemplos:
+                    - gastei 1200 parcelado em 10x
+                    - comprei um celular por 2400 em 12x
+                    - gastei 300 no inter parcelado em 3x
+                    """;
+        }
+
+        if (!pendingTransaction.isExistingInstallment()) {
+            return null;
+        }
+
+        if (pendingTransaction.firstRemainingInstallmentNumber() == null
+                || pendingTransaction.firstRemainingInstallmentNumber() < 1
+                || pendingTransaction.firstRemainingInstallmentNumber() > pendingTransaction.totalInstallments()) {
+            return """
+                    Entendi a intenção de parcelamento existente, mas não consegui identificar uma parcela atual válida.
+                    
+                    Exemplos:
+                    - comprei um celular por 2400 em 12x e ja paguei 5 parcelas
+                    - comprei um celular por 2400 em 12x e estou pagando a 6 parcela
+                    - tenho um financiamento de 3000 em 10x e estou na 6 parcela
+                    """;
+        }
+
+        return null;
+    }
+
+    private String buildInstallmentDueDayQuestion(PendingTelegramTransaction pendingTransaction) {
+        String installmentLabel = pendingTransaction.isExistingInstallment()
+                ? "próxima parcela"
+                : "primeira parcela";
+
+        return """
+                Entendi o parcelamento.
+                
+                Qual o dia de vencimento da %s?
+                
+                Exemplo:
+                - dia 15
+                """.formatted(installmentLabel);
+    }
+
+    private String formatInstallmentPreview(
+            PendingTelegramTransaction pendingTransaction,
+            String accountName
+    ) {
+        if (pendingTransaction.isExistingInstallment()) {
+            return telegramMessageFormatter.formatExistingInstallmentTransactionPreview(
+                    pendingTransaction,
+                    accountName
+            );
+        }
+
+        return telegramMessageFormatter.formatInstallmentTransactionPreview(
+                pendingTransaction,
+                accountName
         );
     }
 
@@ -130,11 +198,13 @@ public class TelegramTransactionPreviewHandler {
         return new PendingTelegramTransaction(
                 pendingTransaction.intentType(),
                 pendingTransaction.amount(),
+                pendingTransaction.monthlyAmount(),
                 pendingTransaction.description(),
                 pendingTransaction.date(),
                 pendingTransaction.categoryName(),
                 resolvedAccountName,
                 pendingTransaction.totalInstallments(),
+                pendingTransaction.firstRemainingInstallmentNumber(),
                 pendingTransaction.originalMessage()
         );
     }

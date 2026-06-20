@@ -105,6 +105,8 @@ class InMemoryTelegramConversationContextStoreTest {
                 null,
                 10,
                 null,
+                null,
+                null,
                 null
         );
 

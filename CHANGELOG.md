@@ -4,15 +4,34 @@
 
 ### Added
 
+- Adicionado suporte para registro de parcelamentos existentes, gerando apenas parcelas restantes a partir da parcela atual.
+- Adicionado endpoint autenticado para criação de parcelamentos existentes no módulo de transações.
+- Adicionado endpoint de integração Telegram para criação de parcelamentos existentes via bot.
+- Adicionado suporte no bot Telegram para interpretar parcelamentos em andamento com parcelas pagas ou parcela atual.
+- Adicionada edição de progresso de parcelamento existente no preview do Telegram antes da confirmação.
 - Adicionado suporte a novos aliases de categorias e contas no vocabulário de linguagem natural do bot Telegram.
+- Adicionado `mc` `mac` para a categoria Alimentação no vocabulário de linguagem natural do bot Telegram.
 - Adicionado suporte a novas expressões de período nas consultas do Telegram, incluindo semana atual e últimos 30 dias.
 - Adicionado suporte a novas variações de perguntas sobre término de parcelamentos.
 
 ### Changed
 
+- Ajustado o fluxo de criação de parcelamentos para reutilizar a geração de plano de parcelas com suporte a parcelas restantes.
+- Melhorada a interpretação de frases como `ja paguei 5`, `estou pagando a 6` e `parcelamento de 10x` no bot Telegram.
 - Melhorada a detecção de intenções de despesa e receita em mensagens naturais do Telegram.
 - Melhorada a limpeza da descrição de transações interpretadas pelo Telegram, evitando sobras como preposições após remoção de valores.
 - Centralizados termos e padrões de limpeza do parser em constantes para facilitar manutenção.
+
+### Fixed
+
+- Corrigida a autorização da rota de integração Telegram para salvar parcelamentos existentes.
+- Corrigido o roteamento de `CREATE_EXISTING_INSTALLMENT_EXPENSE` para o preview do bot Telegram.
+- Corrigido o parser do Telegram para não usar quantidade de parcelas pagas como valor da compra.
+
+### Tests
+
+- Adicionada cobertura para criação de parcelamentos existentes no domínio, use case, controller e integração Telegram.
+- Adicionada cobertura para interpretação, preview, edição e confirmação de parcelamentos existentes no bot Telegram.
 
 ## v1.4.0
 

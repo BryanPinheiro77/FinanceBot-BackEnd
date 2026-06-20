@@ -5,6 +5,7 @@ import com.financebot.telegrambot.intent.TelegramIntentType;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -141,24 +142,74 @@ public class TelegramMessageFormatter {
                 : "Automática";
 
         return """
-                💳 <b>Entendi este parcelamento:</b>
-                
-                <b>Valor total:</b> %s
-                <b>Parcelas:</b> %s
-                <b>Descrição:</b> %s
-                <b>Primeira parcela:</b> %s
-                <b>Conta:</b> %s
-                <b>Categoria:</b> %s
-                
-                Deseja confirmar e salvar?
-                """.formatted(
-                formatCurrency(pendingTransaction.amount()),
+            💳 <b>Entendi este parcelamento:</b>
+            
+            <b>Valor total:</b> %s
+            <b>Parcelas:</b> %s
+            <b>Valor da parcela:</b> %s
+            <b>Descrição:</b> %s
+            <b>Primeira parcela:</b> %s
+            <b>Conta:</b> %s
+            <b>Categoria:</b> %s
+            
+            Deseja confirmar e salvar?
+            """.formatted(
+                formatCurrency(calculateEffectiveTotalAmount(pendingTransaction)),
                 pendingTransaction.totalInstallments() != null
                         ? pendingTransaction.totalInstallments() + "x"
                         : "Não informada",
+                formatCurrency(calculateInstallmentAmount(pendingTransaction)),
                 pendingTransaction.description() != null
                         ? escapeHtml(pendingTransaction.description())
                         : "Não informada",
+                formatDate(pendingTransaction.date()),
+                escapeHtml(accountName),
+                escapeHtml(category)
+        );
+    }
+
+    public String formatExistingInstallmentTransactionPreview(
+            PendingTelegramTransaction pendingTransaction,
+            String accountName
+    ) {
+        String category = pendingTransaction.categoryName() != null
+                ? pendingTransaction.categoryName()
+                : "Automática";
+        Integer firstRemainingInstallmentNumber = pendingTransaction.firstRemainingInstallmentNumber();
+        Integer paidInstallments = firstRemainingInstallmentNumber != null
+                ? firstRemainingInstallmentNumber - 1
+                : null;
+        String nextInstallment = firstRemainingInstallmentNumber != null && pendingTransaction.totalInstallments() != null
+                ? firstRemainingInstallmentNumber + "/" + pendingTransaction.totalInstallments()
+                : "Não informada";
+
+        return """
+            💳 <b>Entendi este parcelamento em andamento:</b>
+            
+            <b>Valor total:</b> %s
+            <b>Valor da parcela:</b> %s
+            <b>Descrição:</b> %s
+            <b>Parcelas:</b> %s
+            <b>Parcelas pagas:</b> %s
+            <b>Próxima parcela:</b> %s
+            <b>Vencimento da próxima parcela:</b> %s
+            <b>Conta:</b> %s
+            <b>Categoria:</b> %s
+            
+            Deseja confirmar e salvar?
+            """.formatted(
+                formatCurrency(calculateEffectiveTotalAmount(pendingTransaction)),
+                formatCurrency(calculateInstallmentAmount(pendingTransaction)),
+                pendingTransaction.description() != null
+                        ? escapeHtml(pendingTransaction.description())
+                        : "Não informada",
+                pendingTransaction.totalInstallments() != null
+                        ? pendingTransaction.totalInstallments() + "x"
+                        : "Não informada",
+                paidInstallments != null
+                        ? paidInstallments
+                        : "Não informada",
+                nextInstallment,
                 formatDate(pendingTransaction.date()),
                 escapeHtml(accountName),
                 escapeHtml(category)
@@ -175,26 +226,76 @@ public class TelegramMessageFormatter {
                     : "Automática";
 
             return """
-                    ✅ <b>Operação atualizada.</b>
-                    
-                    <b>Entendi este parcelamento:</b>
-                    
-                    <b>Valor total:</b> %s
-                    <b>Parcelas:</b> %s
-                    <b>Descrição:</b> %s
-                    <b>Primeira parcela:</b> %s
-                    <b>Conta:</b> %s
-                    <b>Categoria:</b> %s
-                    
-                    Deseja confirmar e salvar?
-                    """.formatted(
-                    formatCurrency(pendingTransaction.amount()),
+        ✅ <b>Operação atualizada.</b>
+        
+        <b>Entendi este parcelamento:</b>
+        
+        <b>Valor total:</b> %s
+        <b>Parcelas:</b> %s
+        <b>Valor da parcela:</b> %s
+        <b>Descrição:</b> %s
+        <b>Primeira parcela:</b> %s
+        <b>Conta:</b> %s
+        <b>Categoria:</b> %s
+        
+        Deseja confirmar e salvar?
+        """.formatted(
+                    formatCurrency(calculateEffectiveTotalAmount(pendingTransaction)),
                     pendingTransaction.totalInstallments() != null
                             ? pendingTransaction.totalInstallments() + "x"
                             : "Não informada",
+                    formatCurrency(calculateInstallmentAmount(pendingTransaction)),
                     pendingTransaction.description() != null
                             ? escapeHtml(pendingTransaction.description())
                             : "Não informada",
+                    formatDate(pendingTransaction.date()),
+                    escapeHtml(accountName),
+                    escapeHtml(category)
+            );
+        }
+
+        if (pendingTransaction.intentType() == TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE) {
+            String category = pendingTransaction.categoryName() != null
+                    ? pendingTransaction.categoryName()
+                    : "Automática";
+
+            Integer firstRemainingInstallmentNumber = pendingTransaction.firstRemainingInstallmentNumber();
+            Integer paidInstallments = firstRemainingInstallmentNumber != null
+                    ? firstRemainingInstallmentNumber - 1
+                    : null;
+            String nextInstallment = firstRemainingInstallmentNumber != null && pendingTransaction.totalInstallments() != null
+                    ? firstRemainingInstallmentNumber + "/" + pendingTransaction.totalInstallments()
+                    : "Não informada";
+
+            return """
+        ✅ <b>Operação atualizada.</b>
+
+        <b>Entendi este parcelamento em andamento:</b>
+
+        <b>Valor total:</b> %s
+        <b>Valor da parcela:</b> %s
+        <b>Descrição:</b> %s
+        <b>Parcelas:</b> %s
+        <b>Parcelas pagas:</b> %s
+        <b>Próxima parcela:</b> %s
+        <b>Vencimento da próxima parcela:</b> %s
+        <b>Conta:</b> %s
+        <b>Categoria:</b> %s
+
+        Deseja confirmar e salvar?
+        """.formatted(
+                    formatCurrency(calculateEffectiveTotalAmount(pendingTransaction)),
+                    formatCurrency(calculateInstallmentAmount(pendingTransaction)),
+                    pendingTransaction.description() != null
+                            ? escapeHtml(pendingTransaction.description())
+                            : "Não informada",
+                    pendingTransaction.totalInstallments() != null
+                            ? pendingTransaction.totalInstallments() + "x"
+                            : "Não informada",
+                    paidInstallments != null
+                            ? paidInstallments
+                            : "Não informada",
+                    nextInstallment,
                     formatDate(pendingTransaction.date()),
                     escapeHtml(accountName),
                     escapeHtml(category)
@@ -373,7 +474,8 @@ public class TelegramMessageFormatter {
     }
 
     public String formatTransactionSuccess(TelegramIntentType intentType) {
-        if (intentType == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE) {
+        if (intentType == TelegramIntentType.CREATE_INSTALLMENT_EXPENSE
+                || intentType == TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE) {
             return """
                     ✅ <b>Parcelamento registrado com sucesso!</b>
                     
@@ -628,6 +730,35 @@ public class TelegramMessageFormatter {
 
     public String formatGenericSetIncomeFailureMessage() {
         return "⚠️ <b>Não foi possível atualizar sua renda mensal base agora.</b>";
+    }
+
+    private BigDecimal calculateEffectiveTotalAmount(PendingTelegramTransaction pendingTransaction) {
+        if (pendingTransaction.amount() != null) {
+            return pendingTransaction.amount();
+        }
+
+        if (pendingTransaction.monthlyAmount() == null || pendingTransaction.totalInstallments() == null) {
+            return null;
+        }
+
+        return pendingTransaction.monthlyAmount()
+                .multiply(BigDecimal.valueOf(pendingTransaction.totalInstallments()));
+    }
+
+    private BigDecimal calculateInstallmentAmount(PendingTelegramTransaction pendingTransaction) {
+        if (pendingTransaction.monthlyAmount() != null) {
+            return pendingTransaction.monthlyAmount();
+        }
+
+        if (pendingTransaction.amount() == null || pendingTransaction.totalInstallments() == null) {
+            return null;
+        }
+
+        return pendingTransaction.amount().divide(
+                BigDecimal.valueOf(pendingTransaction.totalInstallments()),
+                2,
+                RoundingMode.HALF_UP
+        );
     }
 
     private String formatCurrency(BigDecimal value) {

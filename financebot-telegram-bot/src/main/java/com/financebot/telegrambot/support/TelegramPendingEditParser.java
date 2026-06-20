@@ -23,10 +23,12 @@ public class TelegramPendingEditParser {
         String lower = telegramTextNormalizer.normalize(messageText);
 
         BigDecimal amount = null;
+        EditedAmountKind amountKind = EditedAmountKind.UNSPECIFIED;
         String description = null;
         LocalDate date = null;
         String categoryName = null;
         String accountName = null;
+        Integer firstRemainingInstallmentNumber = null;
 
         boolean changed = false;
 
@@ -35,6 +37,7 @@ public class TelegramPendingEditParser {
 
             if (newAmount != null && newAmount.compareTo(BigDecimal.ZERO) > 0) {
                 amount = newAmount;
+                amountKind = resolveAmountKind(lower);
                 changed = true;
             }
         }
@@ -75,18 +78,62 @@ public class TelegramPendingEditParser {
             }
         }
 
+        if (containsInstallmentPositionEditHint(lower)) {
+            Integer newFirstRemainingInstallmentNumber = extractFirstRemainingInstallmentNumberFromEdit(lower);
+
+            if (newFirstRemainingInstallmentNumber != null) {
+                firstRemainingInstallmentNumber = newFirstRemainingInstallmentNumber;
+                changed = true;
+            }
+        }
+
         return new PendingEditResult(
                 changed,
                 amount,
+                amountKind,
                 description,
                 date,
                 categoryName,
-                accountName
+                accountName,
+                firstRemainingInstallmentNumber
         );
     }
 
     private boolean containsAmountEditHint(String lower) {
-        return lower.contains("valor");
+        return lower.contains("valor")
+                || lower.contains("total")
+                || lower.contains("mensal")
+                || containsBareAmountEditHint(lower);
+    }
+
+    private boolean containsBareAmountEditHint(String lower) {
+        return BARE_AMOUNT_EDIT_PATTERN.matcher(lower).find()
+                && !lower.contains("parcela")
+                && !lower.contains("data")
+                && !lower.contains("dia")
+                && !lower.contains("conta")
+                && !lower.contains("categoria")
+                && !lower.contains("descricao");
+    }
+
+    private EditedAmountKind resolveAmountKind(String lower) {
+        if (lower.contains("valor total")
+                || lower.contains("total do parcelamento")
+                || lower.contains("total da compra")
+                || lower.contains("total para")
+                || lower.contains("total pra")) {
+            return EditedAmountKind.TOTAL;
+        }
+
+        if (lower.contains("valor mensal")
+                || lower.contains("por mes")
+                || lower.contains("mensal")
+                || lower.contains("valor da parcela")
+                || lower.contains("valor de parcela")) {
+            return EditedAmountKind.MONTHLY;
+        }
+
+        return EditedAmountKind.UNSPECIFIED;
     }
 
     private boolean containsDescriptionEditHint(String lower) {
@@ -112,6 +159,13 @@ public class TelegramPendingEditParser {
 
     private boolean containsAccountEditHint(String lower) {
         return lower.contains("conta");
+    }
+
+    private boolean containsInstallmentPositionEditHint(String lower) {
+        return lower.contains("parcela")
+                || lower.contains("parcelas pagas")
+                || lower.contains("ja paguei")
+                || lower.contains("estou pagando");
     }
 
     private BigDecimal extractAmountFromEdit(String text) {
@@ -251,6 +305,38 @@ public class TelegramPendingEditParser {
         return null;
     }
 
+    private Integer extractFirstRemainingInstallmentNumberFromEdit(String lower) {
+        Matcher currentInstallmentMatcher = CURRENT_INSTALLMENT_NUMBER_PATTERN.matcher(lower);
+        if (currentInstallmentMatcher.find()) {
+            return parsePositiveInteger(currentInstallmentMatcher.group(1));
+        }
+
+        Matcher directInstallmentMatcher = DIRECT_INSTALLMENT_NUMBER_PATTERN.matcher(lower);
+        if (directInstallmentMatcher.find()) {
+            return parsePositiveInteger(directInstallmentMatcher.group(1));
+        }
+
+        Matcher paidInstallmentsMatcher = PAID_INSTALLMENTS_PATTERN.matcher(lower);
+        if (paidInstallmentsMatcher.find()) {
+            Integer paidInstallments = parsePositiveInteger(paidInstallmentsMatcher.group(1));
+
+            if (paidInstallments != null) {
+                return paidInstallments + 1;
+            }
+        }
+
+        return null;
+    }
+
+    private Integer parsePositiveInteger(String value) {
+        try {
+            int parsed = Integer.parseInt(value);
+            return parsed > 0 ? parsed : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     private String extractAccountFromEdit(String text) {
         String cleaned = telegramTextNormalizer.normalize(text)
                 .replaceFirst(".*?conta\\s+para\\s+", "")
@@ -365,6 +451,14 @@ public class TelegramPendingEditParser {
     private static final Pattern EDIT_DAY_AND_MONTH_PATTERN =
             Pattern.compile("\\bdia\\s+(?:para\\s+|pra\\s+)?(\\d{1,2})\\s+(?:do|de)\\s+(\\d{1,2})\\b");
     private static final Pattern EDIT_DAY_ONLY_PATTERN = Pattern.compile("\\bdia\\s+(\\d{1,2})\\b");
+    private static final Pattern PAID_INSTALLMENTS_PATTERN =
+            Pattern.compile("\\b(?:ja\\s+paguei\\s+|parcelas?\\s+pagas?\\s+(?:para\\s+|pra\\s+)?|(?:muda|mude|altera|altere|troca|troque|corrige|corrija)\\s+(?:a\\s+)?parcela\\s+paga\\s+(?:para\\s+|pra\\s+)?)(\\d{1,3})\\b");
+    private static final Pattern CURRENT_INSTALLMENT_NUMBER_PATTERN =
+            Pattern.compile("\\b(?:estou\\s+pagando\\s+(?:a\\s+)?|estou\\s+na\\s+|parcela\\s+atual\\s+(?:para\\s+|pra\\s+)?)(\\d{1,3})(?:a|ª|º)?\\s+parcela?\\b");
+    private static final Pattern DIRECT_INSTALLMENT_NUMBER_PATTERN =
+            Pattern.compile("\\b(?:muda|mude|altera|altere|troca|troque|corrige|corrija)\\s+(?:para\\s+|pra\\s+)?(?:a\\s+)?parcela\\s+(?:para\\s+|pra\\s+)?(\\d{1,3})(?:a|ª|º)?\\b");
+    private static final Pattern BARE_AMOUNT_EDIT_PATTERN =
+            Pattern.compile("\\b(?:muda|mude|altera|altere|troca|troque|corrige|corrija)\\s+(?:para\\s+|pra\\s+)?(?:r\\$\\s*)?\\d+[\\.,]?\\d{0,2}\\b");
 
     private static final DateTimeFormatter FLEXIBLE_SLASH_DATE_FORMATTER = new DateTimeFormatterBuilder()
             .appendValue(ChronoField.DAY_OF_MONTH)
@@ -385,10 +479,18 @@ public class TelegramPendingEditParser {
     public record PendingEditResult(
             boolean changed,
             BigDecimal amount,
+            EditedAmountKind amountKind,
             String description,
             LocalDate date,
             String categoryName,
-            String accountName
+            String accountName,
+            Integer firstRemainingInstallmentNumber
     ) {
+    }
+
+    public enum EditedAmountKind {
+        TOTAL,
+        MONTHLY,
+        UNSPECIFIED
     }
 }

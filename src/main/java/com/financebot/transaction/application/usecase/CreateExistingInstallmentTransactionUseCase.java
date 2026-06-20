@@ -2,7 +2,7 @@ package com.financebot.transaction.application.usecase;
 
 import com.financebot.account.domain.Account;
 import com.financebot.category.domain.Category;
-import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
+import com.financebot.transaction.application.command.CreateExistingInstallmentTransactionCommand;
 import com.financebot.transaction.application.dto.response.InstallmentTransactionResponse;
 import com.financebot.transaction.application.dto.response.TransactionResponse;
 import com.financebot.transaction.application.port.out.SaveTransactionPort;
@@ -16,11 +16,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class CreateInstallmentTransactionUseCase {
+public class CreateExistingInstallmentTransactionUseCase {
 
     private final SaveTransactionPort saveTransactionPort;
     private final UserResourceResolver userResourceResolver;
@@ -30,13 +31,16 @@ public class CreateInstallmentTransactionUseCase {
     private final InstallmentTransactionBuilder installmentTransactionBuilder;
 
     @Transactional
-    public InstallmentTransactionResponse execute(CreateInstallmentTransactionCommand command) {
-        InstallmentPlan plan = installmentPlanFactory.create(
-                command.totalAmount(),
+    public InstallmentTransactionResponse execute(CreateExistingInstallmentTransactionCommand command) {
+        BigDecimal effectiveTotalAmount = resolveEffectiveTotalAmount(command);
+
+        InstallmentPlan plan = installmentPlanFactory.createRemaining(
+                effectiveTotalAmount,
                 command.description(),
-                command.firstInstallmentDate(),
+                command.firstRemainingInstallmentDate(),
                 command.type(),
-                command.totalInstallments()
+                command.totalInstallments(),
+                command.firstRemainingInstallmentNumber()
         );
 
         Account account = userResourceResolver.resolveAccount(command.accountId(), command.user().getId());
@@ -66,5 +70,30 @@ public class CreateInstallmentTransactionUseCase {
                 plan.totalInstallments(),
                 responses
         );
+    }
+
+    private BigDecimal resolveEffectiveTotalAmount(CreateExistingInstallmentTransactionCommand command) {
+        boolean hasTotalAmount = command.totalAmount() != null;
+        boolean hasMonthlyAmount = command.monthlyAmount() != null;
+
+        if (hasTotalAmount == hasMonthlyAmount) {
+            throw new IllegalArgumentException("Exactly one of total amount or monthly amount must be provided");
+        }
+
+        if (hasTotalAmount) {
+            validatePositiveAmount(command.totalAmount(), "Total amount must be greater than zero");
+            return command.totalAmount();
+        }
+
+        validatePositiveAmount(command.monthlyAmount(), "Monthly amount must be greater than zero");
+
+        return command.monthlyAmount()
+                .multiply(BigDecimal.valueOf(command.totalInstallments()));
+    }
+
+    private void validatePositiveAmount(BigDecimal amount, String message) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(message);
+        }
     }
 }
