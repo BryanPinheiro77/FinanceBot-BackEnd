@@ -13,11 +13,13 @@ public class PendingTelegramTransactionMapper {
         return new PendingTelegramTransaction(
                 parsedMessage.intentType(),
                 resolveAmount(parsedMessage),
+                parsedMessage.monthlyAmount(),
                 parsedMessage.description(),
                 parsedMessage.date(),
                 parsedMessage.categoryName(),
                 parsedMessage.accountName(),
                 parsedMessage.totalInstallments(),
+                parsedMessage.firstRemainingInstallmentNumber(),
                 parsedMessage.originalMessage()
         );
     }

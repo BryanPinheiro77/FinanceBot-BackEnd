@@ -95,6 +95,8 @@ public class TelegramQueryContextService {
                 startDate,
                 endDate,
                 null,
+                previous.firstRemainingInstallmentNumber(),
+                null,
                 null,
                 null
         );
@@ -121,7 +123,9 @@ public class TelegramQueryContextService {
                 null,
                 null,
                 null,
+                previous.firstRemainingInstallmentNumber(),
                 target,
+                null,
                 null
         );
     }

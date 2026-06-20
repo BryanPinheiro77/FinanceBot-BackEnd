@@ -8,8 +8,10 @@ import com.financebot.category.domain.Category;
 import com.financebot.telegram.dto.request.*;
 import com.financebot.telegram.dto.response.*;
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
+import com.financebot.transaction.application.command.CreateExistingInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateTransactionCommand;
+import com.financebot.transaction.application.usecase.CreateExistingInstallmentTransactionUseCase;
 import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
 import com.financebot.transaction.application.usecase.CreateTransactionUseCase;
 import com.financebot.transaction.domain.SourceType;
@@ -45,6 +47,7 @@ public class TelegramIntegrationService {
     private final TelegramAccountResolverService telegramAccountResolverService;
     private final TelegramCategoryResolverService telegramCategoryResolverService;
     private final CreateTransactionUseCase createTransactionUseCase;
+    private final CreateExistingInstallmentTransactionUseCase createExistingInstallmentTransactionUseCase;
 
     @Transactional(readOnly = true)
     public TelegramUserProfileResponse getMe(Long telegramId) {
@@ -195,6 +198,35 @@ public class TelegramIntegrationService {
         );
 
         createInstallmentTransactionUseCase.execute(command);
+    }
+
+    @Transactional
+    public void createExistingInstallmentTransactionFromTelegram(CreateExistingInstallmentTransactionFromTelegramRequest request) {
+        User user = findUserByTelegramId(request.telegramId());
+
+        Account account = telegramAccountResolverService.resolve(user, request.accountName());
+        Category category = resolveCategoryFromRequest(
+                user,
+                TransactionType.EXPENSE,
+                request.categoryName(),
+                request.description()
+        );
+
+        CreateExistingInstallmentTransactionCommand command = new CreateExistingInstallmentTransactionCommand(
+                request.totalAmount(),
+                request.monthlyAmount(),
+                request.description(),
+                request.firstRemainingInstallmentDate(),
+                TransactionType.EXPENSE,
+                SourceType.BOT_TEXT,
+                account.getId(),
+                category.getId(),
+                request.totalInstallments(),
+                request.firstRemainingInstallmentNumber(),
+                user
+        );
+
+        createExistingInstallmentTransactionUseCase.execute(command);
     }
 
     @Transactional(readOnly = true)

@@ -49,8 +49,10 @@ public class TelegramPendingQueryHandler {
                 pending.startDate(),
                 pending.endDate(),
                 pending.totalInstallments(),
+                pending.firstRemainingInstallmentNumber(),
                 selectedTarget,
-                pending.totalAmount()
+                pending.totalAmount(),
+                pending.monthlyAmount()
         );
 
         telegramPendingQueryService.clearPending(telegramId);

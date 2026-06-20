@@ -74,6 +74,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/telegram/income/current-month").permitAll()
                         .requestMatchers(HttpMethod.POST, "/telegram/transactions").permitAll()
                         .requestMatchers(HttpMethod.POST, "/telegram/transactions/installments").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/telegram/transactions/installments/existing").permitAll()
                         .requestMatchers(HttpMethod.POST, "/telegram/transactions/summary").permitAll()
                         .requestMatchers(HttpMethod.POST, "/telegram/installments/count").permitAll()
                         .requestMatchers(HttpMethod.POST, "/telegram/installments/purchase-capacity").permitAll()

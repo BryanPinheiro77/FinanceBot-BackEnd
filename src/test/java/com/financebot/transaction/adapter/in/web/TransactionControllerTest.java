@@ -7,14 +7,17 @@ import com.financebot.analysis.service.FinancialAnalysisService;
 import com.financebot.common.pagination.PageQuery;
 import com.financebot.common.pagination.PageResult;
 import com.financebot.common.pagination.SortDirection;
+import com.financebot.transaction.application.command.CreateExistingInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateTransactionCommand;
 import com.financebot.transaction.application.command.UpdateTransactionCommand;
+import com.financebot.transaction.application.dto.request.CreateExistingInstallmentTransactionRequest;
 import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
 import com.financebot.transaction.application.dto.request.UpdateTransactionRequest;
 import com.financebot.transaction.application.dto.response.InstallmentTransactionResponse;
 import com.financebot.transaction.application.dto.response.TransactionResponse;
+import com.financebot.transaction.application.usecase.CreateExistingInstallmentTransactionUseCase;
 import com.financebot.transaction.application.usecase.CreateInstallmentTransactionUseCase;
 import com.financebot.transaction.application.usecase.CreateTransactionUseCase;
 import com.financebot.transaction.application.usecase.DeleteTransactionUseCase;
@@ -68,6 +71,9 @@ class TransactionControllerTest {
 
     @Mock
     private CreateInstallmentTransactionUseCase createInstallmentTransactionUseCase;
+
+    @Mock
+    private CreateExistingInstallmentTransactionUseCase createExistingInstallmentTransactionUseCase;
 
     @Mock
     private ListTransactionsUseCase listTransactionsUseCase;
@@ -179,6 +185,59 @@ class TransactionControllerTest {
         verify(authenticatedUserResolver).resolve(authentication);
         verify(transactionMapper).toCommand(request, user);
         verify(createInstallmentTransactionUseCase).execute(command);
+        verify(financialAnalysisService).getFinancialCommitment(authentication);
+    }
+
+    @Test
+    @DisplayName("deve criar transação parcelada existente e retornar análise financeira atualizada")
+    void shouldCreateExistingInstallmentTransactionAndReturnFinancialAnalysis() {
+        CreateExistingInstallmentTransactionRequest request = new CreateExistingInstallmentTransactionRequest(
+                new BigDecimal("6000.00"),
+                null,
+                "iPhone",
+                LocalDate.of(2026, 6, 15),
+                TransactionType.EXPENSE,
+                SourceType.WEB,
+                10L,
+                20L,
+                10,
+                6
+        );
+
+        User user = new User();
+        user.setId(1L);
+
+        CreateExistingInstallmentTransactionCommand command = new CreateExistingInstallmentTransactionCommand(
+                request.totalAmount(),
+                request.monthlyAmount(),
+                request.description(),
+                request.firstRemainingInstallmentDate(),
+                request.type(),
+                request.sourceType(),
+                request.accountId(),
+                request.categoryId(),
+                request.totalInstallments(),
+                request.firstRemainingInstallmentNumber(),
+                user
+        );
+
+        InstallmentTransactionResponse installmentResponse = mock(InstallmentTransactionResponse.class);
+        FinancialCommitmentResponse financialAnalysis = mock(FinancialCommitmentResponse.class);
+
+        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
+        when(transactionMapper.toCommand(request, user)).thenReturn(command);
+        when(createExistingInstallmentTransactionUseCase.execute(command)).thenReturn(installmentResponse);
+        when(financialAnalysisService.getFinancialCommitment(authentication)).thenReturn(financialAnalysis);
+
+        InstallmentTransactionCreationResponse result =
+                transactionController.createExistingInstallment(request, authentication);
+
+        assertThat(result.installment()).isEqualTo(installmentResponse);
+        assertThat(result.analysis()).isEqualTo(financialAnalysis);
+
+        verify(authenticatedUserResolver).resolve(authentication);
+        verify(transactionMapper).toCommand(request, user);
+        verify(createExistingInstallmentTransactionUseCase).execute(command);
         verify(financialAnalysisService).getFinancialCommitment(authentication);
     }
 

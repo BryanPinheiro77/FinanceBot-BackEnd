@@ -67,6 +67,61 @@ public class InstallmentPlanFactory {
         );
     }
 
+    public InstallmentPlan createRemaining(
+            BigDecimal totalAmount,
+            String description,
+            LocalDate firstRemainingInstallmentDate,
+            TransactionType type,
+            Integer totalInstallments,
+            Integer firstRemainingInstallmentNumber
+    ) {
+        validate(type, totalInstallments, firstRemainingInstallmentNumber);
+
+        String installmentGroupId = UUID.randomUUID().toString();
+
+        BigDecimal installmentAmount = totalAmount.divide(
+                BigDecimal.valueOf(totalInstallments),
+                MONEY_SCALE,
+                RoundingMode.HALF_UP
+        );
+
+        BigDecimal accumulated = BigDecimal.ZERO;
+        List<InstallmentPlanItem> items = new ArrayList<>();
+
+        for (int installmentNumber = 1; installmentNumber <= totalInstallments; installmentNumber++) {
+            BigDecimal amount = calculateCurrentInstallmentAmount(
+                    installmentNumber,
+                    totalInstallments,
+                    installmentAmount,
+                    totalAmount,
+                    accumulated
+            );
+
+            if (installmentNumber < totalInstallments) {
+                accumulated = accumulated.add(amount);
+            }
+
+            if (installmentNumber < firstRemainingInstallmentNumber) {
+                continue;
+            }
+
+            items.add(new InstallmentPlanItem(
+                    amount,
+                    buildInstallmentDescription(description, installmentNumber, totalInstallments),
+                    firstRemainingInstallmentDate.plusMonths((long) installmentNumber - firstRemainingInstallmentNumber),
+                    installmentNumber,
+                    totalInstallments,
+                    installmentGroupId
+            ));
+        }
+
+        return new InstallmentPlan(
+                installmentGroupId,
+                totalInstallments,
+                items
+        );
+    }
+
     private void validate(TransactionType type, Integer totalInstallments) {
         if (type != TransactionType.EXPENSE) {
             throw new IllegalArgumentException(INSTALLMENT_ONLY_EXPENSE_MESSAGE);
@@ -74,6 +129,24 @@ public class InstallmentPlanFactory {
 
         if (totalInstallments == null || totalInstallments < 2) {
             throw new IllegalArgumentException(MINIMUM_INSTALLMENTS_MESSAGE);
+        }
+    }
+
+    private void validate(
+            TransactionType type,
+            Integer totalInstallments,
+            Integer firstRemainingInstallmentNumber
+    ) {
+        validate(type, totalInstallments);
+
+        if (firstRemainingInstallmentNumber == null || firstRemainingInstallmentNumber < 1) {
+            throw new IllegalArgumentException("First remaining installment number must be at least 1");
+        }
+
+        if (firstRemainingInstallmentNumber > totalInstallments) {
+            throw new IllegalArgumentException(
+                    "First remaining installment number cannot be greater than total installments"
+            );
         }
     }
 

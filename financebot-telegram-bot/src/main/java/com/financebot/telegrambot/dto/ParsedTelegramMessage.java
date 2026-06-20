@@ -16,7 +16,9 @@ public record ParsedTelegramMessage(
         LocalDate startDate,
         LocalDate endDate,
         Integer totalInstallments,
+        Integer firstRemainingInstallmentNumber,
         String installmentQueryTarget,
-        BigDecimal totalAmount
+        BigDecimal totalAmount,
+        BigDecimal monthlyAmount
 ) {
 }

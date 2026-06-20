@@ -99,6 +99,132 @@ class TelegramIntentServiceTest {
     }
 
     @Test
+    @DisplayName("deve interpretar parcelamento existente com parcelas ja pagas")
+    void shouldParseExistingInstallmentWithPaidInstallments() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "comprei um iPhone de 6000 em 10x e já paguei 5 parcelas"
+        );
+
+        assertThat(parsed.intentType()).isEqualTo(TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE);
+        assertThat(parsed.totalAmount()).isEqualByComparingTo(new BigDecimal("6000"));
+        assertThat(parsed.description()).isEqualTo("iphone");
+        assertThat(parsed.totalInstallments()).isEqualTo(10);
+        assertThat(parsed.firstRemainingInstallmentNumber()).isEqualTo(6);
+    }
+
+    @Test
+    @DisplayName("deve interpretar parcelamento existente com valor mensal")
+    void shouldParseExistingInstallmentWithMonthlyAmount() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "tenho um financiamento de 300 por mes em 10x e ja paguei 5 parcelas"
+        );
+
+        assertThat(parsed.intentType()).isEqualTo(TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE);
+        assertThat(parsed.totalAmount()).isNull();
+        assertThat(parsed.monthlyAmount()).isEqualByComparingTo(new BigDecimal("300"));
+        assertThat(parsed.totalInstallments()).isEqualTo(10);
+        assertThat(parsed.firstRemainingInstallmentNumber()).isEqualTo(6);
+    }
+
+    @Test
+    @DisplayName("deve interpretar parcelamento existente com valor mensal escrito em reais")
+    void shouldParseExistingInstallmentWithMonthlyAmountInReais() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "tenho um financiamento de 300 reais por mes em 10x e ja paguei 5 parcelas"
+        );
+
+        assertThat(parsed.intentType()).isEqualTo(TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE);
+        assertThat(parsed.totalAmount()).isNull();
+        assertThat(parsed.monthlyAmount()).isEqualByComparingTo(new BigDecimal("300"));
+        assertThat(parsed.totalInstallments()).isEqualTo(10);
+        assertThat(parsed.firstRemainingInstallmentNumber()).isEqualTo(6);
+    }
+
+    @Test
+    @DisplayName("deve interpretar parcelamento existente com parcelas pagas sem palavra parcelas")
+    void shouldParseExistingInstallmentWithPaidInstallmentsWithoutInstallmentWord() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "comprei um iphone parcelado em 10x e ja paguei 5"
+        );
+
+        assertThat(parsed.intentType()).isEqualTo(TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE);
+        assertThat(parsed.amount()).isNull();
+        assertThat(parsed.totalAmount()).isNull();
+        assertThat(parsed.description()).isEqualTo("iphone");
+        assertThat(parsed.totalInstallments()).isEqualTo(10);
+        assertThat(parsed.firstRemainingInstallmentNumber()).isEqualTo(6);
+    }
+
+    @Test
+    @DisplayName("deve interpretar parcelamento existente com parcela atual por extenso")
+    void shouldParseExistingInstallmentWithCurrentInstallmentInWords() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "comprei um iPhone de 6000 em 10x e estou pagando a sexta parcela"
+        );
+
+        assertThat(parsed.intentType()).isEqualTo(TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE);
+        assertThat(parsed.totalAmount()).isEqualByComparingTo(new BigDecimal("6000"));
+        assertThat(parsed.totalInstallments()).isEqualTo(10);
+        assertThat(parsed.firstRemainingInstallmentNumber()).isEqualTo(6);
+    }
+
+    @Test
+    @DisplayName("deve interpretar parcelamento existente com parcela atual numerica sem palavra parcela")
+    void shouldParseExistingInstallmentWithCurrentInstallmentNumberWithoutInstallmentWord() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "comprei um celular de 3000 parcelado em 10x e estou pagando a 6"
+        );
+
+        assertThat(parsed.intentType()).isEqualTo(TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE);
+        assertThat(parsed.totalAmount()).isEqualByComparingTo(new BigDecimal("3000"));
+        assertThat(parsed.description()).isEqualTo("celular");
+        assertThat(parsed.totalInstallments()).isEqualTo(10);
+        assertThat(parsed.firstRemainingInstallmentNumber()).isEqualTo(6);
+    }
+
+    @Test
+    @DisplayName("deve interpretar parcelamento existente com quinta parcela atual sem palavra parcela")
+    void shouldParseExistingInstallmentWithFifthCurrentInstallmentWithoutInstallmentWord() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "comprei um celular de 3000 parcelado em 10x e estou pagando a 5"
+        );
+
+        assertThat(parsed.intentType()).isEqualTo(TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE);
+        assertThat(parsed.totalAmount()).isEqualByComparingTo(new BigDecimal("3000"));
+        assertThat(parsed.description()).isEqualTo("celular");
+        assertThat(parsed.totalInstallments()).isEqualTo(10);
+        assertThat(parsed.firstRemainingInstallmentNumber()).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("nao deve usar parcelas pagas como valor do parcelamento existente")
+    void shouldNotUsePaidInstallmentsAsExistingInstallmentAmount() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "tenho um parcelamento de 10x e ja paguei 5"
+        );
+
+        assertThat(parsed.intentType()).isEqualTo(TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE);
+        assertThat(parsed.amount()).isNull();
+        assertThat(parsed.totalAmount()).isNull();
+        assertThat(parsed.totalInstallments()).isEqualTo(10);
+        assertThat(parsed.firstRemainingInstallmentNumber()).isEqualTo(6);
+    }
+
+    @Test
+    @DisplayName("deve interpretar parcelamento existente com parcela atual numerica")
+    void shouldParseExistingInstallmentWithCurrentInstallmentNumber() {
+        ParsedTelegramMessage parsed = telegramIntentService.parse(
+                "tenho um financiamento de 3000 em 10x e estou na 6ª parcela"
+        );
+
+        assertThat(parsed.intentType()).isEqualTo(TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE);
+        assertThat(parsed.totalAmount()).isEqualByComparingTo(new BigDecimal("3000"));
+        assertThat(parsed.description()).isEqualTo("Despesa parcelada");
+        assertThat(parsed.totalInstallments()).isEqualTo(10);
+        assertThat(parsed.firstRemainingInstallmentNumber()).isEqualTo(6);
+    }
+
+    @Test
     @DisplayName("nao deve interpretar pergunta ambigua fora do escopo")
     void shouldNotParseOutOfScopeAmbiguousInstallmentQuestion() {
         ParsedTelegramMessage parsed = telegramIntentService.parse(

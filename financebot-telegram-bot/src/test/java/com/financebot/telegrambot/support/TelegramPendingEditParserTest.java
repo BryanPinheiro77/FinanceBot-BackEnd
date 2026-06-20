@@ -25,6 +25,40 @@ class TelegramPendingEditParserTest {
 
         assertThat(result.changed()).isTrue();
         assertThat(result.amount()).isEqualByComparingTo("80.50");
+        assertThat(result.amountKind()).isEqualTo(TelegramPendingEditParser.EditedAmountKind.UNSPECIFIED);
+    }
+
+    @Test
+    @DisplayName("deve identificar edicao explicita de valor total")
+    void shouldIdentifyTotalAmountEdit() {
+        TelegramPendingEditParser.PendingEditResult result =
+                telegramPendingEditParser.parse("muda o valor total para 6200");
+
+        assertThat(result.changed()).isTrue();
+        assertThat(result.amount()).isEqualByComparingTo("6200");
+        assertThat(result.amountKind()).isEqualTo(TelegramPendingEditParser.EditedAmountKind.TOTAL);
+    }
+
+    @Test
+    @DisplayName("deve identificar edicao explicita de valor mensal")
+    void shouldIdentifyMonthlyAmountEdit() {
+        TelegramPendingEditParser.PendingEditResult result =
+                telegramPendingEditParser.parse("muda o valor mensal para 620");
+
+        assertThat(result.changed()).isTrue();
+        assertThat(result.amount()).isEqualByComparingTo("620");
+        assertThat(result.amountKind()).isEqualTo(TelegramPendingEditParser.EditedAmountKind.MONTHLY);
+    }
+
+    @Test
+    @DisplayName("deve tratar edicao direta de numero como valor ambiguo")
+    void shouldTreatBareNumberEditAsUnspecifiedAmount() {
+        TelegramPendingEditParser.PendingEditResult result =
+                telegramPendingEditParser.parse("muda pra 6200");
+
+        assertThat(result.changed()).isTrue();
+        assertThat(result.amount()).isEqualByComparingTo("6200");
+        assertThat(result.amountKind()).isEqualTo(TelegramPendingEditParser.EditedAmountKind.UNSPECIFIED);
     }
 
     @Test
@@ -107,5 +141,55 @@ class TelegramPendingEditParserTest {
         assertThat(result.amount()).isEqualByComparingTo("80");
         assertThat(result.categoryName()).isEqualTo("Mercado");
         assertThat(result.accountName()).isEqualTo("Nubank");
+    }
+
+    @Test
+    @DisplayName("deve extrair primeira parcela restante a partir de parcelas pagas")
+    void shouldExtractFirstRemainingInstallmentFromPaidInstallments() {
+        TelegramPendingEditParser.PendingEditResult result =
+                telegramPendingEditParser.parse("ja paguei 5 parcelas");
+
+        assertThat(result.changed()).isTrue();
+        assertThat(result.firstRemainingInstallmentNumber()).isEqualTo(6);
+    }
+
+    @Test
+    @DisplayName("deve extrair primeira parcela restante a partir da parcela atual")
+    void shouldExtractFirstRemainingInstallmentFromCurrentInstallment() {
+        TelegramPendingEditParser.PendingEditResult result =
+                telegramPendingEditParser.parse("estou pagando a 6 parcela");
+
+        assertThat(result.changed()).isTrue();
+        assertThat(result.firstRemainingInstallmentNumber()).isEqualTo(6);
+    }
+
+    @Test
+    @DisplayName("deve extrair primeira parcela restante de edicao direta da parcela")
+    void shouldExtractFirstRemainingInstallmentFromDirectInstallmentEdit() {
+        TelegramPendingEditParser.PendingEditResult result =
+                telegramPendingEditParser.parse("muda para a parcela 8");
+
+        assertThat(result.changed()).isTrue();
+        assertThat(result.firstRemainingInstallmentNumber()).isEqualTo(8);
+    }
+
+    @Test
+    @DisplayName("deve extrair primeira parcela restante ao editar parcela paga")
+    void shouldExtractFirstRemainingInstallmentFromPaidInstallmentEdit() {
+        TelegramPendingEditParser.PendingEditResult result =
+                telegramPendingEditParser.parse("muda a parcela paga para 1");
+
+        assertThat(result.changed()).isTrue();
+        assertThat(result.firstRemainingInstallmentNumber()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("deve extrair primeira parcela restante ao editar parcela diretamente")
+    void shouldExtractFirstRemainingInstallmentFromDirectInstallmentToEdit() {
+        TelegramPendingEditParser.PendingEditResult result =
+                telegramPendingEditParser.parse("muda a parcela para 1");
+
+        assertThat(result.changed()).isTrue();
+        assertThat(result.firstRemainingInstallmentNumber()).isEqualTo(1);
     }
 }

@@ -36,10 +36,31 @@
                         + ")\\b|,|\\?|$))"
         );
 
-        private static final Pattern INSTALLMENT_PATTERN = Pattern.compile("\\b(?:parcelad[oa]\\s+em\\s+|em\\s+)(\\d{1,3})x\\b");
+        private static final Pattern INSTALLMENT_PATTERN = Pattern.compile("\\b(?:parcelad[oa]\\s+em\\s+|em\\s+|de\\s+)(\\d{1,3})x\\b");
+
+        private static final String INSTALLMENT_ORDINAL_WORDS =
+                "primeir[ao]|segund[ao]|terceir[ao]|quart[ao]|quint[ao]|sext[ao]|setim[ao]|oitav[ao]|non[ao]|decim[ao]";
+
+        private static final Pattern PAID_INSTALLMENTS_PATTERN = Pattern.compile(
+                "\\b(?:ja\\s+)?paguei\\s+(\\d{1,3})(?:\\s+parcelas?)?\\b"
+        );
+
+        private static final Pattern CURRENT_INSTALLMENT_NUMBER_PATTERN = Pattern.compile(
+                "\\b(?:estou|to)\\s+(?:pagando|na|no)\\s+(?:a|o)?\\s*(\\d{1,3})(?:a|o|ª|º)?(?:\\s+parcela)?\\b"
+        );
+
+        private static final Pattern CURRENT_INSTALLMENT_WORD_PATTERN = Pattern.compile(
+                "\\b(?:estou|to)\\s+(?:pagando|na|no)\\s+(?:a|o)?\\s*("
+                        + INSTALLMENT_ORDINAL_WORDS
+                        + ")(?:\\s+parcela)?\\b"
+        );
 
         private static final Pattern INSTALLMENT_PURCHASE_AMOUNT_PATTERN = Pattern.compile(
                 "\\b(?:de|por|valor(?:\\s+de)?|parcelar)\\s+(\\d+[\\.,]?\\d{0,2})\\b(?!\\s*x\\b)"
+        );
+
+        private static final Pattern MONTHLY_INSTALLMENT_AMOUNT_PATTERN = Pattern.compile(
+                "\\b(?:de|por|valor(?:\\s+de)?|parcela(?:\\s+de)?|parcelas?\\s+de)?\\s*(\\d+[\\.,]?\\d{0,2})\\s*(?:reais?|rs)?\\s*(?:por\\s+mes|ao\\s+mes|mensais|mensal|/mes|por\\s+parcela|cada\\s+parcela)\\b"
         );
 
         private static final Pattern TRANSACTION_NOISE_PATTERN = Pattern.compile(
@@ -91,6 +112,8 @@
                         dateRange.endDate(),
                         null,
                         null,
+                        null,
+                        null,
                         null
                 );
             }
@@ -110,6 +133,8 @@
                         dateRange.endDate(),
                         null,
                         null,
+                        null,
+                        null,
                         null
                 );
             }
@@ -121,6 +146,8 @@
                         null,
                         LocalDate.now(),
                         messageText,
+                        null,
+                        null,
                         null,
                         null,
                         null,
@@ -143,7 +170,9 @@
                         null,
                         null,
                         null,
+                        null,
                         extractInstallmentQueryTarget(normalized),
+                        null,
                         null
                 );
             }
@@ -160,7 +189,9 @@
                         null,
                         null,
                         null,
+                        null,
                         extractInstallmentQueryTarget(normalized),
+                        null,
                         null
                 );
             }
@@ -182,7 +213,9 @@
                             null,
                             totalInstallments,
                             null,
-                            totalAmount
+                            null,
+                            totalAmount,
+                            null
                     );
                 }
             }
@@ -202,7 +235,33 @@
                         dateRange.endDate(),
                         null,
                         null,
+                        null,
+                        null,
                         null
+                );
+            }
+
+            if (looksLikeExistingInstallmentExpense(normalized)) {
+                BigDecimal monthlyAmount = extractMonthlyInstallmentAmount(normalized);
+                BigDecimal totalAmount = monthlyAmount != null
+                        ? null
+                        : extractInstallmentPurchaseAmount(normalized);
+
+                return new ParsedTelegramMessage(
+                        TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE,
+                        null,
+                        extractInstallmentDescription(normalized),
+                        extractDate(normalized),
+                        messageText,
+                        extractCategoryName(normalized),
+                        extractAccountName(normalized),
+                        null,
+                        null,
+                        extractInstallmentCount(normalized),
+                        extractFirstRemainingInstallmentNumber(normalized),
+                        null,
+                        totalAmount,
+                        monthlyAmount
                 );
             }
 
@@ -219,6 +278,8 @@
                         null,
                         extractInstallmentCount(normalized),
                         null,
+                        null,
+                        null,
                         null
                 );
             }
@@ -232,6 +293,8 @@
                         messageText,
                         extractCategoryName(normalized),
                         extractAccountName(normalized),
+                        null,
+                        null,
                         null,
                         null,
                         null,
@@ -253,6 +316,8 @@
                         null,
                         null,
                         null,
+                        null,
+                        null,
                         null
                 );
             }
@@ -267,6 +332,8 @@
                     null,
                     null,
                     messageText,
+                    null,
+                    null,
                     null,
                     null,
                     null,
@@ -327,6 +394,24 @@
                     && installmentCount >= 2;
         }
 
+        private boolean looksLikeExistingInstallmentExpense(String text) {
+            Integer installmentCount = extractInstallmentCount(text);
+            Integer firstRemainingInstallmentNumber = extractFirstRemainingInstallmentNumber(text);
+
+            return looksLikeInstallmentSubject(text)
+                    && installmentCount != null
+                    && installmentCount >= 2
+                    && firstRemainingInstallmentNumber != null
+                    && firstRemainingInstallmentNumber <= installmentCount;
+        }
+
+        private boolean looksLikeInstallmentSubject(String text) {
+            return looksLikeExpense(text)
+                    || text.contains("parcelamento")
+                    || text.contains("financiamento")
+                    || text.contains("tenho");
+        }
+
         private boolean looksLikeIncome(String text) {
             return text.contains("recebi")
                     || text.contains("ganhei")
@@ -346,15 +431,7 @@
                 return null;
             }
 
-            String value = matcher.group(1);
-
-            if (value.contains(",") && value.contains(".")) {
-                value = value.replace(".", "").replace(",", ".");
-            } else if (value.contains(",")) {
-                value = value.replace(",", ".");
-            }
-
-            return new BigDecimal(value);
+            return parseAmount(matcher.group(1));
         }
 
         private BigDecimal extractInstallmentPurchaseAmount(String text) {
@@ -364,15 +441,7 @@
                 return null;
             }
 
-            String value = matcher.group(1);
-
-            if (value.contains(",") && value.contains(".")) {
-                value = value.replace(".", "").replace(",", ".");
-            } else if (value.contains(",")) {
-                value = value.replace(",", ".");
-            }
-
-            return new BigDecimal(value);
+            return parseAmount(matcher.group(1));
         }
 
         private String extractDescriptionForTransaction(String text) {
@@ -388,6 +457,13 @@
                 cleaned = cleaned.replaceAll("\\bcartao\\s+" + Pattern.quote(normalizedAccount) + "\\b", "");
             }
 
+            cleaned = cleaned
+                    .replaceAll("\\b(?:ja\\s+)?paguei\\s+\\d{1,3}(?:\\s+parcelas?)?\\b", "")
+                    .replaceAll("\\b(?:estou|to)\\s+(?:pagando|na|no)\\s+(?:a|o)?\\s*(?:"
+                            + INSTALLMENT_ORDINAL_WORDS
+                            + "|\\d{1,3}(?:a|o|ª|º)?)(?:\\s+parcela)?\\b", "")
+                    .replaceAll("\\b(?:tenho|financiamento|parcelamento)\\b", "");
+
             cleaned = TRANSACTION_NOISE_PATTERN.matcher(cleaned).replaceAll("");
             cleaned = DATE_NOISE_PATTERN.matcher(cleaned).replaceAll("");
 
@@ -399,6 +475,7 @@
 
             cleaned = cleaned
                     .replaceAll("\\b(?:da conta|do cartao|na conta|no cartao)\\b.*", "")
+                    .replaceAll("\\b(?:ja|parcelas?|e|um|uma|o|a|os|as)\\b", "")
                     .replaceAll("\\s+", " ")
                     .trim();
 
@@ -434,6 +511,72 @@
             } catch (NumberFormatException e) {
                 return null;
             }
+        }
+
+        private Integer extractFirstRemainingInstallmentNumber(String text) {
+            Integer currentInstallmentNumber = extractCurrentInstallmentNumber(text);
+
+            if (currentInstallmentNumber != null) {
+                return currentInstallmentNumber;
+            }
+
+            Integer paidInstallments = extractPaidInstallments(text);
+
+            if (paidInstallments == null) {
+                return null;
+            }
+
+            return paidInstallments + 1;
+        }
+
+        private Integer extractPaidInstallments(String text) {
+            Matcher matcher = PAID_INSTALLMENTS_PATTERN.matcher(text);
+
+            if (!matcher.find()) {
+                return null;
+            }
+
+            try {
+                return Integer.valueOf(matcher.group(1));
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+
+        private Integer extractCurrentInstallmentNumber(String text) {
+            Matcher numberMatcher = CURRENT_INSTALLMENT_NUMBER_PATTERN.matcher(text);
+
+            if (numberMatcher.find()) {
+                try {
+                    return Integer.valueOf(numberMatcher.group(1));
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            }
+
+            Matcher wordMatcher = CURRENT_INSTALLMENT_WORD_PATTERN.matcher(text);
+
+            if (!wordMatcher.find()) {
+                return null;
+            }
+
+            return parseInstallmentOrdinal(wordMatcher.group(1));
+        }
+
+        private Integer parseInstallmentOrdinal(String value) {
+            return switch (value) {
+                case "primeira", "primeiro" -> 1;
+                case "segunda", "segundo" -> 2;
+                case "terceira", "terceiro" -> 3;
+                case "quarta", "quarto" -> 4;
+                case "quinta", "quinto" -> 5;
+                case "sexta", "sexto" -> 6;
+                case "setima", "setimo" -> 7;
+                case "oitava", "oitavo" -> 8;
+                case "nona", "nono" -> 9;
+                case "decima", "decimo" -> 10;
+                default -> null;
+            };
         }
 
         public String extractInstallmentQueryTarget(String text) {
@@ -572,5 +715,25 @@
                     || text.contains("quando acaba a parcela")
                     || text.contains("quando termina parcela")
                     || text.contains("quando acaba parcela");
+        }
+
+        private BigDecimal extractMonthlyInstallmentAmount(String text) {
+            Matcher matcher = MONTHLY_INSTALLMENT_AMOUNT_PATTERN.matcher(text);
+
+            if (!matcher.find()) {
+                return null;
+            }
+
+            return parseAmount(matcher.group(1));
+        }
+
+        private BigDecimal parseAmount(String value) {
+            if (value.contains(",") && value.contains(".")) {
+                value = value.replace(".", "").replace(",", ".");
+            } else if (value.contains(",")) {
+                value = value.replace(",", ".");
+            }
+
+            return new BigDecimal(value);
         }
     }

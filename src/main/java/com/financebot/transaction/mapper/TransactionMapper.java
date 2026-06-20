@@ -1,8 +1,10 @@
 package com.financebot.transaction.mapper;
 
+import com.financebot.transaction.application.command.CreateExistingInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateTransactionCommand;
 import com.financebot.transaction.application.command.UpdateTransactionCommand;
+import com.financebot.transaction.application.dto.request.CreateExistingInstallmentTransactionRequest;
 import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
 import com.financebot.transaction.application.dto.request.UpdateTransactionRequest;
@@ -50,6 +52,25 @@ public class TransactionMapper {
                 request.accountId(),
                 request.categoryId(),
                 request.totalInstallments(),
+                user
+        );
+    }
+
+    public CreateExistingInstallmentTransactionCommand toCommand(
+            CreateExistingInstallmentTransactionRequest request,
+            User user
+    ) {
+        return new CreateExistingInstallmentTransactionCommand(
+                request.totalAmount(),
+                request.monthlyAmount(),
+                request.description(),
+                request.firstRemainingInstallmentDate(),
+                request.type(),
+                request.sourceType(),
+                request.accountId(),
+                request.categoryId(),
+                request.totalInstallments(),
+                request.firstRemainingInstallmentNumber(),
                 user
         );
     }
