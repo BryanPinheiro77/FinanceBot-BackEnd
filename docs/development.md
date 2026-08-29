@@ -29,6 +29,7 @@ RABBITMQ_PASSWORD=guest
 JWT_SECRET=troque-por-uma-chave-local-com-mais-de-64-caracteres
 JWT_EXPIRATION=86400000
 CORS_ALLOWED_ORIGINS=http://localhost:5173
+TELEGRAM_INTERNAL_TOKEN=gere-um-token-local-forte-e-nao-compartilhe
 ```
 
 ```bash
@@ -50,6 +51,7 @@ REDIS_PORT=6379
 TELEGRAM_STATE_STORE=memory
 TELEGRAM_CONVERSATION_CONTEXT_TTL=30m
 TELEGRAM_QUERY_CONTEXT_TTL=30m
+TELEGRAM_INTERNAL_TOKEN=use-o-mesmo-token-configurado-na-api
 ```
 
 Execute-o com `cd financebot-telegram-bot && ./mvnw spring-boot:run`.

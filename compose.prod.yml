@@ -28,6 +28,7 @@ services:
       JWT_EXPIRATION: ${JWT_EXPIRATION}
 
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      TELEGRAM_INTERNAL_TOKEN: ${TELEGRAM_INTERNAL_TOKEN}
 
     networks:
       - backend-network

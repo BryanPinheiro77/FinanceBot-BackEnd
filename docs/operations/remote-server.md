@@ -31,6 +31,7 @@ Se o SSH falhar, confira o Tailscale no Mac e no notebook e depois o serviço SS
 - [ ] O runner GitHub Actions está online.
 - [ ] O diretório privado do checkout aponta para o repositório correto.
 - [ ] Os dois `.env` existem e têm permissões restritas.
+- [ ] `TELEGRAM_INTERNAL_TOKEN` existe nos dois `.env` e tem o mesmo valor, sem aparecer em logs.
 - [ ] `backend-network` existe.
 - [ ] Há backup verificável do PostgreSQL.
 - [ ] Logs e espaço em disco são monitorados.

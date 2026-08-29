@@ -14,11 +14,14 @@ O diretório do checkout deve ser configurado como variável privada no runner s
 - repositório clonado no diretório privado configurado no runner;
 - rede Docker externa `backend-network` criada;
 - `.env` da API na raiz e `.env` do bot em `financebot-telegram-bot/`;
+- `TELEGRAM_INTERNAL_TOKEN` com o mesmo valor nos dois `.env`, mantido em segredo;
 - PostgreSQL, Redis e RabbitMQ acessíveis pelos hosts definidos nos `.env`.
 
 No GitHub, configure a variável de repositório `FINANCEBOT_DEPLOY_PATH` com o caminho do checkout no runner. O valor real deve ficar nas configurações privadas do repositório, não em YAML, documentação ou código.
 
 Para receber notificação quando o deploy ou algum health check falhar, configure o secret `DEPLOY_FAILURE_WEBHOOK_URL` com um webhook privado compatível. Se o secret não existir, o workflow apenas registra que a notificação foi ignorada.
+
+O endpoint público de confirmação inicial do vínculo Telegram permanece em `/users/telegram/confirm-link`. Os demais endpoints de `/telegram/**` exigem o header interno enviado pelo bot.
 
 Criação inicial da rede:
 
