@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- Adicionado `AGENTS.md` com contexto, limites operacionais e regras de contribuição para agentes.
+- Adicionada documentação de desenvolvimento, arquitetura, API, bot Telegram, integração com frontend, contribuição, deploy e servidor remoto.
+- Adicionado workflow de CI para validar os dois módulos Maven com Java 21.
+- Adicionado health check técnico ao bot Telegram e validação pós-deploy da API e do bot.
+- Adicionada notificação opcional de falha de deploy via webhook privado.
+
  ## [v1.5.0]
 
 ### Added

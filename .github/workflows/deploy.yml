@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
@@ -14,13 +18,62 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy backend
+        env:
+          DEPLOY_PATH: ${{ vars.FINANCEBOT_DEPLOY_PATH }}
         run: |
-          cd /home/bryan/FinanceBot-BackEnd
+          test -n "$DEPLOY_PATH"
+          cd "$DEPLOY_PATH"
           git pull
           docker compose -f compose.prod.yml up -d --build
 
       - name: Deploy telegram bot
+        env:
+          DEPLOY_PATH: ${{ vars.FINANCEBOT_DEPLOY_PATH }}
         run: |
-          cd /home/bryan/FinanceBot-BackEnd/financebot-telegram-bot
+          test -n "$DEPLOY_PATH"
+          cd "$DEPLOY_PATH/financebot-telegram-bot"
           git pull
           docker compose -f compose.prod.yml up -d --build
+
+      - name: Health check API
+        run: |
+          for attempt in {1..12}; do
+            if curl --fail --silent --show-error http://localhost:8080/api/health; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "API health check failed after 12 attempts"
+          exit 1
+
+      - name: Health check Telegram bot
+        run: |
+          for attempt in {1..12}; do
+            if curl --fail --silent --show-error http://localhost:8081/actuator/health; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Telegram bot health check failed after 12 attempts"
+          exit 1
+
+  notify-failure:
+    name: Notify failed deploy
+    needs: deploy
+    if: ${{ always() && needs.deploy.result == 'failure' }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Notify webhook when configured
+        env:
+          WEBHOOK_URL: ${{ secrets.DEPLOY_FAILURE_WEBHOOK_URL }}
+        run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "DEPLOY_FAILURE_WEBHOOK_URL is not configured; skipping notification"
+            exit 0
+          fi
+          curl --fail --silent --show-error \
+            -X POST \
+            -H 'Content-Type: application/json' \
+            --data '{"content":"FinanceBot: deploy falhou. Consulte a execução do GitHub Actions para os detalhes."}' \
+            "$WEBHOOK_URL"
