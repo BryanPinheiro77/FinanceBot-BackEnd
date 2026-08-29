@@ -5,9 +5,9 @@ description: "Systematic performance profiling for Node.js, Python, and Go appli
 
 # Performance Profiler
 
-**Tier:** POWERFUL  
-**Category:** Engineering  
-**Domain:** Performance Engineering  
+**Tier:** POWERFUL
+**Category:** Engineering
+**Domain:** Performance Engineering
 
 ---
 

@@ -14,8 +14,8 @@
 
 [2-3 sentences: problem it solves, who uses it, current state]
 
-**Live:** https://myapp.com  
-**Staging:** https://staging.myapp.com  
+**Live:** https://myapp.com
+**Staging:** https://staging.myapp.com
 **Docs:** https://docs.myapp.com
 
 ---

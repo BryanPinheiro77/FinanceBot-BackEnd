@@ -5,8 +5,8 @@ description: "Analyze a codebase and generate onboarding documentation for engin
 
 # Codebase Onboarding
 
-**Tier:** POWERFUL  
-**Category:** Engineering  
+**Tier:** POWERFUL
+**Category:** Engineering
 **Domain:** Documentation / Developer Experience
 
 ---

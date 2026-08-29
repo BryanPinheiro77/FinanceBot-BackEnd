@@ -5,8 +5,8 @@ description: "Generate pragmatic CI/CD pipelines from detected project stack sig
 
 # CI/CD Pipeline Builder
 
-**Tier:** POWERFUL  
-**Category:** Engineering  
+**Tier:** POWERFUL
+**Category:** Engineering
 **Domain:** DevOps / Automation
 
 ## Overview

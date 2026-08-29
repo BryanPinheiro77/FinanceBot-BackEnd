@@ -9,9 +9,9 @@ performance PR.
 ```markdown
 ## Performance Optimization: [What You Fixed]
 
-**Date:** 2026-03-01  
-**Engineer:** @username  
-**Ticket:** PROJ-123  
+**Date:** 2026-03-01
+**Engineer:** @username
+**Ticket:** PROJ-123
 
 ### Problem
 [1-2 sentences: what was slow, how was it observed]

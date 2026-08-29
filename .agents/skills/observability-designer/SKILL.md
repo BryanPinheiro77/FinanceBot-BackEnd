@@ -5,8 +5,8 @@ description: "Design production-ready observability strategies combining metrics
 
 # Observability Designer (POWERFUL)
 
-**Category:** Engineering  
-**Tier:** POWERFUL  
+**Category:** Engineering
+**Tier:** POWERFUL
 **Description:** Design comprehensive observability strategies for production systems including SLI/SLO frameworks, alerting optimization, and dashboard generation.
 
 ## Overview
@@ -87,7 +87,7 @@ python3 scripts/slo_designer.py --service-type api --criticality high --user-fac
 ### Alert Design and Optimization
 
 #### Alert Classification
-- **Severity Levels:** 
+- **Severity Levels:**
   - **Critical:** Service down, SLO burn rate high
   - **Warning:** Approaching thresholds, non-user-facing issues
   - **Info:** Deployment notifications, capacity planning alerts

@@ -17,7 +17,7 @@ public class TelegramQueryMessageFormatter {
     public String formatMonthExpenseSummary(BigDecimal totalAmount) {
         return """
             💸 <b>Total gasto no mês</b>
-            
+
             Você gastou <b>%s</b> neste mês.
             """.formatted(formatCurrency(totalAmount));
     }
@@ -25,7 +25,7 @@ public class TelegramQueryMessageFormatter {
     public String formatMonthIncomeSummary(BigDecimal totalAmount) {
         return """
             💰 <b>Total recebido no mês</b>
-            
+
             Você recebeu <b>%s</b> neste mês.
             """.formatted(formatCurrency(totalAmount));
     }
@@ -33,7 +33,7 @@ public class TelegramQueryMessageFormatter {
     public String formatTransactionSummary(String label, String complemento, BigDecimal totalAmount) {
         return """
             📊 <b>Total %s%s</b>
-            
+
             O total foi <b>%s</b>.
             """.formatted(escapeHtml(label), escapeHtml(complemento != null ? complemento : ""), formatCurrency(totalAmount));
     }
@@ -44,12 +44,12 @@ public class TelegramQueryMessageFormatter {
     ) {
         return """
             💳 <b>Análise de compra parcelada</b>
-            
+
             <b>Valor total:</b> %s
             <b>Parcelas:</b> %s
             <b>Valor estimado por parcela:</b> %s
             <b>Resultado:</b> %s
-            
+
             %s
             """.formatted(formatCurrency(totalAmount),
                 totalInstallments != null ? totalInstallments + "x" : "Não informado",
@@ -60,7 +60,7 @@ public class TelegramQueryMessageFormatter {
     public String formatInstallmentCountMessage(Long count, LocalDate startDate, LocalDate endDate) {
         return """
             💳 <b>Parcelas no período</b>
-            
+
             Você tem <b>%s</b> parcela(s) entre <b>%s</b> e <b>%s</b>.
             """.formatted(count != null ? count : 0L, formatDate(startDate), formatDate(endDate));
     }
@@ -68,7 +68,7 @@ public class TelegramQueryMessageFormatter {
     public String formatActiveInstallmentsMessage(Long count) {
         return """
             💳 <b>Parcelamentos ativos</b>
-            
+
             Você tem <b>%s</b> parcelamento(s) ativo(s).
             """.formatted(count != null ? count : 0L);
     }
@@ -76,7 +76,7 @@ public class TelegramQueryMessageFormatter {
     public String formatNoActiveInstallmentsMessage() {
         return """
             💳 <b>Parcelamentos</b>
-            
+
             Você não tem parcelamentos ativos no momento.
             """;
     }
@@ -84,7 +84,7 @@ public class TelegramQueryMessageFormatter {
     public String formatMultipleActiveInstallmentsMessage() {
         return """
             💳 <b>Parcelamentos</b>
-            
+
             Você tem mais de um parcelamento ativo.
             Me diga qual deles deseja consultar.
             """;
@@ -93,7 +93,7 @@ public class TelegramQueryMessageFormatter {
     public String formatInstallmentNotFoundMessage(String target) {
         return """
             💳 <b>Parcelamentos</b>
-            
+
             Não encontrei um parcelamento ativo para <b>%s</b>.
             """.formatted(escapeHtml(defaultText(target)));
     }
@@ -110,7 +110,7 @@ public class TelegramQueryMessageFormatter {
                 ? remainingInstallments + " parcela(s)" : "Nenhuma parcela restante";
         return """
             💳 <b>Parcelas restantes</b>
-            
+
             <b>Descrição:</b> %s
             <b>Parcela atual:</b> %s
             <b>Próximo vencimento:</b> %s
@@ -122,7 +122,7 @@ public class TelegramQueryMessageFormatter {
     public String formatInstallmentEndDateMessage(String description, LocalDate endDate) {
         return """
             💳 <b>Fim do parcelamento</b>
-            
+
             <b>Descrição:</b> %s
             <b>Última parcela:</b> %s
             """.formatted(escapeHtml(defaultText(description)), formatDate(endDate));

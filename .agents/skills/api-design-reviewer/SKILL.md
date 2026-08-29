@@ -5,9 +5,9 @@ description: "Comprehensive REST API design review with automated linting, break
 
 # API Design Reviewer
 
-**Tier:** POWERFUL  
-**Category:** Engineering / Architecture  
-**Maintainer:** Claude Skills Team  
+**Tier:** POWERFUL
+**Category:** Engineering / Architecture
+**Maintainer:** Claude Skills Team
 
 ## Overview
 
@@ -91,7 +91,7 @@ Filtering: /api/v1/users?status=active&role=admin
 /api/v1/users
 /api/v2/users
 ```
-**Pros**: Clear, explicit, easy to route  
+**Pros**: Clear, explicit, easy to route
 **Cons**: URL proliferation, caching complexity
 
 ### 2. Header Versioning
@@ -99,7 +99,7 @@ Filtering: /api/v1/users?status=active&role=admin
 GET /api/users
 Accept: application/vnd.api+json;version=1
 ```
-**Pros**: Clean URLs, content negotiation  
+**Pros**: Clean URLs, content negotiation
 **Cons**: Less visible, harder to test manually
 
 ### 3. Media Type Versioning
@@ -107,14 +107,14 @@ Accept: application/vnd.api+json;version=1
 GET /api/users
 Accept: application/vnd.myapi.v1+json
 ```
-**Pros**: RESTful, supports multiple representations  
+**Pros**: RESTful, supports multiple representations
 **Cons**: Complex, harder to implement
 
 ### 4. Query Parameter Versioning
 ```
 /api/users?version=1
 ```
-**Pros**: Simple to implement  
+**Pros**: Simple to implement
 **Cons**: Not RESTful, can be ignored
 
 ## Pagination Patterns
@@ -248,7 +248,7 @@ X-RateLimit-Reset: 1640995200
     "self": { "href": "/api/v1/users/123" },
     "orders": { "href": "/api/v1/users/123/orders" },
     "profile": { "href": "/api/v1/users/123/profile" },
-    "deactivate": { 
+    "deactivate": {
       "href": "/api/v1/users/123/deactivate",
       "method": "POST"
     }

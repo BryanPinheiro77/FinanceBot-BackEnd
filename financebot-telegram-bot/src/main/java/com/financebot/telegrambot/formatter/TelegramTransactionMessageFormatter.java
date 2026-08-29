@@ -25,13 +25,13 @@ public class TelegramTransactionMessageFormatter {
 
         return """
                 💸 <b>Entendi esta %s:</b>
-                
+
                 <b>Valor:</b> %s
                 <b>Descrição:</b> %s
                 <b>Data:</b> %s
                 <b>Conta:</b> %s
                 <b>Categoria:</b> %s
-                
+
                 Deseja confirmar e salvar?
                 """.formatted(type, formatCurrency(pendingTransaction.amount()),
                 pendingTransaction.description() != null ? escapeHtml(pendingTransaction.description()) : "Não informada",
@@ -44,7 +44,7 @@ public class TelegramTransactionMessageFormatter {
 
         return """
             💳 <b>Entendi este parcelamento:</b>
-            
+
             <b>Valor total:</b> %s
             <b>Parcelas:</b> %s
             <b>Valor da parcela:</b> %s
@@ -52,7 +52,7 @@ public class TelegramTransactionMessageFormatter {
             <b>Primeira parcela:</b> %s
             <b>Conta:</b> %s
             <b>Categoria:</b> %s
-            
+
             Deseja confirmar e salvar?
             """.formatted(formatCurrency(calculateEffectiveTotalAmount(pendingTransaction)),
                 pendingTransaction.totalInstallments() != null ? pendingTransaction.totalInstallments() + "x" : "Não informada",
@@ -71,7 +71,7 @@ public class TelegramTransactionMessageFormatter {
 
         return """
             💳 <b>Entendi este parcelamento em andamento:</b>
-            
+
             <b>Valor total:</b> %s
             <b>Valor da parcela:</b> %s
             <b>Descrição:</b> %s
@@ -81,7 +81,7 @@ public class TelegramTransactionMessageFormatter {
             <b>Vencimento da próxima parcela:</b> %s
             <b>Conta:</b> %s
             <b>Categoria:</b> %s
-            
+
             Deseja confirmar e salvar?
             """.formatted(formatCurrency(calculateEffectiveTotalAmount(pendingTransaction)),
                 formatCurrency(calculateInstallmentAmount(pendingTransaction)),
@@ -96,9 +96,9 @@ public class TelegramTransactionMessageFormatter {
             String category = pendingTransaction.categoryName() != null ? pendingTransaction.categoryName() : "Automática";
             return """
         ✅ <b>Operação atualizada.</b>
-        
+
         <b>Entendi este parcelamento:</b>
-        
+
         <b>Valor total:</b> %s
         <b>Parcelas:</b> %s
         <b>Valor da parcela:</b> %s
@@ -106,7 +106,7 @@ public class TelegramTransactionMessageFormatter {
         <b>Primeira parcela:</b> %s
         <b>Conta:</b> %s
         <b>Categoria:</b> %s
-        
+
         Deseja confirmar e salvar?
         """.formatted(formatCurrency(calculateEffectiveTotalAmount(pendingTransaction)),
                     pendingTransaction.totalInstallments() != null ? pendingTransaction.totalInstallments() + "x" : "Não informada",
@@ -149,15 +149,15 @@ public class TelegramTransactionMessageFormatter {
         String category = pendingTransaction.categoryName() != null ? pendingTransaction.categoryName() : "Automática";
         return """
                 ✅ <b>Operação atualizada.</b>
-                
+
                 <b>Entendi esta %s:</b>
-                
+
                 <b>Valor:</b> %s
                 <b>Descrição:</b> %s
                 <b>Data:</b> %s
                 <b>Conta:</b> %s
                 <b>Categoria:</b> %s
-                
+
                 Deseja confirmar e salvar?
                 """.formatted(type, formatCurrency(pendingTransaction.amount()),
                 pendingTransaction.description() != null ? escapeHtml(pendingTransaction.description()) : "Não informada",

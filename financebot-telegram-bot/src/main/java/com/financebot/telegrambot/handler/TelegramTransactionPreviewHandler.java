@@ -41,7 +41,7 @@ public class TelegramTransactionPreviewHandler {
                 && parsedMessage.monthlyAmount() == null) {
             return """
                     Entendi a intenção, mas não consegui identificar o valor.
-                    
+
                     Exemplos:
                     - gastei 50 no mercado
                     - paguei 120 de gasolina
@@ -106,7 +106,7 @@ public class TelegramTransactionPreviewHandler {
         if (pendingTransaction.totalInstallments() == null || pendingTransaction.totalInstallments() < 2) {
             return """
                     Entendi a intenção de parcelamento, mas não consegui identificar uma quantidade válida de parcelas.
-                    
+
                     Exemplos:
                     - gastei 1200 parcelado em 10x
                     - comprei um celular por 2400 em 12x
@@ -123,7 +123,7 @@ public class TelegramTransactionPreviewHandler {
                 || pendingTransaction.firstRemainingInstallmentNumber() > pendingTransaction.totalInstallments()) {
             return """
                     Entendi a intenção de parcelamento existente, mas não consegui identificar uma parcela atual válida.
-                    
+
                     Exemplos:
                     - comprei um celular por 2400 em 12x e ja paguei 5 parcelas
                     - comprei um celular por 2400 em 12x e estou pagando a 6 parcela
@@ -141,9 +141,9 @@ public class TelegramTransactionPreviewHandler {
 
         return """
                 Entendi o parcelamento.
-                
+
                 Qual o dia de vencimento da %s?
-                
+
                 Exemplo:
                 - dia 15
                 """.formatted(installmentLabel);

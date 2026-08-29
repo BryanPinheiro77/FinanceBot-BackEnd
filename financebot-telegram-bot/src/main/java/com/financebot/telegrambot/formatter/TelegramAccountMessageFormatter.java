@@ -14,9 +14,9 @@ public class TelegramAccountMessageFormatter {
         String greeting = displayName != null && !displayName.isBlank() ? ", " + escapeHtml(displayName) : "";
         return """
                 👋 <b>Bem-vindo%s ao Your Finance Assistant!</b>
-                
+
                 Eu posso ajudar você a conectar sua conta e acompanhar suas finanças direto pelo Telegram.
-                
+
                 <b>Comandos disponíveis:</b>
                 <code>/start</code> ou <code>/iniciar</code> - Iniciar o bot
                 <code>/help</code> ou <code>/ajuda</code> - Ver ajuda
@@ -26,7 +26,7 @@ public class TelegramAccountMessageFormatter {
                 <code>/analysis</code> ou <code>/analise</code> - Ver análise financeira
                 <code>/setincome</code> ou <code>/definirrenda VALOR</code> - Definir renda mensal base
                 <code>/disconnect</code> ou <code>/desconectar</code> - Desconectar conta
-                
+
                 <b>Exemplos em linguagem natural:</b>
                 • gastei 50 no mercado
                 • recebi 1200 de salário
@@ -39,7 +39,7 @@ public class TelegramAccountMessageFormatter {
     public String formatHelpMessage() {
         return """
                 ℹ️ <b>Comandos disponíveis</b>
-                
+
                 <code>/start</code> ou <code>/iniciar</code> - Iniciar o bot
                 <code>/help</code> ou <code>/ajuda</code> - Ver ajuda
                 <code>/connect</code> ou <code>/conectar CODIGO</code> - Conectar sua conta
@@ -48,13 +48,13 @@ public class TelegramAccountMessageFormatter {
                 <code>/analysis</code> ou <code>/analise</code> - Ver análise financeira
                 <code>/setincome</code> ou <code>/definirrenda VALOR</code> - Definir renda mensal base
                 <code>/disconnect</code> ou <code>/desconectar</code> - Desconectar conta
-                
+
                 <b>Exemplos com comandos:</b>
                 <code>/connect FIN-ABC123</code>
                 <code>/conectar FIN-ABC123</code>
                 <code>/setincome 3500</code>
                 <code>/definirrenda 3500</code>
-                
+
                 <b>Exemplos com linguagem natural:</b>
                 • gastei 50 no mercado
                 • paguei 120 de gasolina ontem
@@ -70,15 +70,15 @@ public class TelegramAccountMessageFormatter {
         String greeting = displayName != null && !displayName.isBlank() ? ", " + escapeHtml(displayName) : "";
         return """
                 👋 <b>Olá%s!</b>
-                
+
                 Eu sou seu assistente financeiro no Telegram.
-                
+
                 <b>Você pode usar:</b>
                 <code>/help</code> ou <code>/ajuda</code> - Ver ajuda
                 <code>/connect</code> ou <code>/conectar CODIGO</code> - Conectar sua conta
                 <code>/me</code> ou <code>/perfil</code> - Ver seu perfil
                 <code>/analysis</code> ou <code>/analise</code> - Ver análise financeira
-                
+
                 <b>Ou escrever naturalmente:</b>
                 • gastei 50 no mercado
                 • recebi 1200
@@ -90,7 +90,7 @@ public class TelegramAccountMessageFormatter {
     public String formatStatusMessage(String email, BigDecimal monthlyBaseIncome, BigDecimal projectedNetNextMonth, String riskLevel) {
         return """
             ✅ <b>Status da conta</b>
-            
+
             <b>Conta conectada:</b> Sim
             <b>Email:</b> %s
             <b>Renda mensal base:</b> %s
@@ -106,7 +106,7 @@ public class TelegramAccountMessageFormatter {
             BigDecimal commitmentPercentage, Long activeInstallmentCount, String riskLevel, String message) {
         return """
             📊 <b>Análise financeira</b>
-            
+
             <b>Renda mensal base:</b> %s
             <b>Renda de referência:</b> %s
             <b>Receita recorrente prevista:</b> %s
@@ -117,7 +117,7 @@ public class TelegramAccountMessageFormatter {
             <b>Comprometimento:</b> %s%%
             <b>Grupos de parcelamento ativos:</b> %s
             <b>Nível de risco:</b> %s
-            
+
             %s
             """.formatted(formatCurrency(monthlyBaseIncome), formatCurrency(monthlyIncomeReference),
                 formatCurrency(projectedRecurringIncomeNextMonth), formatCurrency(projectedRecurringExpenseNextMonth),
@@ -129,7 +129,7 @@ public class TelegramAccountMessageFormatter {
 
     public String formatConnectCodeRequiredMessage() { return """
             🔗 <b>Você precisa enviar o código junto do comando.</b>
-            
+
             <b>Exemplo:</b>
             <code>/connect FIN-ABC123</code>
             ou
@@ -138,11 +138,11 @@ public class TelegramAccountMessageFormatter {
 
     public String formatConnectInstructionsMessage() { return """
             🔗 <b>Para conectar sua conta, gere um código no sistema e envie assim:</b>
-            
+
             <code>/connect SEU_CODIGO</code>
             ou
             <code>/conectar SEU_CODIGO</code>
-            
+
             <b>Exemplo:</b>
             <code>/connect FIN-ABC123</code>
             """; }
@@ -151,7 +151,7 @@ public class TelegramAccountMessageFormatter {
 
     public String formatDisconnectSuccessMessage() { return """
             ✅ <b>Sua conta do Telegram foi desconectada com sucesso.</b>
-            
+
             Se quiser conectar novamente, gere um novo código no sistema e use:
             <code>/connect SEU_CODIGO</code>
             ou
@@ -174,7 +174,7 @@ public class TelegramAccountMessageFormatter {
     public String formatProfileMessage(String name, String email, BigDecimal monthlyBaseIncome, boolean telegramLinked) {
         return """
             👤 <b>Seu perfil</b>
-            
+
             <b>Nome:</b> %s
             <b>Email:</b> %s
             <b>Renda mensal base:</b> %s
@@ -185,7 +185,7 @@ public class TelegramAccountMessageFormatter {
 
     public String formatSetIncomeValueRequiredMessage() { return """
             💰 <b>Você precisa informar um valor.</b>
-            
+
             <b>Exemplo:</b>
             <code>/setincome 3500</code>
             ou
@@ -193,7 +193,7 @@ public class TelegramAccountMessageFormatter {
             """; }
     public String formatSetIncomeInvalidValueMessage() { return """
             ⚠️ <b>Valor inválido.</b>
-            
+
             <b>Exemplos válidos:</b>
             <code>/setincome 3500</code>
             <code>/setincome 3500,50</code>
@@ -203,7 +203,7 @@ public class TelegramAccountMessageFormatter {
     public String formatSetIncomeNonPositiveMessage() { return "⚠️ <b>A renda mensal base deve ser maior que zero.</b>"; }
     public String formatSetIncomeSuccessMessage(BigDecimal value) { return """
             ✅ <b>Renda mensal base atualizada com sucesso!</b>
-            
+
             <b>Novo valor:</b> %s
             """.formatted(formatCurrency(value)); }
     public String formatGenericProfileFailureMessage() { return "⚠️ <b>Não foi possível buscar seu perfil agora.</b>"; }
