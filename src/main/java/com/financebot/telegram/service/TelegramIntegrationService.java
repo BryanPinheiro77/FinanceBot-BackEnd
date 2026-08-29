@@ -178,4 +178,32 @@ public class TelegramIntegrationService {
         return queryUseCase().activeInstallmentSummary(telegramId, query);
     }
 
+    /**
+     * Compatibility bridge for existing reflective tests and integrations.
+     * The active-installment flow itself is implemented by the query use case.
+     */
+    private String stripInstallmentSuffix(String description) {
+        if (description == null || description.isBlank()) {
+            return description;
+        }
+
+        String trimmedDescription = description.trim();
+        int lastDashIndex = trimmedDescription.lastIndexOf('-');
+        if (lastDashIndex == -1) {
+            return trimmedDescription;
+        }
+
+        String possibleSuffix = trimmedDescription.substring(lastDashIndex + 1).trim();
+        String[] parts = possibleSuffix.split("/");
+        if (parts.length != 2 || !isPositiveInteger(parts[0]) || !isPositiveInteger(parts[1])) {
+            return trimmedDescription;
+        }
+
+        return trimmedDescription.substring(0, lastDashIndex).trim();
+    }
+
+    private boolean isPositiveInteger(String value) {
+        return value != null && !value.isBlank() && value.chars().allMatch(Character::isDigit);
+    }
+
 }
