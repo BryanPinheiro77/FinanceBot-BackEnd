@@ -13,6 +13,8 @@ cd financebot-telegram-bot
 
 O serviço usa a porta `8081` e precisa de `TELEGRAM_BOT_TOKEN` e `FINANCEBOT_API_URL`. O armazenamento de contexto pode ser `memory` ou Redis, conforme `TELEGRAM_STATE_STORE`.
 
+O endpoint técnico `GET /actuator/health` é usado pelo deploy para confirmar que o processo iniciou. Ele não expõe detalhes das dependências (`show-details=never`).
+
 ## Fluxo principal
 
 ```text

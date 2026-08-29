@@ -18,6 +18,8 @@ O diretório do checkout deve ser configurado como variável privada no runner s
 
 No GitHub, configure a variável de repositório `FINANCEBOT_DEPLOY_PATH` com o caminho do checkout no runner. O valor real deve ficar nas configurações privadas do repositório, não em YAML, documentação ou código.
 
+Para receber notificação quando o deploy ou algum health check falhar, configure o secret `DEPLOY_FAILURE_WEBHOOK_URL` com um webhook privado compatível. Se o secret não existir, o workflow apenas registra que a notificação foi ignorada.
+
 Criação inicial da rede:
 
 ```bash
@@ -29,7 +31,7 @@ docker network create backend-network
 1. Faça merge na `main` após o CI passar.
 2. Acompanhe o workflow no GitHub.
 3. No servidor, confirme os containers com `docker compose -f compose.prod.yml ps` em cada módulo.
-4. Valide a API com `curl --fail http://localhost:8080/api/health`.
+4. O workflow valida automaticamente `http://localhost:8080/api/health` e `http://localhost:8081/actuator/health`, tentando por até 60 segundos cada.
 
 ## Rollback operacional
 
