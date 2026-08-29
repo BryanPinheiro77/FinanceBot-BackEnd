@@ -3,6 +3,7 @@ package com.financebot.telegrambot.client;
 import com.financebot.telegrambot.dto.request.*;
 import com.financebot.telegrambot.dto.response.*;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -12,9 +13,13 @@ public class FinanceBotApiClient {
 
     private final RestClient restClient;
 
-    public FinanceBotApiClient(@Value("${financebot.api.base-url}") String baseUrl) {
+    public FinanceBotApiClient(
+            @Value("${financebot.api.base-url}") String baseUrl,
+            @Value("${financebot.api.internal-token:}") String internalToken
+    ) {
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
+                .defaultHeader("X-Internal-Service-Token", internalToken)
                 .build();
     }
 
