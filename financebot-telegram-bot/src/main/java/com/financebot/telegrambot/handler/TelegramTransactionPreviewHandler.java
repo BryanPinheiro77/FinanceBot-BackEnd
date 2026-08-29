@@ -6,7 +6,7 @@ import com.financebot.telegrambot.conversation.domain.TelegramConversationContex
 import com.financebot.telegrambot.conversation.domain.TelegramConversationMissingField;
 import com.financebot.telegrambot.dto.ParsedTelegramMessage;
 import com.financebot.telegrambot.dto.PendingTelegramTransaction;
-import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
+import com.financebot.telegrambot.formatter.TelegramTransactionMessageFormatter;
 import com.financebot.telegrambot.mapper.PendingTelegramTransactionMapper;
 import com.financebot.telegrambot.service.TelegramPendingConfirmationService;
 import com.financebot.telegrambot.support.TelegramPreviewAccountResolver;
@@ -21,7 +21,7 @@ import java.util.Set;
 public class TelegramTransactionPreviewHandler {
 
     private final TelegramPendingConfirmationService telegramPendingConfirmationService;
-    private final TelegramMessageFormatter telegramMessageFormatter;
+    private final TelegramTransactionMessageFormatter telegramTransactionMessageFormatter;
     private final PendingTelegramTransactionMapper pendingTelegramTransactionMapper;
     private final TelegramPreviewAccountResolver telegramPreviewAccountResolver;
     private final TelegramConversationContextService telegramConversationContextService;
@@ -72,7 +72,7 @@ public class TelegramTransactionPreviewHandler {
 
         telegramPendingConfirmationService.savePending(telegramId, pendingTransaction);
 
-        return telegramMessageFormatter.formatTransactionPreview(
+        return telegramTransactionMessageFormatter.formatTransactionPreview(
                 pendingTransaction,
                 resolvedAccount.displayName()
         );
@@ -154,13 +154,13 @@ public class TelegramTransactionPreviewHandler {
             String accountName
     ) {
         if (pendingTransaction.isExistingInstallment()) {
-            return telegramMessageFormatter.formatExistingInstallmentTransactionPreview(
+            return telegramTransactionMessageFormatter.formatExistingInstallmentTransactionPreview(
                     pendingTransaction,
                     accountName
             );
         }
 
-        return telegramMessageFormatter.formatInstallmentTransactionPreview(
+        return telegramTransactionMessageFormatter.formatInstallmentTransactionPreview(
                 pendingTransaction,
                 accountName
         );

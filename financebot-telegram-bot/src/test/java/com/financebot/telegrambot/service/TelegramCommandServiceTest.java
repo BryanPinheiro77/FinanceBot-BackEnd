@@ -13,6 +13,9 @@ import com.financebot.telegrambot.dto.request.InstallmentPurchaseCapacityRequest
 import com.financebot.telegrambot.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.telegrambot.dto.response.TelegramDefaultAccountResponse;
 import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
+import com.financebot.telegrambot.formatter.TelegramAccountMessageFormatter;
+import com.financebot.telegrambot.formatter.TelegramQueryMessageFormatter;
+import com.financebot.telegrambot.formatter.TelegramTransactionMessageFormatter;
 import com.financebot.telegrambot.handler.TelegramBasicCommandHandler;
 import com.financebot.telegrambot.handler.TelegramPendingEditHandler;
 import com.financebot.telegrambot.handler.TelegramPendingOperationHandler;
@@ -83,7 +86,7 @@ class TelegramCommandServiceTest {
                 financeBotApiClient,
                 telegramPendingConfirmationService,
                 telegramPendingQueryService,
-                telegramMessageFormatter,
+                new TelegramAccountMessageFormatter(),
                 telegramBotErrorMapper
         );
 
@@ -98,7 +101,7 @@ class TelegramCommandServiceTest {
 
         TelegramTransactionPreviewHandler telegramTransactionPreviewHandler = new TelegramTransactionPreviewHandler(
                 telegramPendingConfirmationService,
-                telegramMessageFormatter,
+                new TelegramTransactionMessageFormatter(),
                 new PendingTelegramTransactionMapper(),
                 telegramPreviewAccountResolver,
                 telegramConversationContextService
@@ -109,7 +112,7 @@ class TelegramCommandServiceTest {
 
         TelegramPendingEditHandler telegramPendingEditHandler = new TelegramPendingEditHandler(
                 telegramPendingConfirmationService,
-                telegramMessageFormatter,
+                new TelegramTransactionMessageFormatter(),
                 telegramPendingEditParser,
                 telegramPreviewAccountResolver
         );
@@ -118,7 +121,7 @@ class TelegramCommandServiceTest {
                 financeBotApiClient,
                 telegramPendingQueryService,
                 telegramQueryContextService,
-                telegramMessageFormatter,
+                new TelegramQueryMessageFormatter(),
                 telegramBotErrorMapper,
                 telegramBasicCommandHandler
         );

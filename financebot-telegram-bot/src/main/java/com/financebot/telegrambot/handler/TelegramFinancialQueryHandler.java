@@ -11,7 +11,7 @@ import com.financebot.telegrambot.dto.response.TelegramActiveInstallmentSummaryR
 import com.financebot.telegrambot.dto.response.TelegramActiveInstallmentsResponse;
 import com.financebot.telegrambot.dto.response.TelegramInstallmentCountResponse;
 import com.financebot.telegrambot.dto.response.TelegramTransactionSummaryResponse;
-import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
+import com.financebot.telegrambot.formatter.TelegramQueryMessageFormatter;
 import com.financebot.telegrambot.service.TelegramPendingQueryService;
 import com.financebot.telegrambot.service.TelegramQueryContextService;
 import com.financebot.telegrambot.support.TelegramBotErrorMapper;
@@ -28,7 +28,7 @@ public class TelegramFinancialQueryHandler {
     private final FinanceBotApiClient financeBotApiClient;
     private final TelegramPendingQueryService telegramPendingQueryService;
     private final TelegramQueryContextService telegramQueryContextService;
-    private final TelegramMessageFormatter telegramMessageFormatter;
+    private final TelegramQueryMessageFormatter telegramQueryMessageFormatter;
     private final TelegramBotErrorMapper telegramBotErrorMapper;
     private final TelegramBasicCommandHandler telegramBasicCommandHandler;
 
@@ -39,14 +39,14 @@ public class TelegramFinancialQueryHandler {
                     MonthlyAmountSummaryResponse response =
                             financeBotApiClient.getCurrentMonthExpenseSummary(telegramId);
 
-                    yield telegramMessageFormatter.formatMonthExpenseSummary(response.totalAmount());
+                    yield telegramQueryMessageFormatter.formatMonthExpenseSummary(response.totalAmount());
                 }
 
                 case QUERY_MONTH_INCOME_TOTAL -> {
                     MonthlyAmountSummaryResponse response =
                             financeBotApiClient.getCurrentMonthIncomeSummary(telegramId);
 
-                    yield telegramMessageFormatter.formatMonthIncomeSummary(response.totalAmount());
+                    yield telegramQueryMessageFormatter.formatMonthIncomeSummary(response.totalAmount());
                 }
 
                 case QUERY_MONTH_ANALYSIS -> telegramBasicCommandHandler.handleAnalysis(telegramId);
@@ -82,7 +82,7 @@ public class TelegramFinancialQueryHandler {
                         complemento.append(" na conta ").append(response.accountName());
                     }
 
-                    yield telegramMessageFormatter.formatTransactionSummary(
+                    yield telegramQueryMessageFormatter.formatTransactionSummary(
                             label,
                             complemento.toString(),
                             response.totalAmount()
@@ -98,7 +98,7 @@ public class TelegramFinancialQueryHandler {
                             )
                     );
 
-                    yield telegramMessageFormatter.formatInstallmentCountMessage(
+                    yield telegramQueryMessageFormatter.formatInstallmentCountMessage(
                             response.installmentCount(),
                             response.startDate(),
                             response.endDate()
@@ -115,7 +115,7 @@ public class TelegramFinancialQueryHandler {
                                     )
                             );
 
-                    yield telegramMessageFormatter.formatInstallmentPurchaseCapacityMessage(
+                    yield telegramQueryMessageFormatter.formatInstallmentPurchaseCapacityMessage(
                             response.totalAmount(),
                             response.totalInstallments(),
                             response.estimatedInstallmentAmount(),
@@ -128,7 +128,7 @@ public class TelegramFinancialQueryHandler {
                     TelegramActiveInstallmentsResponse response =
                             financeBotApiClient.getActiveInstallments(telegramId);
 
-                    yield telegramMessageFormatter.formatActiveInstallmentsMessage(
+                    yield telegramQueryMessageFormatter.formatActiveInstallmentsMessage(
                             response.activeInstallmentGroupCount()
                     );
                 }
@@ -184,15 +184,15 @@ public class TelegramFinancialQueryHandler {
             if (response == null || !response.hasActiveInstallment()) {
                 if (parsedMessage.installmentQueryTarget() != null
                         && !parsedMessage.installmentQueryTarget().isBlank()) {
-                    return telegramMessageFormatter.formatInstallmentNotFoundMessage(
+                    return telegramQueryMessageFormatter.formatInstallmentNotFoundMessage(
                             parsedMessage.installmentQueryTarget()
                     );
                 }
 
-                return telegramMessageFormatter.formatNoActiveInstallmentsMessage();
+                return telegramQueryMessageFormatter.formatNoActiveInstallmentsMessage();
             }
 
-            return telegramMessageFormatter.formatRemainingInstallmentsMessage(
+            return telegramQueryMessageFormatter.formatRemainingInstallmentsMessage(
                     response.description(),
                     response.currentDueDate(),
                     response.currentInstallmentNumber(),
@@ -204,7 +204,7 @@ public class TelegramFinancialQueryHandler {
         } catch (RestClientResponseException e) {
             if (e.getStatusCode().value() == 409 || e.getStatusCode().value() == 403) {
                 telegramPendingQueryService.savePending(telegramId, parsedMessage);
-                return telegramMessageFormatter.formatMultipleActiveInstallmentsMessage();
+                return telegramQueryMessageFormatter.formatMultipleActiveInstallmentsMessage();
             }
 
             throw e;
@@ -222,22 +222,22 @@ public class TelegramFinancialQueryHandler {
             if (response == null || !response.hasActiveInstallment()) {
                 if (parsedMessage.installmentQueryTarget() != null
                         && !parsedMessage.installmentQueryTarget().isBlank()) {
-                    return telegramMessageFormatter.formatInstallmentNotFoundMessage(
+                    return telegramQueryMessageFormatter.formatInstallmentNotFoundMessage(
                             parsedMessage.installmentQueryTarget()
                     );
                 }
 
-                return telegramMessageFormatter.formatNoActiveInstallmentsMessage();
+                return telegramQueryMessageFormatter.formatNoActiveInstallmentsMessage();
             }
 
-            return telegramMessageFormatter.formatInstallmentEndDateMessage(
+            return telegramQueryMessageFormatter.formatInstallmentEndDateMessage(
                     response.description(),
                     response.endDate()
             );
         } catch (RestClientResponseException e) {
             if (e.getStatusCode().value() == 409 || e.getStatusCode().value() == 403) {
                 telegramPendingQueryService.savePending(telegramId, parsedMessage);
-                return telegramMessageFormatter.formatMultipleActiveInstallmentsMessage();
+                return telegramQueryMessageFormatter.formatMultipleActiveInstallmentsMessage();
             }
 
             throw e;

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Refatorada a classificação de intenções e extraídos formatters dedicados para transações e consultas do módulo Telegram, preservando a fachada e os contratos existentes.
+
 ### Changed
 
 - Separada a interpretação de mensagens do bot em parsers dedicados para consultas e transações, preservando o comportamento existente.

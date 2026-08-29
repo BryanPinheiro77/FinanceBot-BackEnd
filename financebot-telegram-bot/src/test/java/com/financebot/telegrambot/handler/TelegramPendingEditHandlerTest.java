@@ -2,7 +2,7 @@ package com.financebot.telegrambot.handler;
 
 import com.financebot.telegrambot.client.FinanceBotApiClient;
 import com.financebot.telegrambot.dto.PendingTelegramTransaction;
-import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
+import com.financebot.telegrambot.formatter.TelegramTransactionMessageFormatter;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import com.financebot.telegrambot.service.TelegramPendingConfirmationService;
 import com.financebot.telegrambot.support.TelegramPendingEditParser;
@@ -45,7 +45,7 @@ class TelegramPendingEditHandlerTest {
 
         handler = new TelegramPendingEditHandler(
                 telegramPendingConfirmationService,
-                new TelegramMessageFormatter(),
+                new TelegramTransactionMessageFormatter(),
                 new TelegramPendingEditParser(textNormalizer),
                 new TelegramPreviewAccountResolver(financeBotApiClient)
         );

@@ -1,7 +1,7 @@
 package com.financebot.telegrambot.handler;
 
 import com.financebot.telegrambot.dto.PendingTelegramTransaction;
-import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
+import com.financebot.telegrambot.formatter.TelegramTransactionMessageFormatter;
 import com.financebot.telegrambot.service.TelegramPendingConfirmationService;
 import com.financebot.telegrambot.support.TelegramPendingEditParser;
 import com.financebot.telegrambot.support.TelegramPreviewAccountResolver;
@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 public class TelegramPendingEditHandler {
 
     private final TelegramPendingConfirmationService telegramPendingConfirmationService;
-    private final TelegramMessageFormatter telegramMessageFormatter;
+    private final TelegramTransactionMessageFormatter telegramTransactionMessageFormatter;
     private final TelegramPendingEditParser telegramPendingEditParser;
     private final TelegramPreviewAccountResolver telegramPreviewAccountResolver;
 
@@ -108,7 +108,7 @@ public class TelegramPendingEditHandler {
         TelegramPreviewAccountResolver.ResolvedPreviewAccount resolvedAccount =
                 telegramPreviewAccountResolver.resolve(pendingTransaction, telegramId);
 
-        return telegramMessageFormatter.formatUpdatedPendingMessage(
+        return telegramTransactionMessageFormatter.formatUpdatedPendingMessage(
                 pendingTransaction,
                 resolvedAccount.displayName()
         );
