@@ -122,6 +122,17 @@ O projeto está evoluindo para reduzir acoplamento entre domínio, aplicação, 
 
 ---
 
+## Documentação
+
+- [Índice da documentação](docs/README.md)
+- [Desenvolvimento local](docs/development.md)
+- [Arquitetura](docs/architecture.md)
+- [API](docs/api.md)
+- [Bot Telegram](docs/telegram-bot.md)
+- [Contribuição](docs/contributing.md)
+- [Deploy](docs/deployment.md)
+- [Servidor remoto](docs/operations/remote-server.md)
+
 ## Como executar localmente
 
 ### Pré-requisitos
@@ -330,4 +341,3 @@ Este projeto está licenciado sob a licença [MIT](LICENSE).
 
 - **Bryan Pinheiro** — [@BryanPinheiro77](https://github.com/BryanPinheiro77)
 - **Luiz Fernando** — [@LuizFernandoReisFranca](https://github.com/luizfernandoreisfranca)
-

@@ -1,0 +1,44 @@
+# Deploy
+
+## Modelo atual
+
+O deploy é acionado por push na branch `main` pelo workflow `.github/workflows/deploy.yml`. Ele executa em um runner GitHub Actions `self-hosted` instalado no notebook remoto e roda Docker Compose para a API e para o bot.
+
+O diretório do checkout deve ser configurado como variável privada no runner self-hosted. Ele não deve ser exposto neste repositório público.
+
+## Pré-requisitos
+
+- Tailscale conectado;
+- runner self-hosted online;
+- Docker e Docker Compose funcionando para o usuário do runner;
+- repositório clonado no diretório privado configurado no runner;
+- rede Docker externa `backend-network` criada;
+- `.env` da API na raiz e `.env` do bot em `financebot-telegram-bot/`;
+- PostgreSQL, Redis e RabbitMQ acessíveis pelos hosts definidos nos `.env`.
+
+No GitHub, configure a variável de repositório `FINANCEBOT_DEPLOY_PATH` com o caminho do checkout no runner. O valor real deve ficar nas configurações privadas do repositório, não em YAML, documentação ou código.
+
+Criação inicial da rede:
+
+```bash
+docker network create backend-network
+```
+
+## Publicação
+
+1. Faça merge na `main` após o CI passar.
+2. Acompanhe o workflow no GitHub.
+3. No servidor, confirme os containers com `docker compose -f compose.prod.yml ps` em cada módulo.
+4. Valide a API com `curl --fail http://localhost:8080/api/health`.
+
+## Rollback operacional
+
+O rollback atual é manual: identifique o commit anterior saudável, volte o checkout do servidor para esse commit e execute novamente os dois comandos `docker compose ... up -d --build`. Antes de automatizar rollback, confirme backup do PostgreSQL e compatibilidade das migrations.
+
+## Melhorias planejadas
+
+- substituir `git pull` no servidor por checkout imutável do SHA do workflow;
+- adicionar health check pós-deploy e notificação de falha;
+- documentar backup/restauração do PostgreSQL;
+- separar ambientes e usar aprovação para produção;
+- avaliar armazenamento seguro de secrets.

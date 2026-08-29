@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
@@ -14,13 +18,19 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy backend
+        env:
+          DEPLOY_PATH: ${{ vars.FINANCEBOT_DEPLOY_PATH }}
         run: |
-          cd /home/bryan/FinanceBot-BackEnd
+          test -n "$DEPLOY_PATH"
+          cd "$DEPLOY_PATH"
           git pull
           docker compose -f compose.prod.yml up -d --build
 
       - name: Deploy telegram bot
+        env:
+          DEPLOY_PATH: ${{ vars.FINANCEBOT_DEPLOY_PATH }}
         run: |
-          cd /home/bryan/FinanceBot-BackEnd/financebot-telegram-bot
+          test -n "$DEPLOY_PATH"
+          cd "$DEPLOY_PATH/financebot-telegram-bot"
           git pull
           docker compose -f compose.prod.yml up -d --build
