@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Separada a interpretação de mensagens do bot em parsers dedicados para consultas e transações, preservando o comportamento existente.
+
 ### Added
 
 - Adicionado `AGENTS.md` com contexto, limites operacionais e regras de contribuição para agentes.

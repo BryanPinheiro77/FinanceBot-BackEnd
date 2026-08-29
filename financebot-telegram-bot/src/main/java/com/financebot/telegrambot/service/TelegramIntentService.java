@@ -1,8 +1,10 @@
     package com.financebot.telegrambot.service;
 
-    import com.financebot.telegrambot.dto.ParsedDateRange;
-    import com.financebot.telegrambot.dto.ParsedTelegramMessage;
-    import com.financebot.telegrambot.intent.TelegramIntentType;
+import com.financebot.telegrambot.dto.ParsedDateRange;
+import com.financebot.telegrambot.dto.ParsedTelegramMessage;
+import com.financebot.telegrambot.intent.TelegramIntentType;
+import com.financebot.telegrambot.parser.TelegramQueryParser;
+import com.financebot.telegrambot.parser.TelegramTransactionParser;
     import org.springframework.stereotype.Service;
 
     import java.math.BigDecimal;
@@ -81,6 +83,8 @@
 
         private final TelegramDateRangeResolver telegramDateRangeResolver;
         private final TelegramNaturalLanguageVocabulary telegramNaturalLanguageVocabulary;
+        private final TelegramQueryParser telegramQueryParser;
+        private final TelegramTransactionParser telegramTransactionParser;
 
         public TelegramIntentService(
                 TelegramDateRangeResolver telegramDateRangeResolver,
@@ -88,9 +92,27 @@
         ) {
             this.telegramDateRangeResolver = telegramDateRangeResolver;
             this.telegramNaturalLanguageVocabulary = telegramNaturalLanguageVocabulary;
+            this.telegramQueryParser = new TelegramQueryParser(this, telegramDateRangeResolver);
+            this.telegramTransactionParser = new TelegramTransactionParser(this);
         }
 
         public ParsedTelegramMessage parse(String messageText) {
+            if (messageText == null || messageText.isBlank()) {
+                return unknown(messageText);
+            }
+
+            String normalized = telegramNaturalLanguageVocabulary.normalize(messageText);
+            ParsedTelegramMessage parsed = telegramQueryParser.parse(normalized, messageText);
+
+            if (parsed == null) {
+                parsed = telegramTransactionParser.parse(normalized, messageText);
+            }
+
+            // Mantém uma rota de compatibilidade durante a migração incremental das regras.
+            return parsed != null ? parsed : parseLegacy(messageText);
+        }
+
+        private ParsedTelegramMessage parseLegacy(String messageText) {
             if (messageText == null || messageText.isBlank()) {
                 return unknown(messageText);
             }
@@ -344,7 +366,7 @@
             );
         }
 
-        private boolean isInstallmentPurchaseCapacityQuery(String text) {
+        public boolean isInstallmentPurchaseCapacityQuery(String text) {
             boolean asksCapacity = text.contains("consigo")
                     || text.contains("cabe no meu orcamento")
                     || text.contains("cabe no orcamento")
@@ -356,7 +378,7 @@
                     && extractInstallmentPurchaseAmount(text) != null;
         }
 
-        private boolean isTransactionTotalQuery(String text) {
+        public boolean isTransactionTotalQuery(String text) {
             return text.contains("quanto gastei")
                     || text.contains("quanto recebi")
                     || text.contains("quanto entrou")
@@ -367,12 +389,12 @@
                     || text.contains("entrou quanto");
         }
 
-        private boolean isMonthAnalysisQuery(String text) {
+        public boolean isMonthAnalysisQuery(String text) {
             return text.contains("analise")
                     || text.contains("resumo financeiro");
         }
 
-        private boolean looksLikeExpense(String text) {
+        public boolean looksLikeExpense(String text) {
             return text.contains("gastei")
                     || text.contains("paguei")
                     || text.contains("comprei")
@@ -386,7 +408,7 @@
                     || text.contains("saiu do banco");
         }
 
-        private boolean looksLikeInstallmentExpense(String text) {
+        public boolean looksLikeInstallmentExpense(String text) {
             Integer installmentCount = extractInstallmentCount(text);
 
             return looksLikeExpense(text)
@@ -394,7 +416,7 @@
                     && installmentCount >= 2;
         }
 
-        private boolean looksLikeExistingInstallmentExpense(String text) {
+        public boolean looksLikeExistingInstallmentExpense(String text) {
             Integer installmentCount = extractInstallmentCount(text);
             Integer firstRemainingInstallmentNumber = extractFirstRemainingInstallmentNumber(text);
 
@@ -412,7 +434,7 @@
                     || text.contains("tenho");
         }
 
-        private boolean looksLikeIncome(String text) {
+        public boolean looksLikeIncome(String text) {
             return text.contains("recebi")
                     || text.contains("ganhei")
                     || text.contains("entrou")
@@ -424,7 +446,7 @@
                     || text.contains("me pagaram");
         }
 
-        private BigDecimal extractAmount(String text) {
+        public BigDecimal extractAmount(String text) {
             Matcher matcher = AMOUNT_PATTERN.matcher(text);
 
             if (!matcher.find()) {
@@ -434,7 +456,7 @@
             return parseAmount(matcher.group(1));
         }
 
-        private BigDecimal extractInstallmentPurchaseAmount(String text) {
+        public BigDecimal extractInstallmentPurchaseAmount(String text) {
             Matcher matcher = INSTALLMENT_PURCHASE_AMOUNT_PATTERN.matcher(text);
 
             if (!matcher.find()) {
@@ -444,7 +466,7 @@
             return parseAmount(matcher.group(1));
         }
 
-        private String extractDescriptionForTransaction(String text) {
+        public String extractDescriptionForTransaction(String text) {
             String normalized = telegramNaturalLanguageVocabulary.normalize(text);
             String cleaned = normalized;
 
@@ -489,7 +511,7 @@
             return cleaned;
         }
 
-        private String extractInstallmentDescription(String text) {
+        public String extractInstallmentDescription(String text) {
             String description = extractDescriptionForTransaction(text);
 
             if (description == null || description.isBlank()) {
@@ -499,7 +521,7 @@
             return description;
         }
 
-        private Integer extractInstallmentCount(String text) {
+        public Integer extractInstallmentCount(String text) {
             Matcher matcher = INSTALLMENT_PATTERN.matcher(text);
 
             if (!matcher.find()) {
@@ -513,7 +535,7 @@
             }
         }
 
-        private Integer extractFirstRemainingInstallmentNumber(String text) {
+        public Integer extractFirstRemainingInstallmentNumber(String text) {
             Integer currentInstallmentNumber = extractCurrentInstallmentNumber(text);
 
             if (currentInstallmentNumber != null) {
@@ -635,7 +657,7 @@
             return null;
         }
 
-        private LocalDate extractDate(String text) {
+        public LocalDate extractDate(String text) {
             LocalDate today = LocalDate.now();
 
             if (containsWord(text, "ontem") || containsWord(text, "ont")) {
@@ -676,7 +698,7 @@
             return pattern.matcher(text).find();
         }
 
-        private boolean isInstallmentCountQuery(String text) {
+        public boolean isInstallmentCountQuery(String text) {
             return (text.contains("quantas parcelas") || text.contains("quantos parcelamentos"))
                     && (text.contains("tenho")
                     || text.contains("nesse mes")
@@ -688,7 +710,7 @@
                     || text.contains("ontem"));
         }
 
-        private boolean isActiveInstallmentsQuery(String text) {
+        public boolean isActiveInstallmentsQuery(String text) {
             return text.contains("parcelamentos ativos")
                     || text.contains("parcelamento ativo")
                     || text.contains("parcelas ativas")
@@ -696,7 +718,7 @@
                     || text.contains("tenho parcelamentos ativos");
         }
 
-        private boolean isInstallmentRemainingQuery(String text) {
+        public boolean isInstallmentRemainingQuery(String text) {
             return text.contains("quantas parcelas faltam")
                     || text.contains("quantas faltam")
                     || text.contains("faltam quantas parcelas")
@@ -704,7 +726,7 @@
                     || text.contains("restam quantas parcelas");
         }
 
-        private boolean isInstallmentEndDateQuery(String text) {
+        public boolean isInstallmentEndDateQuery(String text) {
             return text.contains("quando acaba o parcelamento")
                     || text.contains("quando termina o parcelamento")
                     || text.contains("quando acaba minha parcela")
@@ -717,7 +739,7 @@
                     || text.contains("quando acaba parcela");
         }
 
-        private BigDecimal extractMonthlyInstallmentAmount(String text) {
+        public BigDecimal extractMonthlyInstallmentAmount(String text) {
             Matcher matcher = MONTHLY_INSTALLMENT_AMOUNT_PATTERN.matcher(text);
 
             if (!matcher.find()) {

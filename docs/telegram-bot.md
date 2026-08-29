@@ -15,6 +15,15 @@ O serviço usa a porta `8081` e precisa de `TELEGRAM_BOT_TOKEN` e `FINANCEBOT_AP
 
 O endpoint técnico `GET /actuator/health` é usado pelo deploy para confirmar que o processo iniciou. Ele não expõe detalhes das dependências (`show-details=never`).
 
+## Interpretação de mensagens
+
+`TelegramIntentService` funciona como fachada e normaliza a mensagem antes de delegar para parsers especializados:
+
+- `TelegramQueryParser`: consultas financeiras, análises e parcelamentos;
+- `TelegramTransactionParser`: despesas, receitas e parcelamentos.
+
+Os parsers preservam a ordem das regras existentes. A extração de valores, datas, contas e categorias continua centralizada no serviço durante esta etapa incremental; a issue #96 poderá aprofundar essa separação.
+
 ## Fluxo principal
 
 ```text
