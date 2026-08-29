@@ -5,6 +5,7 @@
 FinanceBot é um sistema de controle financeiro pessoal composto por uma API REST em Java 21 + Spring Boot (`src/`), um bot do Telegram (`financebot-telegram-bot/`) e PostgreSQL, Redis e RabbitMQ executados via Docker Compose. O frontend não está neste repositório; contratos de integração estão em `docs/frontend-integration.md`.
 
 Leia `README.md` e `docs/README.md` antes de fazer alterações de arquitetura ou infraestrutura.
+As skills compartilhadas do projeto estão catalogadas em `docs/ai-skills.md` e armazenadas em `.agents/skills/`.
 
 ## Regras de trabalho
 

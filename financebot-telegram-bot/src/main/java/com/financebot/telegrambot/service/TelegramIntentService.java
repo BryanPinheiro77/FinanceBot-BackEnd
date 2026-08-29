@@ -5,6 +5,7 @@ import com.financebot.telegrambot.dto.ParsedTelegramMessage;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import com.financebot.telegrambot.parser.TelegramQueryParser;
 import com.financebot.telegrambot.parser.TelegramTransactionParser;
+import com.financebot.telegrambot.parser.TelegramIntentClassifier;
     import org.springframework.stereotype.Service;
 
     import java.math.BigDecimal;
@@ -83,6 +84,7 @@ import com.financebot.telegrambot.parser.TelegramTransactionParser;
 
         private final TelegramDateRangeResolver telegramDateRangeResolver;
         private final TelegramNaturalLanguageVocabulary telegramNaturalLanguageVocabulary;
+        private final TelegramIntentClassifier telegramIntentClassifier;
         private final TelegramQueryParser telegramQueryParser;
         private final TelegramTransactionParser telegramTransactionParser;
 
@@ -92,6 +94,11 @@ import com.financebot.telegrambot.parser.TelegramTransactionParser;
         ) {
             this.telegramDateRangeResolver = telegramDateRangeResolver;
             this.telegramNaturalLanguageVocabulary = telegramNaturalLanguageVocabulary;
+            this.telegramIntentClassifier = new TelegramIntentClassifier(
+                    this::extractInstallmentCount,
+                    this::extractInstallmentPurchaseAmount,
+                    this::extractFirstRemainingInstallmentNumber
+            );
             this.telegramQueryParser = new TelegramQueryParser(this, telegramDateRangeResolver);
             this.telegramTransactionParser = new TelegramTransactionParser(this);
         }
@@ -367,83 +374,31 @@ import com.financebot.telegrambot.parser.TelegramTransactionParser;
         }
 
         public boolean isInstallmentPurchaseCapacityQuery(String text) {
-            boolean asksCapacity = text.contains("consigo")
-                    || text.contains("cabe no meu orcamento")
-                    || text.contains("cabe no orcamento")
-                    || text.contains("se eu parcelar");
-
-            return asksCapacity
-                    && (text.contains("compra") || text.contains("parcel"))
-                    && extractInstallmentCount(text) != null
-                    && extractInstallmentPurchaseAmount(text) != null;
+            return telegramIntentClassifier.isInstallmentPurchaseCapacityQuery(text);
         }
 
         public boolean isTransactionTotalQuery(String text) {
-            return text.contains("quanto gastei")
-                    || text.contains("quanto recebi")
-                    || text.contains("quanto entrou")
-                    || text.contains("total gasto")
-                    || text.contains("total recebido")
-                    || text.contains("gastei quanto")
-                    || text.contains("recebi quanto")
-                    || text.contains("entrou quanto");
+            return telegramIntentClassifier.isTransactionTotalQuery(text);
         }
 
         public boolean isMonthAnalysisQuery(String text) {
-            return text.contains("analise")
-                    || text.contains("resumo financeiro");
+            return telegramIntentClassifier.isMonthAnalysisQuery(text);
         }
 
         public boolean looksLikeExpense(String text) {
-            return text.contains("gastei")
-                    || text.contains("paguei")
-                    || text.contains("comprei")
-                    || text.contains("despesa")
-                    || text.contains("pago")
-                    || text.contains("compra")
-                    || text.contains("boleto")
-                    || text.contains("debito")
-                    || text.contains("debitei")
-                    || text.contains("saiu da conta")
-                    || text.contains("saiu do banco");
+            return telegramIntentClassifier.looksLikeExpense(text);
         }
 
         public boolean looksLikeInstallmentExpense(String text) {
-            Integer installmentCount = extractInstallmentCount(text);
-
-            return looksLikeExpense(text)
-                    && installmentCount != null
-                    && installmentCount >= 2;
+            return telegramIntentClassifier.looksLikeInstallmentExpense(text);
         }
 
         public boolean looksLikeExistingInstallmentExpense(String text) {
-            Integer installmentCount = extractInstallmentCount(text);
-            Integer firstRemainingInstallmentNumber = extractFirstRemainingInstallmentNumber(text);
-
-            return looksLikeInstallmentSubject(text)
-                    && installmentCount != null
-                    && installmentCount >= 2
-                    && firstRemainingInstallmentNumber != null
-                    && firstRemainingInstallmentNumber <= installmentCount;
-        }
-
-        private boolean looksLikeInstallmentSubject(String text) {
-            return looksLikeExpense(text)
-                    || text.contains("parcelamento")
-                    || text.contains("financiamento")
-                    || text.contains("tenho");
+            return telegramIntentClassifier.looksLikeExistingInstallmentExpense(text);
         }
 
         public boolean looksLikeIncome(String text) {
-            return text.contains("recebi")
-                    || text.contains("ganhei")
-                    || text.contains("entrou")
-                    || text.contains("entrada")
-                    || text.contains("caiu")
-                    || text.contains("depositaram")
-                    || text.contains("deposito")
-                    || text.contains("pix recebido")
-                    || text.contains("me pagaram");
+            return telegramIntentClassifier.looksLikeIncome(text);
         }
 
         public BigDecimal extractAmount(String text) {
@@ -699,44 +654,19 @@ import com.financebot.telegrambot.parser.TelegramTransactionParser;
         }
 
         public boolean isInstallmentCountQuery(String text) {
-            return (text.contains("quantas parcelas") || text.contains("quantos parcelamentos"))
-                    && (text.contains("tenho")
-                    || text.contains("nesse mes")
-                    || text.contains("neste mes")
-                    || text.contains("esse mes")
-                    || text.contains("este mes")
-                    || text.contains("mes passado")
-                    || text.contains("hoje")
-                    || text.contains("ontem"));
+            return telegramIntentClassifier.isInstallmentCountQuery(text);
         }
 
         public boolean isActiveInstallmentsQuery(String text) {
-            return text.contains("parcelamentos ativos")
-                    || text.contains("parcelamento ativo")
-                    || text.contains("parcelas ativas")
-                    || text.contains("parcela ativa")
-                    || text.contains("tenho parcelamentos ativos");
+            return telegramIntentClassifier.isActiveInstallmentsQuery(text);
         }
 
         public boolean isInstallmentRemainingQuery(String text) {
-            return text.contains("quantas parcelas faltam")
-                    || text.contains("quantas faltam")
-                    || text.contains("faltam quantas parcelas")
-                    || text.contains("quantas parcelas restam")
-                    || text.contains("restam quantas parcelas");
+            return telegramIntentClassifier.isInstallmentRemainingQuery(text);
         }
 
         public boolean isInstallmentEndDateQuery(String text) {
-            return text.contains("quando acaba o parcelamento")
-                    || text.contains("quando termina o parcelamento")
-                    || text.contains("quando acaba minha parcela")
-                    || text.contains("quando acaba meu parcelamento")
-                    || text.contains("quando termina minha parcela")
-                    || text.contains("quando termina meu parcelamento")
-                    || text.contains("quando termina a parcela")
-                    || text.contains("quando acaba a parcela")
-                    || text.contains("quando termina parcela")
-                    || text.contains("quando acaba parcela");
+            return telegramIntentClassifier.isInstallmentEndDateQuery(text);
         }
 
         public BigDecimal extractMonthlyInstallmentAmount(String text) {

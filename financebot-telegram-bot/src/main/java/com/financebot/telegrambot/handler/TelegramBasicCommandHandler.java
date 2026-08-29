@@ -6,7 +6,7 @@ import com.financebot.telegrambot.dto.request.UpdateMonthlyBaseIncomeRequest;
 import com.financebot.telegrambot.dto.response.FinancialCommitmentResponse;
 import com.financebot.telegrambot.dto.response.TelegramLinkConfirmResponse;
 import com.financebot.telegrambot.dto.response.UserProfileResponse;
-import com.financebot.telegrambot.formatter.TelegramMessageFormatter;
+import com.financebot.telegrambot.formatter.TelegramAccountMessageFormatter;
 import com.financebot.telegrambot.service.TelegramPendingConfirmationService;
 import com.financebot.telegrambot.service.TelegramPendingQueryService;
 import com.financebot.telegrambot.support.TelegramBotErrorMapper;
@@ -23,32 +23,32 @@ public class TelegramBasicCommandHandler {
     private final FinanceBotApiClient financeBotApiClient;
     private final TelegramPendingConfirmationService telegramPendingConfirmationService;
     private final TelegramPendingQueryService telegramPendingQueryService;
-    private final TelegramMessageFormatter telegramMessageFormatter;
+    private final TelegramAccountMessageFormatter telegramAccountMessageFormatter;
     private final TelegramBotErrorMapper telegramBotErrorMapper;
 
     public String handleStart(String telegramFirstName, String telegramUsername) {
         String name = resolveDisplayName(telegramFirstName, telegramUsername);
-        return telegramMessageFormatter.formatStartMessage(name);
+        return telegramAccountMessageFormatter.formatStartMessage(name);
     }
 
     public String handleHelp() {
-        return telegramMessageFormatter.formatHelpMessage();
+        return telegramAccountMessageFormatter.formatHelpMessage();
     }
 
     public String handleGreeting(String telegramFirstName, String telegramUsername) {
         String name = resolveDisplayName(telegramFirstName, telegramUsername);
-        return telegramMessageFormatter.formatGreetingMessage(name);
+        return telegramAccountMessageFormatter.formatGreetingMessage(name);
     }
 
     public String handleConnectionIntent() {
-        return telegramMessageFormatter.formatConnectInstructionsMessage();
+        return telegramAccountMessageFormatter.formatConnectInstructionsMessage();
     }
 
     public String handleConnect(String messageText, Long telegramId, String telegramUsername) {
         String[] parts = messageText.split("\\s+", 2);
 
         if (parts.length < 2 || parts[1].isBlank()) {
-            return telegramMessageFormatter.formatConnectCodeRequiredMessage();
+            return telegramAccountMessageFormatter.formatConnectCodeRequiredMessage();
         }
 
         String linkCode = parts[1].trim();
@@ -58,11 +58,11 @@ public class TelegramBasicCommandHandler {
                     new TelegramLinkConfirmRequest(linkCode, telegramId, telegramUsername)
             );
 
-            return telegramMessageFormatter.formatConnectSuccessMessage(response.message());
+            return telegramAccountMessageFormatter.formatConnectSuccessMessage(response.message());
         } catch (RestClientResponseException e) {
-            return telegramMessageFormatter.formatConnectErrorMessage(e.getStatusCode().value());
+            return telegramAccountMessageFormatter.formatConnectErrorMessage(e.getStatusCode().value());
         } catch (Exception e) {
-            return telegramMessageFormatter.formatGenericConnectFailureMessage();
+            return telegramAccountMessageFormatter.formatGenericConnectFailureMessage();
         }
     }
 
@@ -72,11 +72,11 @@ public class TelegramBasicCommandHandler {
             telegramPendingConfirmationService.clearPending(telegramId);
             telegramPendingQueryService.clearPending(telegramId);
 
-            return telegramMessageFormatter.formatDisconnectSuccessMessage();
+            return telegramAccountMessageFormatter.formatDisconnectSuccessMessage();
         } catch (RestClientResponseException e) {
             return telegramBotErrorMapper.mapDefaultBotErrors(e);
         } catch (Exception e) {
-            return telegramMessageFormatter.formatGenericDisconnectFailureMessage();
+            return telegramAccountMessageFormatter.formatGenericDisconnectFailureMessage();
         }
     }
 
@@ -84,7 +84,7 @@ public class TelegramBasicCommandHandler {
         try {
             UserProfileResponse response = financeBotApiClient.getMe(telegramId);
 
-            return telegramMessageFormatter.formatProfileMessage(
+            return telegramAccountMessageFormatter.formatProfileMessage(
                     response.name(),
                     response.email(),
                     response.monthlyBaseIncome(),
@@ -93,7 +93,7 @@ public class TelegramBasicCommandHandler {
         } catch (RestClientResponseException e) {
             return telegramBotErrorMapper.mapDefaultBotErrors(e);
         } catch (Exception e) {
-            return telegramMessageFormatter.formatGenericProfileFailureMessage();
+            return telegramAccountMessageFormatter.formatGenericProfileFailureMessage();
         }
     }
 
@@ -101,14 +101,14 @@ public class TelegramBasicCommandHandler {
         String[] parts = messageText.split("\\s+", 2);
 
         if (parts.length < 2 || parts[1].isBlank()) {
-            return telegramMessageFormatter.formatSetIncomeValueRequiredMessage();
+            return telegramAccountMessageFormatter.formatSetIncomeValueRequiredMessage();
         }
 
         try {
             BigDecimal income = parseBrazilianNumber(parts[1]);
 
             if (income.compareTo(BigDecimal.ZERO) <= 0) {
-                return telegramMessageFormatter.formatSetIncomeNonPositiveMessage();
+                return telegramAccountMessageFormatter.formatSetIncomeNonPositiveMessage();
             }
 
             UserProfileResponse response = financeBotApiClient.updateMonthlyBaseIncome(
@@ -116,13 +116,13 @@ public class TelegramBasicCommandHandler {
                     new UpdateMonthlyBaseIncomeRequest(income)
             );
 
-            return telegramMessageFormatter.formatSetIncomeSuccessMessage(response.monthlyBaseIncome());
+            return telegramAccountMessageFormatter.formatSetIncomeSuccessMessage(response.monthlyBaseIncome());
         } catch (NumberFormatException e) {
-            return telegramMessageFormatter.formatSetIncomeInvalidValueMessage();
+            return telegramAccountMessageFormatter.formatSetIncomeInvalidValueMessage();
         } catch (RestClientResponseException e) {
             return telegramBotErrorMapper.mapDefaultBotErrors(e);
         } catch (Exception e) {
-            return telegramMessageFormatter.formatGenericSetIncomeFailureMessage();
+            return telegramAccountMessageFormatter.formatGenericSetIncomeFailureMessage();
         }
     }
 
@@ -130,7 +130,7 @@ public class TelegramBasicCommandHandler {
         try {
             FinancialCommitmentResponse response = financeBotApiClient.getFinancialAnalysis(telegramId);
 
-            return telegramMessageFormatter.formatAnalysisMessage(
+            return telegramAccountMessageFormatter.formatAnalysisMessage(
                     response.monthlyBaseIncome(),
                     response.monthlyIncomeReference(),
                     response.projectedRecurringIncomeNextMonth(),
@@ -155,7 +155,7 @@ public class TelegramBasicCommandHandler {
             UserProfileResponse profile = financeBotApiClient.getMe(telegramId);
             FinancialCommitmentResponse analysis = financeBotApiClient.getFinancialAnalysis(telegramId);
 
-            return telegramMessageFormatter.formatStatusMessage(
+            return telegramAccountMessageFormatter.formatStatusMessage(
                     profile.email(),
                     profile.monthlyBaseIncome(),
                     analysis.projectedNetNextMonth(),

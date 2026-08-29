@@ -9,6 +9,20 @@
 
 Os Maven Wrappers (`./mvnw`) são a forma preferida de executar Maven.
 
+### Java 21 no macOS
+
+Em Macs com Homebrew, instale e configure o JDK antes de executar os testes:
+
+```bash
+brew install openjdk@21
+echo 'export JAVA_HOME="$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home"' >> ~/.zshrc
+echo 'export PATH="$JAVA_HOME/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+java -version
+```
+
+O comando deve mostrar a versão 21.
+
 ## Configuração da API
 
 Crie `.env` na raiz. O arquivo é ignorado pelo Git:
