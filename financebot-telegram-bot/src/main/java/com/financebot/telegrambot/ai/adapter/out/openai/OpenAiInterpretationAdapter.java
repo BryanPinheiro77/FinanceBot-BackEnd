@@ -40,7 +40,7 @@ public class OpenAiInterpretationAdapter implements AiInterpretationPort {
             """;
 
     private final AiProperties properties;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public Optional<AiInterpretation> interpret(String message) {
