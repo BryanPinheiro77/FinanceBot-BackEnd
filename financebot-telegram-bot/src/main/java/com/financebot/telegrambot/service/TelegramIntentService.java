@@ -9,6 +9,7 @@ import com.financebot.telegrambot.intent.TelegramIntentType;
 import com.financebot.telegrambot.parser.TelegramQueryParser;
 import com.financebot.telegrambot.parser.TelegramTransactionParser;
 import com.financebot.telegrambot.parser.TelegramIntentClassifier;
+import org.springframework.beans.factory.annotation.Autowired;
     import org.springframework.stereotype.Service;
 
     import java.math.BigDecimal;
@@ -100,6 +101,7 @@ import java.util.Optional;
             this(telegramDateRangeResolver, telegramNaturalLanguageVocabulary, message -> Optional.empty());
         }
 
+        @Autowired
         public TelegramIntentService(
                 TelegramDateRangeResolver telegramDateRangeResolver,
                 TelegramNaturalLanguageVocabulary telegramNaturalLanguageVocabulary,
