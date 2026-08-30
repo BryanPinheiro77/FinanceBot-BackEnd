@@ -1,6 +1,7 @@
 package com.financebot.telegrambot;
 
 import com.financebot.telegrambot.config.TelegramBotProperties;
+import com.financebot.telegrambot.config.AiProperties;
 import com.financebot.telegrambot.conversation.config.TelegramConversationProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -9,7 +10,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 @SpringBootApplication
 @EnableConfigurationProperties({
         TelegramBotProperties.class,
-        TelegramConversationProperties.class
+        TelegramConversationProperties.class,
+        AiProperties.class
 })
 public class FinancebotTelegramBotApplication {
 

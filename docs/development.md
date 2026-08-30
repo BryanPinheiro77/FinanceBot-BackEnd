@@ -66,7 +66,19 @@ TELEGRAM_STATE_STORE=memory
 TELEGRAM_CONVERSATION_CONTEXT_TTL=30m
 TELEGRAM_QUERY_CONTEXT_TTL=30m
 TELEGRAM_INTERNAL_TOKEN=use-o-mesmo-token-configurado-na-api
+# Opcional: enriquecimento de mensagens ambíguas por um endpoint compatível com OpenAI
+FINANCEBOT_AI_ENABLED=false
+FINANCEBOT_AI_ENDPOINT=https://seu-provedor.example/v1/chat/completions
+FINANCEBOT_AI_API_KEY=seu-token-do-provedor
+FINANCEBOT_AI_MODEL=gpt-4o-mini
+FINANCEBOT_AI_TIMEOUT=10s
 ```
+
+Quando habilitada, a IA recebe somente o texto da mensagem e retorna uma intenção
+estruturada. Ela nunca persiste dados: mensagens reconhecidas pelo parser determinístico
+seguem primeiro pela IA quando o recurso está habilitado; respostas inválidas ou falhas do
+provedor fazem fallback para o parser existente. O token deve permanecer apenas no ambiente
+local/seguro.
 
 Execute-o com `cd financebot-telegram-bot && ./mvnw spring-boot:run`.
 
