@@ -1,5 +1,8 @@
-    package com.financebot.telegrambot.service;
+package com.financebot.telegrambot.service;
 
+import com.financebot.telegrambot.ai.application.model.AiInterpretation;
+import com.financebot.telegrambot.ai.application.port.out.AiInterpretationPort;
+import com.financebot.telegrambot.ai.application.service.AiInterpretationValidator;
 import com.financebot.telegrambot.dto.ParsedDateRange;
 import com.financebot.telegrambot.dto.ParsedTelegramMessage;
 import com.financebot.telegrambot.intent.TelegramIntentType;
@@ -9,7 +12,8 @@ import com.financebot.telegrambot.parser.TelegramIntentClassifier;
     import org.springframework.stereotype.Service;
 
     import java.math.BigDecimal;
-    import java.time.LocalDate;
+import java.time.LocalDate;
+import java.util.Optional;
     import java.util.regex.Matcher;
     import java.util.regex.Pattern;
 
@@ -87,13 +91,23 @@ import com.financebot.telegrambot.parser.TelegramIntentClassifier;
         private final TelegramIntentClassifier telegramIntentClassifier;
         private final TelegramQueryParser telegramQueryParser;
         private final TelegramTransactionParser telegramTransactionParser;
+        private final AiInterpretationPort aiInterpretationPort;
 
         public TelegramIntentService(
                 TelegramDateRangeResolver telegramDateRangeResolver,
                 TelegramNaturalLanguageVocabulary telegramNaturalLanguageVocabulary
         ) {
+            this(telegramDateRangeResolver, telegramNaturalLanguageVocabulary, message -> Optional.empty());
+        }
+
+        public TelegramIntentService(
+                TelegramDateRangeResolver telegramDateRangeResolver,
+                TelegramNaturalLanguageVocabulary telegramNaturalLanguageVocabulary,
+                AiInterpretationPort aiInterpretationPort
+        ) {
             this.telegramDateRangeResolver = telegramDateRangeResolver;
             this.telegramNaturalLanguageVocabulary = telegramNaturalLanguageVocabulary;
+            this.aiInterpretationPort = aiInterpretationPort;
             this.telegramIntentClassifier = new TelegramIntentClassifier(
                     this::extractInstallmentCount,
                     this::extractInstallmentPurchaseAmount,
@@ -109,6 +123,16 @@ import com.financebot.telegrambot.parser.TelegramIntentClassifier;
             }
 
             String normalized = telegramNaturalLanguageVocabulary.normalize(messageText);
+
+            // A IA é a estratégia principal quando habilitada. O parser determinístico
+            // continua sendo o fallback para indisponibilidade ou resposta inválida.
+            Optional<ParsedTelegramMessage> aiParsed = aiInterpretationPort.interpret(messageText)
+                    .filter(AiInterpretationValidator::isValid)
+                    .map(interpretation -> toParsedMessage(interpretation, messageText));
+            if (aiParsed.isPresent()) {
+                return aiParsed.get();
+            }
+
             ParsedTelegramMessage parsed = telegramQueryParser.parse(normalized, messageText);
 
             if (parsed == null) {
@@ -116,7 +140,35 @@ import com.financebot.telegrambot.parser.TelegramIntentClassifier;
             }
 
             // Mantém uma rota de compatibilidade durante a migração incremental das regras.
-            return parsed != null ? parsed : parseLegacy(messageText);
+            if (parsed != null) {
+                return parsed;
+            }
+
+            ParsedTelegramMessage legacyParsed = parseLegacy(messageText);
+            if (legacyParsed.intentType() != TelegramIntentType.UNKNOWN) {
+                return legacyParsed;
+            }
+
+            return legacyParsed;
+        }
+
+        private ParsedTelegramMessage toParsedMessage(AiInterpretation interpretation, String originalMessage) {
+            return new ParsedTelegramMessage(
+                    interpretation.intentType(),
+                    interpretation.amount(),
+                    interpretation.description(),
+                    interpretation.date() != null ? interpretation.date() : LocalDate.now(),
+                    originalMessage,
+                    interpretation.categoryName(),
+                    interpretation.accountName(),
+                    interpretation.startDate(),
+                    interpretation.endDate(),
+                    interpretation.totalInstallments(),
+                    interpretation.firstRemainingInstallmentNumber(),
+                    null,
+                    interpretation.totalAmount(),
+                    interpretation.monthlyAmount()
+            );
         }
 
         private ParsedTelegramMessage parseLegacy(String messageText) {
