@@ -1,2 +1,11 @@
 /mvnw text eol=lf
 *.cmd text eol=crlf
+
+# .agents/ traz skills de agente de terceiro (scripts .py, .cs, .c e docs .md).
+# São 1.438.037 bytes de Python — quase o tamanho de TODO o Java deste repo
+# (900.498) — que o linguist somava nas estatísticas de linguagem e derrubavam
+# o Java de ~51% para ~35% no card do perfil. `linguist-vendored` tira só o que
+# está sob .agents/ do cálculo: sai 100% do .py/.cs/.c e apenas 3.995 dos
+# 900.498 bytes de .java (0,4%). Nada é apagado — os arquivos continuam
+# versionados e as skills seguem funcionando.
+.agents/** linguist-vendored
