@@ -2,6 +2,41 @@
 
 ## [Unreleased]
 
+### Added
+
+- Adicionada execução automática de transações recorrentes vencidas, com avanço da próxima data, encerramento após a data final e proteção transacional contra duplicidade.
+
+## [v1.6.0]
+
+### Changed
+
+- Refatorada a classificação de intenções e extraídos formatters dedicados para transações e consultas do módulo Telegram, preservando a fachada e os contratos existentes.
+- Separada a interpretação de mensagens do bot em parsers dedicados para consultas e transações, preservando o comportamento existente.
+- Refatorada a integração Telegram da API para casos de uso de aplicação separados por fluxo, com commands internos e fachada de compatibilidade.
+- Isolada a responsabilidade da integração Telegram para manter controllers e regras de aplicação preparados para evolução independente.
+- Mantida a compatibilidade dos contratos HTTP existentes usados pelo bot Telegram.
+- Integrada a OpenAI como estratégia principal de interpretação de mensagens não estruturadas, com o parser determinístico como fallback.
+
+### Added
+
+- Adicionada porta `AiInterpretationPort` e adapter compatível com a API de Chat Completions.
+- Adicionado contrato interno estruturado para intenções financeiras, com validação de valores, tipos e parcelamentos antes do preview.
+- Adicionada configuração opcional da IA por ambiente, desativada por padrão, incluindo endpoint, modelo e timeout.
+- Adicionado `AGENTS.md` com contexto, limites operacionais e regras de contribuição para agentes.
+- Adicionada documentação de desenvolvimento, arquitetura, API, bot Telegram, integração com frontend, contribuição, deploy e servidor remoto.
+- Adicionado workflow de CI para validar os dois módulos Maven com Java 21.
+- Adicionado health check técnico ao bot Telegram e validação pós-deploy da API e do bot.
+- Adicionada notificação opcional de falha de deploy via webhook privado.
+
+### Fixed
+
+- Corrigida a inicialização do bot quando o adapter de IA está presente, mantendo o carregamento do contexto Spring sem API key configurada.
+
+### Tests
+
+- Adicionada cobertura para resposta válida da IA, prioridade sobre o parser determinístico, resposta inválida e fallback em caso de indisponibilidade.
+- Mantida a suíte completa do bot Telegram e da API passando após as refatorações.
+
  ## [v1.5.0]
 
 ### Added

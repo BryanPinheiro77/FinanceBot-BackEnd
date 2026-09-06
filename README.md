@@ -150,6 +150,9 @@ JWT_SECRET=sua_chave_secreta
 JWT_EXPIRATION=86400000
 
 CORS_ALLOWED_ORIGINS=http://localhost:5173
+
+# Opcional: scheduler de recorrências (padrão: todos os dias à meia-noite)
+FINANCEBOT_RECURRING_SCHEDULER_CRON=0 0 0 * * *
 ```
 
 ### Subindo a API com Docker
