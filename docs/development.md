@@ -44,6 +44,8 @@ JWT_SECRET=troque-por-uma-chave-local-com-mais-de-64-caracteres
 JWT_EXPIRATION=86400000
 CORS_ALLOWED_ORIGINS=http://localhost:5173
 TELEGRAM_INTERNAL_TOKEN=gere-um-token-local-forte-e-nao-compartilhe
+# Opcional: execução automática de despesas/receitas recorrentes à meia-noite
+FINANCEBOT_RECURRING_SCHEDULER_CRON=0 0 0 * * *
 ```
 
 ```bash
