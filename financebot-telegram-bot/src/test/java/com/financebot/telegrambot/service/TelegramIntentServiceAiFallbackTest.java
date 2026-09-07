@@ -67,6 +67,23 @@ class TelegramIntentServiceAiFallbackTest {
         assertThat(parsed.intentType()).isEqualTo(TelegramIntentType.UNKNOWN);
     }
 
+    @Test
+    void acceptsReminderInterpretedByAiForFreeFormMessage() {
+        LocalDate reminderDate = LocalDate.of(2026, 10, 10);
+        AiInterpretationPort port = message -> Optional.of(new AiInterpretation(
+                TelegramIntentType.CREATE_REMINDER, null, null, null,
+                "pagar o aluguel", reminderDate, null, null,
+                null, null, null, null
+        ));
+        TelegramIntentService service = service(port);
+
+        ParsedTelegramMessage parsed = service.parse("programe um aviso para o aluguel no próximo dia dez");
+
+        assertThat(parsed.intentType()).isEqualTo(TelegramIntentType.CREATE_REMINDER);
+        assertThat(parsed.description()).isEqualTo("pagar o aluguel");
+        assertThat(parsed.date()).isEqualTo(reminderDate);
+    }
+
     private TelegramIntentService service(AiInterpretationPort port) {
         return new TelegramIntentService(
                 new TelegramDateRangeResolver(),

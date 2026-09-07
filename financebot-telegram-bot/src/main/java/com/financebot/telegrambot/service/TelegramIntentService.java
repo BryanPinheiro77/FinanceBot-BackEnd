@@ -10,13 +10,14 @@ import com.financebot.telegrambot.parser.TelegramQueryParser;
 import com.financebot.telegrambot.parser.TelegramTransactionParser;
 import com.financebot.telegrambot.parser.TelegramIntentClassifier;
 import org.springframework.beans.factory.annotation.Autowired;
-    import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Service;
 
-    import java.math.BigDecimal;
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.Optional;
-    import java.util.regex.Matcher;
-    import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
     @Service
     public class TelegramIntentService {
@@ -31,6 +32,16 @@ import java.util.Optional;
                 "pix recebido|me pagaram|gastei|paguei|pago|comprei|compra|despesa|recebi|ganhei|entrou|entrada|caiu|depositaram|deposito|boleto|debito|debitei|reais|real";
 
         private static final Pattern AMOUNT_PATTERN = Pattern.compile("\\b(\\d+[\\.,]?\\d{0,2})\\b(?!\\s*x\\b)");
+
+        private static final Pattern REMINDER_INTENT_PATTERN = Pattern.compile(
+                "\\b(?:me\\s+lembre|me\\s+lembra|me\\s+lembrar|lembre\\s+me|lembrar\\s+me|crie\\s+(?:um\\s+)?lembrete|lembrete)\\b"
+        );
+
+        private static final Pattern REMINDER_DAY_PATTERN = Pattern.compile("\\bdia\\s+(\\d{1,2})\\b");
+        private static final Pattern ISO_DATE_PATTERN = Pattern.compile("\\b(\\d{4})-(\\d{2})-(\\d{2})\\b");
+        private static final Pattern BRAZILIAN_DATE_PATTERN = Pattern.compile(
+                "\\b(\\d{1,2})/(\\d{1,2})(?:/(\\d{4}))?\\b"
+        );
 
         private static final Pattern EXPLICIT_ACCOUNT_PATTERN = Pattern.compile(
                 "\\b(?:conta|cartao)\\s+(?:da|do|de)?\\s*([a-zA-Z0-9\\s]+?)(?=\\s*(?:\\b(?:"
@@ -126,6 +137,11 @@ import java.util.Optional;
 
             String normalized = telegramNaturalLanguageVocabulary.normalize(messageText);
 
+            ParsedTelegramMessage reminder = parseReminder(normalized, messageText);
+            if (reminder != null) {
+                return reminder;
+            }
+
             // A IA é a estratégia principal quando habilitada. O parser determinístico
             // continua sendo o fallback para indisponibilidade ou resposta inválida.
             Optional<ParsedTelegramMessage> aiParsed = aiInterpretationPort.interpret(messageText)
@@ -152,6 +168,108 @@ import java.util.Optional;
             }
 
             return legacyParsed;
+        }
+
+        private ParsedTelegramMessage parseReminder(String normalized, String originalMessage) {
+            if (!REMINDER_INTENT_PATTERN.matcher(normalized).find()) {
+                return null;
+            }
+
+            return new ParsedTelegramMessage(
+                    TelegramIntentType.CREATE_REMINDER,
+                    null,
+                    extractReminderDescription(normalized),
+                    extractReminderDate(normalized),
+                    originalMessage,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+        }
+
+        private LocalDate extractReminderDate(String normalized) {
+            LocalDate today = LocalDate.now();
+            if (containsWord(normalized, "hoje")) {
+                return today;
+            }
+            if (containsWord(normalized, "amanha")) {
+                return today.plusDays(1);
+            }
+
+            Matcher isoDate = ISO_DATE_PATTERN.matcher(normalized);
+            if (isoDate.find()) {
+                return parseDate(
+                        Integer.parseInt(isoDate.group(1)),
+                        Integer.parseInt(isoDate.group(2)),
+                        Integer.parseInt(isoDate.group(3))
+                );
+            }
+
+            Matcher brazilianDate = BRAZILIAN_DATE_PATTERN.matcher(normalized);
+            if (brazilianDate.find()) {
+                int day = Integer.parseInt(brazilianDate.group(1));
+                int month = Integer.parseInt(brazilianDate.group(2));
+                int year = brazilianDate.group(3) == null ? today.getYear() : Integer.parseInt(brazilianDate.group(3));
+                LocalDate date = parseDate(year, month, day);
+                if (date != null && brazilianDate.group(3) == null && date.isBefore(today)) {
+                    date = parseDate(year + 1, month, day);
+                }
+                return date;
+            }
+
+            Matcher dayOfMonth = REMINDER_DAY_PATTERN.matcher(normalized);
+            if (dayOfMonth.find()) {
+                return nextOccurrenceOfDay(today, Integer.parseInt(dayOfMonth.group(1)));
+            }
+
+            return null;
+        }
+
+        private LocalDate nextOccurrenceOfDay(LocalDate today, int day) {
+            if (day < 1 || day > 31) {
+                return null;
+            }
+
+            YearMonth month = YearMonth.from(today);
+            for (int index = 0; index < 12; index++) {
+                if (day <= month.lengthOfMonth()) {
+                    LocalDate candidate = month.atDay(day);
+                    if (!candidate.isBefore(today)) {
+                        return candidate;
+                    }
+                }
+                month = month.plusMonths(1);
+            }
+            return null;
+        }
+
+        private LocalDate parseDate(int year, int month, int day) {
+            try {
+                return LocalDate.of(year, month, day);
+            } catch (RuntimeException exception) {
+                return null;
+            }
+        }
+
+        private String extractReminderDescription(String normalized) {
+            String description = normalized.replaceFirst("^.*?" + REMINDER_INTENT_PATTERN.pattern(), " ")
+                    .replaceAll("\\b\\d{4}-\\d{2}-\\d{2}\\b", " ")
+                    .replaceAll("\\b\\d{1,2}/\\d{1,2}(?:/\\d{4})?\\b", " ")
+                    .replaceAll("\\b(?:hoje|amanha)\\b", " ")
+                    .replaceAll("\\b(?:(?:no|para|em)\\s+(?:o\\s+)?)?dia\\s+\\d{1,2}\\b", " ")
+                    .replaceAll("^[\\p{Punct}\\s]+", "")
+                    .replaceFirst("^(?:(?:de|para|que|no|na|em|o|a)\\s+)+", "")
+                    .replaceAll("^[\\p{Punct}\\s]+", "")
+                    .replaceFirst("\\s+(?:de|para|no|na|em)$", "")
+                    .replaceAll("\\s+", " ")
+                    .trim();
+            return description.isBlank() ? null : description;
         }
 
         private ParsedTelegramMessage toParsedMessage(AiInterpretation interpretation, String originalMessage) {

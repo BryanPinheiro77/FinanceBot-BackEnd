@@ -2,6 +2,7 @@ package com.financebot.telegrambot.intent;
 
 public enum TelegramIntentType {
     UNKNOWN,
+    CREATE_REMINDER,
     CREATE_EXPENSE,
     CREATE_INSTALLMENT_EXPENSE,
     CREATE_INCOME,

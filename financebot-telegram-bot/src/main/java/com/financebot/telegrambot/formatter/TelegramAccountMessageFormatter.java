@@ -25,6 +25,7 @@ public class TelegramAccountMessageFormatter {
                 <code>/status</code> ou <code>/resumo</code> - Ver resumo da conta
                 <code>/analysis</code> ou <code>/analise</code> - Ver análise financeira
                 <code>/setincome</code> ou <code>/definirrenda VALOR</code> - Definir renda mensal base
+                <code>/lembrete DATA DIAS DESCRIÇÃO</code> - Criar lembrete financeiro
                 <code>/disconnect</code> ou <code>/desconectar</code> - Desconectar conta
 
                 <b>Exemplos em linguagem natural:</b>
@@ -33,6 +34,7 @@ public class TelegramAccountMessageFormatter {
                 • quanto gastei esse mês?
                 • me dá a análise desse mês
                 • consigo comprar algo de 2000 parcelado em 12x?
+                • me lembre dia 10 de pagar o aluguel
                 """.formatted(greeting);
     }
 
@@ -54,6 +56,7 @@ public class TelegramAccountMessageFormatter {
                 <code>/conectar FIN-ABC123</code>
                 <code>/setincome 3500</code>
                 <code>/definirrenda 3500</code>
+                <code>/lembrete 2026-10-08 2 pagar aluguel</code>
 
                 <b>Exemplos com linguagem natural:</b>
                 • gastei 50 no mercado
@@ -63,6 +66,7 @@ public class TelegramAccountMessageFormatter {
                 • quanto recebi esse mês?
                 • me dá a análise desse mês
                 • se eu parcelar 2400 em 12x, cabe no meu orçamento?
+                • me lembre dia 10 de pagar o aluguel
                 """;
     }
 

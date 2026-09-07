@@ -23,6 +23,7 @@ import com.financebot.telegrambot.handler.TelegramTransactionPreviewHandler;
 import com.financebot.telegrambot.handler.TelegramFinancialQueryHandler;
 import com.financebot.telegrambot.handler.TelegramPendingQueryHandler;
 import com.financebot.telegrambot.handler.TelegramNaturalLanguageHandler;
+import com.financebot.telegrambot.handler.TelegramReminderHandler;
 import com.financebot.telegrambot.intent.TelegramIntentType;
 import com.financebot.telegrambot.mapper.PendingTelegramTransactionMapper;
 import com.financebot.telegrambot.router.TelegramCommandRouter;
@@ -136,7 +137,8 @@ class TelegramCommandServiceTest {
                 telegramIntentService,
                 telegramQueryContextService,
                 telegramFinancialQueryHandler,
-                telegramTransactionPreviewHandler
+                telegramTransactionPreviewHandler,
+                new TelegramReminderHandler(financeBotApiClient, telegramBotErrorMapper)
         );
 
         TelegramCommandRouter telegramCommandRouter = new TelegramCommandRouter(
