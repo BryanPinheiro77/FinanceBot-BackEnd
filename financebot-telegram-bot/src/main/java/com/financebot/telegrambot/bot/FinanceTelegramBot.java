@@ -1,10 +1,13 @@
 package com.financebot.telegrambot.bot;
 
+import com.financebot.telegrambot.client.FinanceBotApiClient;
 import com.financebot.telegrambot.config.TelegramBotProperties;
+import com.financebot.telegrambot.dto.response.PendingReminderResponse;
 import com.financebot.telegrambot.service.TelegramCommandService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
@@ -20,6 +23,7 @@ public class FinanceTelegramBot implements LongPollingUpdateConsumer {
 
     private final TelegramBotProperties telegramBotProperties;
     private final TelegramCommandService telegramCommandService;
+    private final FinanceBotApiClient financeBotApiClient;
 
     private TelegramClient telegramClient;
     private TelegramBotsLongPollingApplication botsApplication;
@@ -79,7 +83,7 @@ public class FinanceTelegramBot implements LongPollingUpdateConsumer {
         }
     }
 
-    private void sendMessage(String chatId, String text) {
+    private boolean sendMessage(String chatId, String text) {
         try {
             SendMessage sendMessage = SendMessage.builder()
                     .chatId(chatId)
@@ -88,8 +92,36 @@ public class FinanceTelegramBot implements LongPollingUpdateConsumer {
                     .build();
 
             telegramClient.execute(sendMessage);
+            return true;
         } catch (Exception e) {
             System.err.println("Erro ao enviar mensagem no Telegram: " + e.getMessage());
+            return false;
         }
+    }
+
+    @Scheduled(fixedDelayString = "${financebot.reminders.poll-interval:60000}")
+    public void sendPendingReminders() {
+        if (telegramClient == null) {
+            return;
+        }
+
+        try {
+            for (PendingReminderResponse reminder : financeBotApiClient.getPendingReminders()) {
+                boolean sent = sendMessage(String.valueOf(reminder.telegramId()),
+                        "🔔 <b>Lembrete financeiro</b>\n" + escapeHtml(reminder.description()));
+                if (sent) {
+                    financeBotApiClient.markReminderSent(reminder.id());
+                }
+            }
+        } catch (Exception exception) {
+            System.err.println("Erro ao processar lembretes: " + exception.getMessage());
+        }
+    }
+
+    private String escapeHtml(String value) {
+        return value == null ? "" : value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
     }
 }

@@ -60,6 +60,10 @@ public class TelegramCommandRouter {
             return telegramBasicCommandHandler.handleSetIncome(normalizedMessage, telegramId);
         }
 
+        if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/reminder", "/lembrete")) {
+            return telegramBasicCommandHandler.handleReminder(normalizedMessage, telegramId);
+        }
+
         if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/analysis", "/analise")) {
             return telegramBasicCommandHandler.handleAnalysis(telegramId);
         }
