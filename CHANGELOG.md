@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Adicionado cadastro de lembretes avulsos ou vinculados a recorrências, com entrega pelo bot Telegram e confirmação para evitar reenvio.
+
 ## [v1.6.0]
 
 ### Changed

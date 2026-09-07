@@ -11,6 +11,7 @@ public final class AiInterpretationValidator {
     private static final Set<TelegramIntentType> SUPPORTED_INTENTS = Set.of(
             TelegramIntentType.CREATE_EXPENSE,
             TelegramIntentType.CREATE_INCOME,
+            TelegramIntentType.CREATE_REMINDER,
             TelegramIntentType.CREATE_INSTALLMENT_EXPENSE,
             TelegramIntentType.CREATE_EXISTING_INSTALLMENT_EXPENSE,
             TelegramIntentType.QUERY_MONTH_EXPENSE_TOTAL,
@@ -51,6 +52,12 @@ public final class AiInterpretationValidator {
         if (interpretation.intentType() == TelegramIntentType.CREATE_EXPENSE
                 || interpretation.intentType() == TelegramIntentType.CREATE_INCOME) {
             return interpretation.amount() != null && interpretation.description() != null
+                    && !interpretation.description().isBlank();
+        }
+
+        if (interpretation.intentType() == TelegramIntentType.CREATE_REMINDER) {
+            return interpretation.date() != null
+                    && interpretation.description() != null
                     && !interpretation.description().isBlank();
         }
 

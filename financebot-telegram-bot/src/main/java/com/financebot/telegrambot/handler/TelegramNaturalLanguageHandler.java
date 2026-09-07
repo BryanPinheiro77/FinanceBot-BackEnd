@@ -15,6 +15,7 @@ public class TelegramNaturalLanguageHandler {
     private final TelegramQueryContextService telegramQueryContextService;
     private final TelegramFinancialQueryHandler telegramFinancialQueryHandler;
     private final TelegramTransactionPreviewHandler telegramTransactionPreviewHandler;
+    private final TelegramReminderHandler telegramReminderHandler;
 
     public String handle(
             String normalizedMessage,
@@ -29,6 +30,10 @@ public class TelegramNaturalLanguageHandler {
 
         if (parsedMessage.intentType() != null && parsedMessage.intentType().name().startsWith("QUERY_")) {
             return telegramFinancialQueryHandler.handleQuery(parsedMessage, telegramId);
+        }
+
+        if (parsedMessage.intentType() == TelegramIntentType.CREATE_REMINDER) {
+            return telegramReminderHandler.handle(telegramId, parsedMessage);
         }
 
         if (parsedMessage.intentType() == TelegramIntentType.CREATE_EXPENSE
@@ -56,6 +61,7 @@ public class TelegramNaturalLanguageHandler {
                 - recebi 1200 de salário
                 - quanto gastei esse mês?
                 - me dá a análise desse mês
+                - me lembre dia 10 de pagar o aluguel
                 """;
     }
 }

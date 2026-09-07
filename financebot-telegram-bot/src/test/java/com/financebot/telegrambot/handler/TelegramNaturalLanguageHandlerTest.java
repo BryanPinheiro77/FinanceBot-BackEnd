@@ -35,6 +35,9 @@ class TelegramNaturalLanguageHandlerTest {
     @Mock
     private TelegramTransactionPreviewHandler telegramTransactionPreviewHandler;
 
+    @Mock
+    private TelegramReminderHandler telegramReminderHandler;
+
     private TelegramNaturalLanguageHandler handler;
 
     @BeforeEach
@@ -43,7 +46,8 @@ class TelegramNaturalLanguageHandlerTest {
                 telegramIntentService,
                 telegramQueryContextService,
                 telegramFinancialQueryHandler,
-                telegramTransactionPreviewHandler
+                telegramTransactionPreviewHandler,
+                telegramReminderHandler
         );
     }
 
@@ -78,5 +82,24 @@ class TelegramNaturalLanguageHandlerTest {
 
         assertThat(result).isEqualTo("preview");
         verify(telegramTransactionPreviewHandler).handlePreview(TELEGRAM_ID, parsedMessage);
+    }
+
+    @Test
+    @DisplayName("deve enviar lembrete em linguagem natural para criacao")
+    void shouldRouteNaturalLanguageReminderToCreation() {
+        String message = "me lembre dia 10 de pagar o aluguel";
+        ParsedTelegramMessage parsedMessage = new ParsedTelegramMessage(
+                TelegramIntentType.CREATE_REMINDER, null, "pagar o aluguel",
+                LocalDate.of(2026, 10, 10), message, null, null, null, null,
+                null, null, null, null, null
+        );
+
+        when(telegramIntentService.parse(message)).thenReturn(parsedMessage);
+        when(telegramQueryContextService.applyQueryContext(TELEGRAM_ID, message, parsedMessage))
+                .thenReturn(parsedMessage);
+        when(telegramReminderHandler.handle(TELEGRAM_ID, parsedMessage)).thenReturn("lembrete criado");
+
+        assertThat(handler.handle(message, TELEGRAM_ID)).isEqualTo("lembrete criado");
+        verify(telegramReminderHandler).handle(TELEGRAM_ID, parsedMessage);
     }
 }
