@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.text.Normalizer;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -62,11 +61,20 @@ public class ReminderPersistenceAdapter implements ReminderPersistencePort, Remi
     @Override
     public Optional<ReminderRecurrence> findActiveRecurrenceByDescription(Long userId, String description) {
         String normalized = normalize(description);
-        return recurringTransactionRepository.findAllByUserIdAndActiveTrue(userId).stream()
+        List<RecurringTransaction> recurrences = recurringTransactionRepository.findAllByUserIdAndActiveTrue(userId);
+        List<RecurringTransaction> exactMatches = recurrences.stream()
+                .filter(item -> normalize(item.getDescription()).equals(normalized))
+                .toList();
+        if (exactMatches.size() == 1) return Optional.of(toReference(exactMatches.getFirst()));
+        if (!exactMatches.isEmpty()) return Optional.empty();
+
+        List<RecurringTransaction> partialMatches = recurrences.stream()
                 .filter(item -> normalize(item.getDescription()).contains(normalized)
                         || normalized.contains(normalize(item.getDescription())))
-                .min(Comparator.comparing(RecurringTransaction::getNextExecutionDate))
-                .map(this::toReference);
+                .toList();
+        return partialMatches.size() == 1
+                ? Optional.of(toReference(partialMatches.getFirst()))
+                : Optional.empty();
     }
 
     private ReminderRecurrence toReference(RecurringTransaction item) {

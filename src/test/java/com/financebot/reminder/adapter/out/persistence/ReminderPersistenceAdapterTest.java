@@ -1,6 +1,7 @@
 package com.financebot.reminder.adapter.out.persistence;
 
 import com.financebot.recurring.repository.RecurringTransactionRepository;
+import com.financebot.recurring.domain.RecurringTransaction;
 import com.financebot.reminder.domain.Reminder;
 import com.financebot.user.domain.User;
 import com.financebot.user.repository.UserRepository;
@@ -51,5 +52,38 @@ class ReminderPersistenceAdapterTest {
             assertThat(reminder.getClaimedAt()).isEqualTo(claimedAt);
         });
         verify(reminderRepository).findPendingForClaim(any(), any(), eq(Pageable.ofSize(100)));
+    }
+
+    @Test
+    void prioritizesExactRecurrenceDescription() {
+        RecurringTransaction exact = recurrence(1L, "Internet");
+        RecurringTransaction partial = recurrence(2L, "Internet casa");
+        when(recurringTransactionRepository.findAllByUserIdAndActiveTrue(10L))
+                .thenReturn(List.of(partial, exact));
+        ReminderPersistenceAdapter adapter = new ReminderPersistenceAdapter(
+                reminderRepository, userRepository, recurringTransactionRepository);
+
+        assertThat(adapter.findActiveRecurrenceByDescription(10L, "internet"))
+                .get().extracting(com.financebot.reminder.domain.ReminderRecurrence::id).isEqualTo(1L);
+    }
+
+    @Test
+    void rejectsAmbiguousPartialRecurrenceDescription() {
+        when(recurringTransactionRepository.findAllByUserIdAndActiveTrue(10L)).thenReturn(List.of(
+                recurrence(1L, "Internet casa"), recurrence(2L, "Internet escritório")));
+        ReminderPersistenceAdapter adapter = new ReminderPersistenceAdapter(
+                reminderRepository, userRepository, recurringTransactionRepository);
+
+        assertThat(adapter.findActiveRecurrenceByDescription(10L, "internet")).isEmpty();
+    }
+
+    private RecurringTransaction recurrence(Long id, String description) {
+        RecurringTransaction recurrence = new RecurringTransaction();
+        recurrence.setId(id);
+        recurrence.setDescription(description);
+        recurrence.setActive(true);
+        recurrence.setNextExecutionDate(LocalDate.of(2026, 10, 10));
+        recurrence.setFrequency(com.financebot.recurring.domain.RecurrenceFrequency.MONTHLY);
+        return recurrence;
     }
 }
