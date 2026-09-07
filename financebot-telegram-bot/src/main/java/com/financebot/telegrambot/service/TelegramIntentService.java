@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
         private static final Pattern AMOUNT_PATTERN = Pattern.compile("\\b(\\d+[\\.,]?\\d{0,2})\\b(?!\\s*x\\b)");
 
         private static final Pattern REMINDER_INTENT_PATTERN = Pattern.compile(
-                "\\b(?:me\\s+lembre|me\\s+lembra|me\\s+lembrar|lembre\\s+me|lembrar\\s+me|crie\\s+(?:um\\s+)?lembrete|lembrete)\\b"
+                "\\b(?:me\\s+lembre|me\\s+lembra|me\\s+lembrar|me\\s+avise|me\\s+avisa|lembre\\s+me|lembrar\\s+me|avisar\\s+me|crie\\s+(?:um\\s+)?lembrete|lembrete)\\b"
         );
 
         private static final Pattern REMINDER_DAY_PATTERN = Pattern.compile("\\bdia\\s+(\\d{1,2})\\b");
@@ -259,6 +259,7 @@ import java.util.regex.Pattern;
 
         private String extractReminderDescription(String normalized) {
             String description = normalized.replaceFirst("^.*?" + REMINDER_INTENT_PATTERN.pattern(), " ")
+                    .replaceAll("\\b(?:um|uma|dois|duas|tres|quatro|cinco|seis|sete|\\d+)\\s+dias?\\s+antes\\s+(?:de|da|do)?\\b", " ")
                     .replaceAll("\\b\\d{4}-\\d{2}-\\d{2}\\b", " ")
                     .replaceAll("\\b\\d{1,2}/\\d{1,2}(?:/\\d{4})?\\b", " ")
                     .replaceAll("\\b(?:hoje|amanha)\\b", " ")
@@ -267,6 +268,7 @@ import java.util.regex.Pattern;
                     .replaceFirst("^(?:(?:de|para|que|no|na|em|o|a)\\s+)+", "")
                     .replaceAll("^[\\p{Punct}\\s]+", "")
                     .replaceFirst("\\s+(?:de|para|no|na|em)$", "")
+                    .replaceFirst("\\s+vencer$", "")
                     .replaceAll("\\s+", " ")
                     .trim();
             return description.isBlank() ? null : description;

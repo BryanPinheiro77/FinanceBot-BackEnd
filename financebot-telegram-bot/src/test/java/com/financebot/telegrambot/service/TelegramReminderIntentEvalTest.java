@@ -41,7 +41,8 @@ class TelegramReminderIntentEvalTest {
                 Arguments.of("por favor, me lembre dia 1 de revisar o orçamento", nextDay(today, 1), "revisar o orcamento"),
                 Arguments.of("lembre me amanhã de comprar remédio", today.plusDays(1), "comprar remedio"),
                 Arguments.of("lembrar me dia 31 de fechar as contas", nextDay(today, 31), "fechar as contas"),
-                Arguments.of("lembrete para hoje: separar os comprovantes", today, "separar os comprovantes")
+                Arguments.of("lembrete para hoje: separar os comprovantes", today, "separar os comprovantes"),
+                Arguments.of("me avise dois dias antes da internet vencer", null, "internet")
         );
     }
 

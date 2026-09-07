@@ -29,10 +29,14 @@ Por padrão, a API escuta na porta `8080`. O health check público é `GET /api/
 
 Endpoints protegidos usam autenticação JWT. Consulte o Swagger e os controllers para o contrato vigente; esta página é um mapa, não substitui a especificação OpenAPI.
 
-Lembretes pendentes são consultados pelo bot em `/telegram/reminders/pending` e confirmados
-em `PATCH /telegram/reminders/{id}/sent` usando o token interno.
+Lembretes pendentes são reservados em lotes pelo bot em `POST /telegram/reminders/pending/claim`
+e confirmados em `PATCH /telegram/reminders/{id}/sent` usando o token interno. Em caso de falha
+antes do envio, o bot libera a reserva em `PATCH /telegram/reminders/{id}/release`; reservas
+abandonadas expiram após cinco minutos.
 O bot também cria lembretes a partir de frases como `me lembre dia 10 de pagar o aluguel`;
 quando o ano ou o mês não é informado, ele usa a próxima ocorrência válida da data.
+Para recorrências ativas, frases como `me avise dois dias antes da internet vencer` vinculam
+o lembrete pela descrição e calculam o aviso a partir do próximo vencimento.
 
 ## Dependências de runtime
 

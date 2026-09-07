@@ -1,14 +1,10 @@
 package com.financebot.telegrambot.bot;
 
-import com.financebot.telegrambot.client.FinanceBotApiClient;
 import com.financebot.telegrambot.config.TelegramBotProperties;
-import com.financebot.telegrambot.dto.response.PendingReminderResponse;
 import com.financebot.telegrambot.service.TelegramCommandService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -23,15 +19,12 @@ public class FinanceTelegramBot implements LongPollingUpdateConsumer {
 
     private final TelegramBotProperties telegramBotProperties;
     private final TelegramCommandService telegramCommandService;
-    private final FinanceBotApiClient financeBotApiClient;
-
-    private TelegramClient telegramClient;
+    private final TelegramClient telegramClient;
     private TelegramBotsLongPollingApplication botsApplication;
 
     @PostConstruct
     public void init() {
         try {
-            this.telegramClient = new OkHttpTelegramClient(telegramBotProperties.token());
             this.botsApplication = new TelegramBotsLongPollingApplication();
 
             botsApplication.registerBot(telegramBotProperties.token(), this);
@@ -99,29 +92,4 @@ public class FinanceTelegramBot implements LongPollingUpdateConsumer {
         }
     }
 
-    @Scheduled(fixedDelayString = "${financebot.reminders.poll-interval:60000}")
-    public void sendPendingReminders() {
-        if (telegramClient == null) {
-            return;
-        }
-
-        try {
-            for (PendingReminderResponse reminder : financeBotApiClient.getPendingReminders()) {
-                boolean sent = sendMessage(String.valueOf(reminder.telegramId()),
-                        "🔔 <b>Lembrete financeiro</b>\n" + escapeHtml(reminder.description()));
-                if (sent) {
-                    financeBotApiClient.markReminderSent(reminder.id());
-                }
-            }
-        } catch (Exception exception) {
-            System.err.println("Erro ao processar lembretes: " + exception.getMessage());
-        }
-    }
-
-    private String escapeHtml(String value) {
-        return value == null ? "" : value
-                .replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;");
-    }
 }
