@@ -15,9 +15,7 @@ public class ReminderMapper {
                 reminder.getDaysBefore(),
                 reminder.isActive(),
                 reminder.getSentAt(),
-                reminder.getRecurringTransaction() == null
-                        ? null
-                        : reminder.getRecurringTransaction().getId()
+                reminder.getRecurringTransactionId()
         );
     }
 }

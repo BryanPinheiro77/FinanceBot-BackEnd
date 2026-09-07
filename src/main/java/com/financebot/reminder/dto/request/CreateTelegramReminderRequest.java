@@ -10,7 +10,8 @@ import java.time.LocalDate;
 public record CreateTelegramReminderRequest(
         @NotNull Long telegramId,
         @NotBlank @Size(max = 255) String description,
-        @NotNull LocalDate reminderDate,
-        @Min(0) Integer daysBefore
+        LocalDate reminderDate,
+        @Min(0) Integer daysBefore,
+        @Size(max = 255) String recurringDescription
 ) {
 }

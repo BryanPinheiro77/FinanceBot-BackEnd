@@ -5,7 +5,8 @@ import com.financebot.reminder.dto.request.CreateTelegramReminderRequest;
 import com.financebot.reminder.dto.response.ReminderResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import com.financebot.reminder.service.ReminderService;
+import com.financebot.reminder.application.usecase.ReminderUseCase;
+import com.financebot.reminder.mapper.ReminderMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,21 +18,30 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TelegramReminderController {
 
-    private final ReminderService reminderService;
+    private final ReminderUseCase reminderUseCase;
+    private final ReminderMapper reminderMapper;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ReminderResponse create(@RequestBody @Valid CreateTelegramReminderRequest request) {
-        return reminderService.createForTelegram(request);
+        return reminderMapper.toResponse(reminderUseCase.createForTelegram(request));
     }
 
-    @GetMapping("/pending")
+    @PostMapping("/pending/claim")
     public List<PendingReminderResponse> findPending() {
-        return reminderService.findPendingForTelegram(LocalDate.now());
+        return reminderUseCase.claimPending(LocalDate.now()).stream()
+                .map(reminder -> new PendingReminderResponse(
+                        reminder.getId(), reminder.getTelegramId(), reminder.getDescription(), reminder.getReminderDate()
+                )).toList();
     }
 
     @PatchMapping("/{id}/sent")
     public void markSent(@PathVariable Long id) {
-        reminderService.markSent(id);
+        reminderUseCase.markSent(id);
+    }
+
+    @PatchMapping("/{id}/release")
+    public void release(@PathVariable Long id) {
+        reminderUseCase.releaseClaim(id);
     }
 }

@@ -5,6 +5,7 @@ CREATE TABLE reminders (
     days_before INTEGER NOT NULL DEFAULT 0,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     sent_at TIMESTAMP,
+    claimed_at TIMESTAMP,
     created_at TIMESTAMP NOT NULL,
     user_id BIGINT NOT NULL,
     recurring_transaction_id BIGINT,
@@ -14,4 +15,4 @@ CREATE TABLE reminders (
 );
 
 CREATE INDEX idx_reminders_user_id ON reminders(user_id);
-CREATE INDEX idx_reminders_due ON reminders(active, sent_at, reminder_date);
+CREATE INDEX idx_reminders_due ON reminders(active, sent_at, claimed_at, reminder_date);

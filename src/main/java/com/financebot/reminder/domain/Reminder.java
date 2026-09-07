@@ -1,60 +1,45 @@
 package com.financebot.reminder.domain;
 
-import com.financebot.recurring.domain.RecurringTransaction;
-import com.financebot.user.domain.User;
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "reminders")
-@Getter
-@Setter
-@NoArgsConstructor
 public class Reminder {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(nullable = false, length = 255)
     private String description;
-
-    @Column(name = "reminder_date", nullable = false)
     private LocalDate reminderDate;
-
-    @Column(name = "days_before", nullable = false)
     private int daysBefore;
-
-    @Column(nullable = false)
     private boolean active = true;
-
-    @Column(name = "sent_at")
     private LocalDateTime sentAt;
-
-    @Column(name = "created_at", nullable = false)
+    private LocalDateTime claimedAt;
     private LocalDateTime createdAt;
+    private Long userId;
+    private Long telegramId;
+    private Long recurringTransactionId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    public void markSent() { sentAt = LocalDateTime.now(); claimedAt = null; active = false; }
+    public void reschedule(LocalDate date) { reminderDate = date; claimedAt = null; sentAt = null; active = true; }
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "recurring_transaction_id")
-    private RecurringTransaction recurringTransaction;
-
-    @PrePersist
-    void prePersist() {
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
-        }
-    }
-
-    public boolean isDueOn(LocalDate date) {
-        return active && sentAt == null && !reminderDate.isAfter(date);
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+    public LocalDate getReminderDate() { return reminderDate; }
+    public void setReminderDate(LocalDate reminderDate) { this.reminderDate = reminderDate; }
+    public int getDaysBefore() { return daysBefore; }
+    public void setDaysBefore(int daysBefore) { this.daysBefore = daysBefore; }
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
+    public LocalDateTime getSentAt() { return sentAt; }
+    public void setSentAt(LocalDateTime sentAt) { this.sentAt = sentAt; }
+    public LocalDateTime getClaimedAt() { return claimedAt; }
+    public void setClaimedAt(LocalDateTime claimedAt) { this.claimedAt = claimedAt; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
+    public Long getTelegramId() { return telegramId; }
+    public void setTelegramId(Long telegramId) { this.telegramId = telegramId; }
+    public Long getRecurringTransactionId() { return recurringTransactionId; }
+    public void setRecurringTransactionId(Long recurringTransactionId) { this.recurringTransactionId = recurringTransactionId; }
 }
