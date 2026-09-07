@@ -3,6 +3,8 @@ package com.financebot.reminder.controller;
 import com.financebot.reminder.dto.request.CreateReminderRequest;
 import com.financebot.reminder.dto.request.UpdateReminderRequest;
 import com.financebot.reminder.dto.response.ReminderResponse;
+import com.financebot.reminder.application.command.CreateReminderCommand;
+import com.financebot.reminder.application.command.UpdateReminderCommand;
 import com.financebot.reminder.application.usecase.ReminderUseCase;
 import com.financebot.reminder.mapper.ReminderMapper;
 import com.financebot.user.service.AuthenticatedUserResolver;
@@ -26,9 +28,11 @@ public class ReminderController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ReminderResponse create(@RequestBody @Valid CreateReminderRequest request, Authentication authentication) {
-        return reminderMapper.toResponse(reminderUseCase.create(
-                request, authenticatedUserResolver.resolve(authentication).getId()
-        ));
+        Long userId = authenticatedUserResolver.resolve(authentication).getId();
+        return reminderMapper.toResponse(reminderUseCase.create(new CreateReminderCommand(
+                request.description(), request.reminderDate(), request.daysBefore(),
+                request.recurringTransactionId(), userId
+        )));
     }
 
     @GetMapping
@@ -43,9 +47,10 @@ public class ReminderController {
             @RequestBody @Valid UpdateReminderRequest request,
             Authentication authentication
     ) {
-        return reminderMapper.toResponse(reminderUseCase.update(
-                id, request, authenticatedUserResolver.resolve(authentication).getId()
-        ));
+        Long userId = authenticatedUserResolver.resolve(authentication).getId();
+        return reminderMapper.toResponse(reminderUseCase.update(id, new UpdateReminderCommand(
+                request.description(), request.reminderDate(), request.daysBefore(), request.active(), userId
+        )));
     }
 
     @DeleteMapping("/{id}")

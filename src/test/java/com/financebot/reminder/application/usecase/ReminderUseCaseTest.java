@@ -3,10 +3,10 @@ package com.financebot.reminder.application.usecase;
 import com.financebot.recurring.domain.RecurrenceFrequency;
 import com.financebot.reminder.application.port.out.ReminderPersistencePort;
 import com.financebot.reminder.application.port.out.ReminderReferencePort;
+import com.financebot.reminder.application.command.CreateReminderCommand;
+import com.financebot.reminder.application.command.CreateTelegramReminderCommand;
 import com.financebot.reminder.domain.Reminder;
 import com.financebot.reminder.domain.ReminderRecurrence;
-import com.financebot.reminder.dto.request.CreateReminderRequest;
-import com.financebot.reminder.dto.request.CreateTelegramReminderRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,9 +39,9 @@ class ReminderUseCaseTest {
     @Test
     void createsStandaloneReminder() {
         when(persistencePort.save(any())).thenAnswer(call -> call.getArgument(0));
-        Reminder result = useCase.create(
-                new CreateReminderRequest("Pagar aluguel", LocalDate.of(2026, 10, 8), 0, null), 10L
-        );
+        Reminder result = useCase.create(new CreateReminderCommand(
+                "Pagar aluguel", LocalDate.of(2026, 10, 8), 0, null, 10L
+        ));
         assertThat(result.getReminderDate()).isEqualTo(LocalDate.of(2026, 10, 8));
         assertThat(result.getUserId()).isEqualTo(10L);
     }
@@ -53,7 +54,7 @@ class ReminderUseCaseTest {
         when(referencePort.findRecurrenceByIdAndUserId(4L, 10L)).thenReturn(Optional.of(recurrence));
         when(persistencePort.save(any())).thenAnswer(call -> call.getArgument(0));
 
-        Reminder result = useCase.create(new CreateReminderRequest("Internet", null, 3, 4L), 10L);
+        Reminder result = useCase.create(new CreateReminderCommand("Internet", null, 3, 4L, 10L));
 
         assertThat(result.getReminderDate()).isEqualTo(LocalDate.of(2026, 10, 7));
         assertThat(result.getRecurringTransactionId()).isEqualTo(4L);
@@ -69,7 +70,7 @@ class ReminderUseCaseTest {
         when(persistencePort.save(any())).thenAnswer(call -> call.getArgument(0));
 
         Reminder result = useCase.createForTelegram(
-                new CreateTelegramReminderRequest(123L, "internet", null, 2, "internet")
+                new CreateTelegramReminderCommand(123L, "internet", null, 2, "internet")
         );
 
         assertThat(result.getReminderDate()).isEqualTo(LocalDate.of(2026, 10, 8));
@@ -78,7 +79,7 @@ class ReminderUseCaseTest {
 
     @Test
     void requiresDateForStandaloneReminder() {
-        assertThatThrownBy(() -> useCase.create(new CreateReminderRequest("Sem data", null, 0, null), 10L))
+        assertThatThrownBy(() -> useCase.create(new CreateReminderCommand("Sem data", null, 0, null, 10L)))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -110,5 +111,19 @@ class ReminderUseCaseTest {
 
         assertThat(reminder.getReminderDate()).isEqualTo(reminderDate.plusDays(2).plusMonths(1).minusDays(2));
         assertThat(reminder.getClaimedAt()).isNull();
+    }
+
+    @Test
+    void doesNotProcessReminderAlreadySent() {
+        Reminder reminder = new Reminder();
+        reminder.setId(5L);
+        reminder.setActive(false);
+        reminder.setSentAt(LocalDateTime.now());
+        when(persistencePort.findById(5L)).thenReturn(Optional.of(reminder));
+
+        useCase.markSent(5L);
+
+        verify(persistencePort).findById(5L);
+        verifyNoMoreInteractions(persistencePort, referencePort);
     }
 }

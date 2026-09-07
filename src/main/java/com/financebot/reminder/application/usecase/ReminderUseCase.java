@@ -2,11 +2,11 @@ package com.financebot.reminder.application.usecase;
 
 import com.financebot.reminder.application.port.out.ReminderPersistencePort;
 import com.financebot.reminder.application.port.out.ReminderReferencePort;
+import com.financebot.reminder.application.command.CreateReminderCommand;
+import com.financebot.reminder.application.command.CreateTelegramReminderCommand;
+import com.financebot.reminder.application.command.UpdateReminderCommand;
 import com.financebot.reminder.domain.Reminder;
 import com.financebot.reminder.domain.ReminderRecurrence;
-import com.financebot.reminder.dto.request.CreateReminderRequest;
-import com.financebot.reminder.dto.request.CreateTelegramReminderRequest;
-import com.financebot.reminder.dto.request.UpdateReminderRequest;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -26,9 +26,9 @@ public class ReminderUseCase {
     private final ReminderReferencePort referencePort;
 
     @Transactional
-    public Reminder create(CreateReminderRequest request, Long userId) {
-        ReminderRecurrence recurrence = resolveRecurrence(request.recurringTransactionId(), userId);
-        return saveNew(userId, request.description(), request.reminderDate(), request.daysBefore(), recurrence);
+    public Reminder create(CreateReminderCommand command) {
+        ReminderRecurrence recurrence = resolveRecurrence(command.recurringTransactionId(), command.userId());
+        return saveNew(command.userId(), command.description(), command.reminderDate(), command.daysBefore(), recurrence);
     }
 
     @Transactional(readOnly = true)
@@ -37,13 +37,13 @@ public class ReminderUseCase {
     }
 
     @Transactional
-    public Reminder update(Long id, UpdateReminderRequest request, Long userId) {
-        Reminder reminder = findUserReminder(id, userId);
-        reminder.setDescription(request.description().trim());
-        reminder.setReminderDate(request.reminderDate());
-        reminder.setDaysBefore(request.daysBefore());
-        reminder.setActive(request.active());
-        if (request.active()) reminder.setSentAt(null);
+    public Reminder update(Long id, UpdateReminderCommand command) {
+        Reminder reminder = findUserReminder(id, command.userId());
+        reminder.setDescription(command.description().trim());
+        reminder.setReminderDate(command.reminderDate());
+        reminder.setDaysBefore(command.daysBefore());
+        reminder.setActive(command.active());
+        if (command.active()) reminder.setSentAt(null);
         return persistencePort.save(reminder);
     }
 
@@ -53,13 +53,13 @@ public class ReminderUseCase {
     }
 
     @Transactional
-    public Reminder createForTelegram(CreateTelegramReminderRequest request) {
-        Long userId = referencePort.findUserIdByTelegramId(request.telegramId())
+    public Reminder createForTelegram(CreateTelegramReminderCommand command) {
+        Long userId = referencePort.findUserIdByTelegramId(command.telegramId())
                 .orElseThrow(() -> new EntityNotFoundException("Telegram user not found"));
-        ReminderRecurrence recurrence = request.recurringDescription() == null ? null
-                : referencePort.findActiveRecurrenceByDescription(userId, request.recurringDescription())
+        ReminderRecurrence recurrence = command.recurringDescription() == null ? null
+                : referencePort.findActiveRecurrenceByDescription(userId, command.recurringDescription())
                 .orElseThrow(() -> new EntityNotFoundException("Recurring transaction not found"));
-        return saveNew(userId, request.description(), request.reminderDate(), request.daysBefore(), recurrence);
+        return saveNew(userId, command.description(), command.reminderDate(), command.daysBefore(), recurrence);
     }
 
     @Transactional

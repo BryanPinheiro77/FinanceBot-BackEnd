@@ -3,6 +3,7 @@ package com.financebot.reminder.controller;
 import com.financebot.reminder.dto.response.PendingReminderResponse;
 import com.financebot.reminder.dto.request.CreateTelegramReminderRequest;
 import com.financebot.reminder.dto.response.ReminderResponse;
+import com.financebot.reminder.application.command.CreateTelegramReminderCommand;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import com.financebot.reminder.application.usecase.ReminderUseCase;
@@ -24,7 +25,10 @@ public class TelegramReminderController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ReminderResponse create(@RequestBody @Valid CreateTelegramReminderRequest request) {
-        return reminderMapper.toResponse(reminderUseCase.createForTelegram(request));
+        return reminderMapper.toResponse(reminderUseCase.createForTelegram(new CreateTelegramReminderCommand(
+                request.telegramId(), request.description(), request.reminderDate(),
+                request.daysBefore(), request.recurringDescription()
+        )));
     }
 
     @PostMapping("/pending/claim")
