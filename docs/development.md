@@ -44,6 +44,7 @@ JWT_SECRET=troque-por-uma-chave-local-com-mais-de-64-caracteres
 JWT_EXPIRATION=86400000
 CORS_ALLOWED_ORIGINS=http://localhost:5173
 TELEGRAM_INTERNAL_TOKEN=gere-um-token-local-forte-e-nao-compartilhe
+FINANCEBOT_RECURRING_SCHEDULER_CRON=0 0 0 * * *
 ```
 
 ```bash
@@ -72,6 +73,7 @@ FINANCEBOT_AI_ENDPOINT=https://seu-provedor.example/v1/chat/completions
 FINANCEBOT_AI_API_KEY=seu-token-do-provedor
 FINANCEBOT_AI_MODEL=gpt-4o-mini
 FINANCEBOT_AI_TIMEOUT=10s
+FINANCEBOT_REMINDERS_POLL_INTERVAL=60000
 ```
 
 Quando habilitada, a IA recebe somente o texto da mensagem e retorna uma intenção

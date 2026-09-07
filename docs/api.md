@@ -22,11 +22,17 @@ Por padrão, a API escuta na porta `8080`. O health check público é `GET /api/
 | Categorias | `/categories` |
 | Transações | `/transactions` |
 | Recorrências | `/recurring-transactions` |
+| Lembretes | `/reminders` |
 | Dashboard | `/dashboard` |
 | Análise | `/analysis` |
 | Integração Telegram | `/telegram` |
 
 Endpoints protegidos usam autenticação JWT. Consulte o Swagger e os controllers para o contrato vigente; esta página é um mapa, não substitui a especificação OpenAPI.
+
+Lembretes pendentes são consultados pelo bot em `/telegram/reminders/pending` e confirmados
+em `PATCH /telegram/reminders/{id}/sent` usando o token interno.
+O bot também cria lembretes a partir de frases como `me lembre dia 10 de pagar o aluguel`;
+quando o ano ou o mês não é informado, ele usa a próxima ocorrência válida da data.
 
 ## Dependências de runtime
 
