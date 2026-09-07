@@ -15,6 +15,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 
 @Component
 @RequiredArgsConstructor
@@ -123,6 +125,35 @@ public class TelegramBasicCommandHandler {
             return telegramBotErrorMapper.mapDefaultBotErrors(e);
         } catch (Exception e) {
             return telegramAccountMessageFormatter.formatGenericSetIncomeFailureMessage();
+        }
+    }
+
+    public String handleReminder(String messageText, Long telegramId) {
+        String[] parts = messageText.split("\\s+", 3);
+        if (parts.length < 3) {
+            return "Use: <code>/lembrete AAAA-MM-DD [dias] descrição</code>";
+        }
+        try {
+            LocalDate date = LocalDate.parse(parts[1]);
+            Integer daysBefore = 0;
+            String description = parts[2].trim();
+            String[] details = description.split("\\s+", 2);
+            if (details[0].matches("-?\\d+")) {
+                daysBefore = Integer.valueOf(details[0]);
+                description = details.length == 2 ? details[1].trim() : "";
+            }
+            if (daysBefore < 0 || description.isBlank()) {
+                return "Informe uma descrição e dias antes iguais ou maiores que zero.";
+            }
+            LocalDate notificationDate = date.minusDays(daysBefore);
+            financeBotApiClient.createReminder(telegramId, description, notificationDate, 0);
+            return "✅ <b>Lembrete criado!</b>\nVou avisar você em " + notificationDate + ".";
+        } catch (DateTimeParseException | NumberFormatException exception) {
+            return "Data ou quantidade de dias inválida. Use <code>/lembrete 2026-10-08 2 pagar aluguel</code>.";
+        } catch (RestClientResponseException exception) {
+            return telegramBotErrorMapper.mapDefaultBotErrors(exception);
+        } catch (Exception exception) {
+            return "Não foi possível criar o lembrete agora.";
         }
     }
 

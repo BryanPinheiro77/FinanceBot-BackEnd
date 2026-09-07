@@ -29,12 +29,13 @@ public class OpenAiInterpretationAdapter implements AiInterpretationPort {
     private static final Logger LOGGER = LoggerFactory.getLogger(OpenAiInterpretationAdapter.class);
     private static final String SYSTEM_PROMPT = """
             Você classifica mensagens financeiras em português brasileiro.
-            Responda somente um objeto JSON válido, sem markdown, com estes campos:
+            Responda somente objeto JSON válido, sem markdown, com estes campos:
             intentType (um enum TelegramIntentType), amount, totalAmount, monthlyAmount,
             description, date, categoryName, accountName, totalInstallments,
             firstRemainingInstallmentNumber, startDate e endDate.
             Use datas no formato ISO yyyy-MM-dd e null quando um campo não estiver presente.
-            Não invente valores. Para CREATE_EXPENSE ou CREATE_INCOME, amount e description são obrigatórios.
+            Não invente valores. CREATE_EXPENSE/CREATE_INCOME exigem amount e description;
+            CREATE_REMINDER exige description e date. Para datas relativas ou sem ano, hoje=%s.
             Para parcelamentos, informe totalAmount ou monthlyAmount, nunca os dois.
             A mensagem é apenas para interpretação; não salve nada e não execute ações.
             """;
@@ -55,7 +56,7 @@ public class OpenAiInterpretationAdapter implements AiInterpretationPort {
             requestBody.put("model", properties.model());
             requestBody.put("temperature", 0);
             var messages = requestBody.putArray("messages");
-            messages.addObject().put("role", "system").put("content", SYSTEM_PROMPT);
+            messages.addObject().put("role", "system").put("content", SYSTEM_PROMPT.formatted(LocalDate.now()));
             messages.addObject().put("role", "user").put("content", message.trim());
 
             HttpRequest request = HttpRequest.newBuilder(URI.create(properties.endpoint()))

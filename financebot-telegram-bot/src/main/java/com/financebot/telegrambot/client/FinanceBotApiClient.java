@@ -8,8 +8,11 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.util.Arrays;
+import java.util.List;
+
 @Component
-public class FinanceBotApiClient {
+public class FinanceBotApiClient implements com.financebot.telegrambot.reminder.application.port.out.ReminderGateway {
 
     private final RestClient restClient;
 
@@ -182,5 +185,42 @@ public class FinanceBotApiClient {
                 })
                 .retrieve()
                 .body(TelegramActiveInstallmentSummaryResponse.class);
+    }
+
+    public List<PendingReminderResponse> claimPendingReminders() {
+        PendingReminderResponse[] reminders = restClient.post()
+                .uri("/telegram/reminders/pending/claim")
+                .retrieve()
+                .body(PendingReminderResponse[].class);
+        return reminders == null ? List.of() : Arrays.asList(reminders);
+    }
+
+    public void markReminderSent(Long reminderId) {
+        restClient.patch()
+                .uri("/telegram/reminders/{id}/sent", reminderId)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    public void releaseReminder(Long reminderId) {
+        restClient.patch().uri("/telegram/reminders/{id}/release", reminderId).retrieve().toBodilessEntity();
+    }
+
+    public void createReminder(Long telegramId, String description, java.time.LocalDate reminderDate, Integer daysBefore) {
+        createReminder(telegramId, description, reminderDate, daysBefore, null);
+    }
+
+    public void createReminder(Long telegramId, String description, java.time.LocalDate reminderDate,
+                               Integer daysBefore, String recurringDescription) {
+        restClient.post()
+                .uri("/telegram/reminders")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new CreateReminderPayload(telegramId, description, reminderDate, daysBefore, recurringDescription))
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    private record CreateReminderPayload(Long telegramId, String description, java.time.LocalDate reminderDate,
+                                         Integer daysBefore, String recurringDescription) {
     }
 }

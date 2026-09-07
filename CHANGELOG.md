@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [v1.7.0]
+
+### Added
+
+- Adicionada execução automática de transações recorrentes vencidas, com avanço da próxima data, encerramento após a data final e proteção transacional contra duplicidade.
+- Adicionado cadastro de lembretes avulsos ou vinculados a recorrências, com entrega pelo bot Telegram e confirmação para evitar reenvio.
+
 ## [v1.6.0]
 
 ### Changed

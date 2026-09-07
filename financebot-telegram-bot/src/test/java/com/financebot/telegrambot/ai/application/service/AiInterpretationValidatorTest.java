@@ -5,6 +5,7 @@ import com.financebot.telegrambot.intent.TelegramIntentType;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,5 +46,26 @@ class AiInterpretationValidatorTest {
 
         assertThat(AiInterpretationValidator.isValid(unknown)).isFalse();
         assertThat(AiInterpretationValidator.isValid(invalidNumber)).isFalse();
+    }
+
+    @Test
+    void acceptsReminderWithDescriptionAndDate() {
+        AiInterpretation reminder = new AiInterpretation(
+                TelegramIntentType.CREATE_REMINDER, null, null, null,
+                "pagar o aluguel", LocalDate.of(2026, 10, 10),
+                null, null, null, null, null, null
+        );
+
+        assertThat(AiInterpretationValidator.isValid(reminder)).isTrue();
+    }
+
+    @Test
+    void rejectsReminderWithoutDate() {
+        AiInterpretation reminder = new AiInterpretation(
+                TelegramIntentType.CREATE_REMINDER, null, null, null,
+                "pagar o aluguel", null, null, null, null, null, null, null
+        );
+
+        assertThat(AiInterpretationValidator.isValid(reminder)).isFalse();
     }
 }
