@@ -33,6 +33,10 @@
 - Adicionada cobertura para resposta válida da IA, prioridade sobre o parser determinístico, resposta inválida e fallback em caso de indisponibilidade.
 - Mantida a suíte completa do bot Telegram e da API passando após as refatorações.
 
+### Added
+
+- Adicionada execução automática de transações recorrentes vencidas, com avanço da próxima data, encerramento após a data final e proteção transacional contra duplicidade.
+
  ## [v1.5.0]
 
 ### Added
