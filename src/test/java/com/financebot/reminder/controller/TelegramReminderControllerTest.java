@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -79,6 +80,17 @@ class TelegramReminderControllerTest {
 
         verify(reminderUseCase).markSent(1L);
         verify(reminderUseCase).releaseClaim(2L);
+    }
+
+    @Test
+    void checksWhetherQueuedDeliveryIsStillCurrent() throws Exception {
+        LocalDate reminderDate = LocalDate.of(2026, 10, 8);
+        when(reminderUseCase.isCurrentDelivery(1L, reminderDate)).thenReturn(true);
+
+        mockMvc.perform(get("/telegram/reminders/1/deliverable")
+                        .queryParam("reminderDate", "2026-10-08"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string("true"));
     }
 
     private Reminder reminder(Long id, String description, LocalDate date) {

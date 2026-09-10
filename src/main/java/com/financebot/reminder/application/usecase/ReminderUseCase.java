@@ -69,6 +69,16 @@ public class ReminderUseCase {
     }
 
     @Transactional
+    public boolean isCurrentDelivery(Long id, LocalDate reminderDate) {
+        return persistencePort.findById(id)
+                .filter(Reminder::isActive)
+                .filter(reminder -> reminder.getSentAt() == null)
+                .filter(reminder -> reminder.getClaimedAt() != null)
+                .filter(reminder -> reminderDate.equals(reminder.getReminderDate()))
+                .isPresent();
+    }
+
+    @Transactional
     public void markSent(Long id) {
         Reminder reminder = persistencePort.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Reminder not found"));
