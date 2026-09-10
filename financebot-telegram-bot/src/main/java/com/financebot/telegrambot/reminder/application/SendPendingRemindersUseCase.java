@@ -12,15 +12,21 @@ public class SendPendingRemindersUseCase {
     private final ReminderGateway reminderGateway;
     private final ReminderNotificationPort notificationPort;
 
-    public void execute() {
-        for (PendingReminderResponse reminder : reminderGateway.claimPendingReminders()) {
-            try {
-                if (notificationPort.send(reminder)) reminderGateway.markReminderSent(reminder.id());
-                else reminderGateway.releaseReminder(reminder.id());
-            } catch (Exception exception) {
-                releaseAfterFailure(reminder.id());
+    public ReminderDeliveryResult execute(PendingReminderResponse reminder) {
+        try {
+            if (!reminderGateway.isDeliverable(reminder.id(), reminder.reminderDate())) {
+                return ReminderDeliveryResult.SKIPPED;
             }
+            if (notificationPort.send(reminder)) {
+                reminderGateway.markReminderSent(reminder.id());
+                return ReminderDeliveryResult.DELIVERED;
+            }
+        } catch (Exception exception) {
+            releaseAfterFailure(reminder.id());
+            return ReminderDeliveryResult.RELEASED;
         }
+        releaseAfterFailure(reminder.id());
+        return ReminderDeliveryResult.RELEASED;
     }
 
     private void releaseAfterFailure(Long id) {
