@@ -39,6 +39,11 @@ public class TelegramReminderController {
                 )).toList();
     }
 
+    @GetMapping("/{id}/deliverable")
+    public boolean isDeliverable(@PathVariable Long id, @RequestParam LocalDate reminderDate) {
+        return reminderUseCase.isCurrentDelivery(id, reminderDate);
+    }
+
     @PatchMapping("/{id}/sent")
     public void markSent(@PathVariable Long id) {
         reminderUseCase.markSent(id);

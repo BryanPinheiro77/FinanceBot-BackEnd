@@ -11,7 +11,9 @@ cd financebot-telegram-bot
 ./mvnw spring-boot:run
 ```
 
-O serviço usa a porta `8081` e precisa de `TELEGRAM_BOT_TOKEN` e `FINANCEBOT_API_URL`. O armazenamento de contexto pode ser `memory` ou Redis, conforme `TELEGRAM_STATE_STORE`.
+O serviço usa a porta `8081` e precisa de `TELEGRAM_BOT_TOKEN`, `FINANCEBOT_API_URL` e acesso
+ao mesmo RabbitMQ usado pela API. O armazenamento de contexto pode ser `memory` ou Redis,
+conforme `TELEGRAM_STATE_STORE`.
 
 O endpoint técnico `GET /actuator/health` é usado pelo deploy para confirmar que o processo iniciou. Ele não expõe detalhes das dependências (`show-details=never`).
 
@@ -37,6 +39,24 @@ Regra financeira e persistência na API
         ↓
 Resposta formatada para o Telegram
 ```
+
+## Entrega de lembretes
+
+```text
+API ──publica──> exchange financebot.notifications
+                         ↓ notification.reminder.telegram
+                fila financebot.notifications.telegram
+                         ↓
+                consumer do bot ──> Telegram
+                         ↓
+                confirmação HTTP na API
+```
+
+O consumer recebe uma mensagem por lembrete, confirma na API que ela ainda corresponde à
+entrega atual e delega o envio ao caso de uso existente. Quando o envio falha, a reserva é
+liberada na API para que o scheduler publique novamente. Mensagens duplicadas ou antigas que já
+não correspondem ao estado atual são ignoradas antes do envio. Mensagens inválidas são descartadas
+com log técnico, sem registrar descrição financeira ou identificador do Telegram.
 
 ## Cuidados
 

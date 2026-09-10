@@ -1,6 +1,5 @@
-package com.financebot.infra.messaging;
+package com.financebot.telegrambot.reminder.adapter.in.messaging;
 
-import com.financebot.reminder.adapter.out.messaging.ReminderNotificationMessage;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
@@ -14,30 +13,31 @@ import org.springframework.context.annotation.Configuration;
 import java.util.Map;
 
 @Configuration
-public class RabbitMQConfig {
+class ReminderRabbitConfig {
 
     @Bean
-    TopicExchange notificationExchange() {
-        return new TopicExchange(QueueNames.NOTIFICATION_EXCHANGE, true, false);
+    TopicExchange reminderNotificationExchange() {
+        return new TopicExchange(ReminderMessagingTopology.NOTIFICATION_EXCHANGE, true, false);
     }
 
     @Bean
     Queue reminderNotificationQueue() {
-        return new Queue(QueueNames.REMINDER_NOTIFICATION_QUEUE, true);
+        return new Queue(ReminderMessagingTopology.REMINDER_NOTIFICATION_QUEUE, true);
     }
 
     @Bean
-    Binding reminderNotificationBinding(Queue reminderNotificationQueue, TopicExchange notificationExchange) {
+    Binding reminderNotificationBinding(Queue reminderNotificationQueue,
+                                        TopicExchange reminderNotificationExchange) {
         return BindingBuilder.bind(reminderNotificationQueue)
-                .to(notificationExchange)
-                .with(QueueNames.REMINDER_NOTIFICATION_ROUTING_KEY);
+                .to(reminderNotificationExchange)
+                .with(ReminderMessagingTopology.REMINDER_NOTIFICATION_ROUTING_KEY);
     }
 
     @Bean
     MessageConverter rabbitMessageConverter() {
         DefaultJacksonJavaTypeMapper typeMapper = new DefaultJacksonJavaTypeMapper();
         typeMapper.setIdClassMapping(Map.of(
-                QueueNames.REMINDER_NOTIFICATION_MESSAGE_TYPE,
+                ReminderMessagingTopology.REMINDER_NOTIFICATION_MESSAGE_TYPE,
                 ReminderNotificationMessage.class
         ));
         JacksonJsonMessageConverter converter = new JacksonJsonMessageConverter();

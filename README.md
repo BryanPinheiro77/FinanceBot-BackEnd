@@ -39,6 +39,7 @@ O repositório é dividido em dois módulos principais:
 - criação de transações por conversa
 - consultas financeiras e resumos
 - suporte a parcelamentos e fluxo contextual
+- consumo assíncrono de lembretes pelo RabbitMQ
 
 ### Infraestrutura local
 - PostgreSQL
@@ -54,6 +55,7 @@ O repositório é dividido em dois módulos principais:
 - criação de despesas e receitas por linguagem natural
 - criação de transações parceladas
 - suporte a transações recorrentes
+- criação e entrega de lembretes financeiros
 - resolução automática de conta padrão
 - resolução automática de categoria
 
@@ -112,6 +114,7 @@ O projeto está evoluindo para reduzir acoplamento entre domínio, aplicação, 
 - Spring Boot 4
 - Telegram Bot API
 - RestClient
+- Spring AMQP / RabbitMQ
 
 ### Testes e qualidade
 - JUnit 5
@@ -164,6 +167,9 @@ CORS_ALLOWED_ORIGINS=http://localhost:5173
 
 # Opcional: scheduler de recorrências (padrão: todos os dias à meia-noite)
 FINANCEBOT_RECURRING_SCHEDULER_CRON=0 0 0 * * *
+
+# Opcional: publicação de lembretes vencidos (padrão: 60 segundos)
+FINANCEBOT_REMINDERS_PUBLISH_INTERVAL=60000
 ```
 
 ### Subindo a API com Docker
@@ -188,6 +194,11 @@ Crie um arquivo `.env` em `financebot-telegram-bot/` ou exporte as variáveis no
 ```env
 TELEGRAM_BOT_TOKEN=seu_token_aqui
 FINANCEBOT_API_URL=http://localhost:8080
+TELEGRAM_INTERNAL_TOKEN=use-o-mesmo-token-configurado-na-api
+RABBITMQ_HOST=localhost
+RABBITMQ_PORT=5672
+RABBITMQ_USER=guest
+RABBITMQ_PASSWORD=guest
 ```
 
 ### Subindo o bot com Docker
