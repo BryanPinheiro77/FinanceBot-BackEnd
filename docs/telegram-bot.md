@@ -54,9 +54,9 @@ API ──publica──> exchange financebot.notifications
 
 O consumer recebe uma mensagem por lembrete, confirma na API que ela ainda corresponde à
 entrega atual e delega o envio ao caso de uso existente. Quando o envio falha, a reserva é
-liberada na API para que o scheduler publique novamente. Mensagens duplicadas ou antigas são
-ignoradas antes do envio. Mensagens inválidas são descartadas com log técnico, sem registrar
-descrição financeira ou identificador do Telegram.
+liberada na API para que o scheduler publique novamente. Mensagens duplicadas ou antigas que já
+não correspondem ao estado atual são ignoradas antes do envio. Mensagens inválidas são descartadas
+com log técnico, sem registrar descrição financeira ou identificador do Telegram.
 
 ## Cuidados
 

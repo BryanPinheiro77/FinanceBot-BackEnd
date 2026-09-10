@@ -35,7 +35,7 @@ Depois de consumir a mensagem, o bot confirma o lembrete em
 o bot libera a reserva em `PATCH /telegram/reminders/{id}/release`; reservas abandonadas
 expiram após cinco minutos. Antes de enviar, o bot consulta
 `GET /telegram/reminders/{id}/deliverable?reminderDate=AAAA-MM-DD`; isso impede que uma mensagem
-antiga ou duplicada gere uma nova notificação.
+antiga ou duplicada já incompatível com o estado atual gere uma nova notificação.
 O bot também cria lembretes a partir de frases como `me lembre dia 10 de pagar o aluguel`;
 quando o ano ou o mês não é informado, ele usa a próxima ocorrência válida da data.
 Para recorrências ativas, frases como `me avise dois dias antes da internet vencer` vinculam
