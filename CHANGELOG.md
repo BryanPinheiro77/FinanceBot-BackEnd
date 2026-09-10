@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Added
+
+- Adicionado envio assíncrono de lembretes pelo RabbitMQ, com producer na API, consumer no bot Telegram e topologia durável para notificações.
+
+### Changed
+
+- Substituído o polling de lembretes realizado pelo bot pela publicação agendada de eventos na API.
+
+### Tests
+
+- Adicionada cobertura para publicação, roteamento, consumo, mensagens obsoletas e tratamento de falha das notificações de lembrete.
+
 ## [v1.7.0]
 
 ### Added

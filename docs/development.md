@@ -45,6 +45,7 @@ JWT_EXPIRATION=86400000
 CORS_ALLOWED_ORIGINS=http://localhost:5173
 TELEGRAM_INTERNAL_TOKEN=gere-um-token-local-forte-e-nao-compartilhe
 FINANCEBOT_RECURRING_SCHEDULER_CRON=0 0 0 * * *
+FINANCEBOT_REMINDERS_PUBLISH_INTERVAL=60000
 ```
 
 ```bash
@@ -67,13 +68,16 @@ TELEGRAM_STATE_STORE=memory
 TELEGRAM_CONVERSATION_CONTEXT_TTL=30m
 TELEGRAM_QUERY_CONTEXT_TTL=30m
 TELEGRAM_INTERNAL_TOKEN=use-o-mesmo-token-configurado-na-api
+RABBITMQ_HOST=localhost
+RABBITMQ_PORT=5672
+RABBITMQ_USER=guest
+RABBITMQ_PASSWORD=guest
 # Opcional: enriquecimento de mensagens ambíguas por um endpoint compatível com OpenAI
 FINANCEBOT_AI_ENABLED=false
 FINANCEBOT_AI_ENDPOINT=https://seu-provedor.example/v1/chat/completions
 FINANCEBOT_AI_API_KEY=seu-token-do-provedor
 FINANCEBOT_AI_MODEL=gpt-4o-mini
 FINANCEBOT_AI_TIMEOUT=10s
-FINANCEBOT_REMINDERS_POLL_INTERVAL=60000
 ```
 
 Quando habilitada, a IA recebe somente o texto da mensagem e retorna uma intenção
@@ -83,6 +87,21 @@ provedor fazem fallback para o parser existente. O token deve permanecer apenas 
 local/seguro.
 
 Execute-o com `cd financebot-telegram-bot && ./mvnw spring-boot:run`.
+
+## RabbitMQ e lembretes
+
+Com `compose.local.yml` em execução, a interface de gerenciamento fica em
+`http://localhost:15672`. Use as credenciais locais configuradas em `RABBITMQ_USER` e
+`RABBITMQ_PASSWORD`.
+
+O fluxo de lembretes usa:
+
+- exchange: `financebot.notifications`;
+- fila: `financebot.notifications.telegram`;
+- routing key: `notification.reminder.telegram`.
+
+A API publica os lembretes vencidos e o bot consome a fila. Por isso, os dois módulos precisam
+apontar para a mesma instância do RabbitMQ.
 
 ## Testes e qualidade
 

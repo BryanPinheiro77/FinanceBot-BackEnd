@@ -29,10 +29,13 @@ Por padrão, a API escuta na porta `8080`. O health check público é `GET /api/
 
 Endpoints protegidos usam autenticação JWT. Consulte o Swagger e os controllers para o contrato vigente; esta página é um mapa, não substitui a especificação OpenAPI.
 
-Lembretes pendentes são reservados em lotes pelo bot em `POST /telegram/reminders/pending/claim`
-e confirmados em `PATCH /telegram/reminders/{id}/sent` usando o token interno. Em caso de falha
-antes do envio, o bot libera a reserva em `PATCH /telegram/reminders/{id}/release`; reservas
-abandonadas expiram após cinco minutos.
+A API reserva lembretes pendentes em lotes e publica uma solicitação de envio no RabbitMQ.
+Depois de consumir a mensagem, o bot confirma o lembrete em
+`PATCH /telegram/reminders/{id}/sent` usando o token interno. Em caso de falha antes do envio,
+o bot libera a reserva em `PATCH /telegram/reminders/{id}/release`; reservas abandonadas
+expiram após cinco minutos. Antes de enviar, o bot consulta
+`GET /telegram/reminders/{id}/deliverable?reminderDate=AAAA-MM-DD`; isso impede que uma mensagem
+antiga ou duplicada gere uma nova notificação.
 O bot também cria lembretes a partir de frases como `me lembre dia 10 de pagar o aluguel`;
 quando o ano ou o mês não é informado, ele usa a próxima ocorrência válida da data.
 Para recorrências ativas, frases como `me avise dois dias antes da internet vencer` vinculam
