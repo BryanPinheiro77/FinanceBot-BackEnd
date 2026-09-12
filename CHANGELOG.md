@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added
+
+- Adicionada stack local de observabilidade com Prometheus, Grafana, Loki e Grafana Alloy.
+- Adicionados dashboard inicial, métricas dos fluxos de Telegram, OpenAI, recorrências e lembretes, além de correlação entre logs do bot e da API.
+
+### Changed
+
+- Padronizados os logs da API e do bot em JSON, sem conteúdo financeiro ou dados pessoais.
+
 ## [v1.8.0]
 
 ### Added

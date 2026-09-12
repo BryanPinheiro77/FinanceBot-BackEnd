@@ -135,6 +135,7 @@ O projeto está evoluindo para reduzir acoplamento entre domínio, aplicação, 
 - [Contribuição](docs/contributing.md)
 - [Deploy](docs/deployment.md)
 - [Servidor remoto](docs/operations/remote-server.md)
+- [Observabilidade](docs/observability.md)
 
 ## Como executar localmente
 
@@ -170,6 +171,10 @@ FINANCEBOT_RECURRING_SCHEDULER_CRON=0 0 0 * * *
 
 # Opcional: publicação de lembretes vencidos (padrão: 60 segundos)
 FINANCEBOT_REMINDERS_PUBLISH_INTERVAL=60000
+
+# Opcional: Actuator local da API (padrões: porta 8082 e endereço 127.0.0.1)
+FINANCEBOT_MANAGEMENT_PORT=8082
+FINANCEBOT_MANAGEMENT_ADDRESS=127.0.0.1
 ```
 
 ### Subindo a API com Docker
@@ -199,6 +204,10 @@ RABBITMQ_HOST=localhost
 RABBITMQ_PORT=5672
 RABBITMQ_USER=guest
 RABBITMQ_PASSWORD=guest
+
+# Opcional: Actuator local do bot (padrões: porta 8083 e endereço 127.0.0.1)
+FINANCEBOT_MANAGEMENT_PORT=8083
+FINANCEBOT_MANAGEMENT_ADDRESS=127.0.0.1
 ```
 
 ### Subindo o bot com Docker
@@ -222,6 +231,8 @@ cd financebot-telegram-bot
 - Health check da API: `http://localhost:8080/api/health`
 - Swagger UI: `http://localhost:8080/swagger-ui/index.html`
 - Bot: `http://localhost:8081`
+- Métricas da API: `http://localhost:8082/actuator/prometheus`
+- Métricas do bot: `http://localhost:8083/actuator/prometheus`
 
 ---
 

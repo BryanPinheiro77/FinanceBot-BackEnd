@@ -36,7 +36,7 @@ docker network create backend-network
 1. Faça merge na `main` após o CI passar.
 2. Acompanhe o workflow no GitHub.
 3. No servidor, confirme os containers com `docker compose -f compose.prod.yml ps` em cada módulo.
-4. O workflow valida automaticamente `http://localhost:8080/api/health` e `http://localhost:8081/actuator/health`, tentando por até 60 segundos cada.
+4. O workflow valida automaticamente `http://localhost:8080/api/health` e `http://localhost:8083/actuator/health`, tentando por até 60 segundos cada. A porta de gerenciamento do bot aceita conexões apenas do próprio servidor.
 
 ## Rollback operacional
 
