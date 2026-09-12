@@ -2,6 +2,7 @@ package com.financebot.telegrambot.client;
 
 import com.financebot.telegrambot.dto.request.*;
 import com.financebot.telegrambot.dto.response.*;
+import com.financebot.telegrambot.observability.CorrelationIds;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -20,6 +21,10 @@ public class FinanceBotApiClient implements com.financebot.telegrambot.reminder.
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader("X-Internal-Service-Token", internalToken)
+                .requestInterceptor((request, body, execution) -> {
+                    request.getHeaders().set(CorrelationIds.HEADER_NAME, CorrelationIds.currentOrCreate());
+                    return execution.execute(request, body);
+                })
                 .build();
     }
 
