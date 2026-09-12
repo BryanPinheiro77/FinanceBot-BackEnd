@@ -1,0 +1,67 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Serviços disponíveis",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(up{job=~\"financebot-.+\"})", "refId": "A"}],
+      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0}
+    },
+    {
+      "type": "timeseries",
+      "title": "Requisições HTTP por segundo",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum by (job, status) (rate(http_server_requests_seconds_count[5m]))", "legendFormat": "{{job}} {{status}}", "refId": "A"}],
+      "gridPos": {"h": 8, "w": 18, "x": 6, "y": 0}
+    },
+    {
+      "type": "timeseries",
+      "title": "Duração HTTP p95",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "histogram_quantile(0.95, sum by (le, job) (rate(http_server_requests_seconds_bucket[5m])))", "legendFormat": "{{job}}", "refId": "A"}],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+    },
+    {
+      "type": "timeseries",
+      "title": "Erros HTTP 5xx",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum by (job) (rate(http_server_requests_seconds_count{status=~\"5..\"}[5m]))", "legendFormat": "{{job}}", "refId": "A"}],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+    },
+    {
+      "type": "timeseries",
+      "title": "Lembretes publicados e entregues",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum by (result) (increase(financebot_reminders_publications_total[$__rate_interval]))", "legendFormat": "publicação {{result}}", "refId": "A"},
+        {"expr": "sum by (result) (increase(financebot_reminders_deliveries_total[$__rate_interval]))", "legendFormat": "entrega {{result}}", "refId": "B"}
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+    },
+    {
+      "type": "timeseries",
+      "title": "Interpretações pela OpenAI",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum by (result) (increase(financebot_ai_interpretations_total[$__rate_interval]))", "legendFormat": "{{result}}", "refId": "A"}],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+    },
+    {
+      "type": "logs",
+      "title": "Logs recentes da API e do bot",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [{"expr": "{container=~\"financebot-backend|financebot-telegram-bot\"}", "refId": "A"}],
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 24}
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 41,
+  "tags": ["financebot"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timezone": "browser",
+  "title": "FinanceBot - Visão geral",
+  "uid": "financebot-overview",
+  "version": 1
+}
