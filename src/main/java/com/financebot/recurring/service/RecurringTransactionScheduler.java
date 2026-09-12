@@ -1,5 +1,6 @@
 package com.financebot.recurring.service;
 
+import com.financebot.common.observability.FinanceBotMetrics;
 import com.financebot.recurring.repository.RecurringTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ public class RecurringTransactionScheduler {
 
     private final RecurringTransactionRepository recurringTransactionRepository;
     private final RecurringTransactionExecutionService executionService;
+    private final FinanceBotMetrics metrics;
 
     @Scheduled(cron = "${financebot.recurring.scheduler.cron:0 0 0 * * *}")
     public void executeDueTransactions() {
@@ -22,6 +24,7 @@ public class RecurringTransactionScheduler {
         recurringTransactionRepository.findAllByActiveTrueAndNextExecutionDateLessThanEqual(today)
                 .forEach(recurring -> {
                     int created = executionService.executeDueTransaction(recurring.getId(), today);
+                    metrics.recordRecurringTransactions(created);
                     if (created > 0) {
                         log.info("Generated {} recurring transaction(s) for recurring transaction {}", created, recurring.getId());
                     }

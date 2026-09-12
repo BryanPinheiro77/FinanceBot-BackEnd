@@ -32,6 +32,8 @@ import com.financebot.user.domain.User;
 import com.financebot.user.service.AuthenticatedUserResolver;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -45,6 +47,8 @@ import java.time.LocalDate;
 @RequestMapping("/transactions")
 @RequiredArgsConstructor
 public class TransactionController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(TransactionController.class);
 
     private final FinancialAnalysisService financialAnalysisService;
     private final AuthenticatedUserResolver authenticatedUserResolver;
@@ -68,6 +72,7 @@ public class TransactionController {
         CreateTransactionCommand command = transactionMapper.toCommand(request, user);
 
         TransactionResponse transaction = createTransactionUseCase.execute(command);
+        LOGGER.info("Transação criada com sucesso: sourceType={}", command.sourceType());
         FinancialCommitmentResponse analysis = financialAnalysisService.getFinancialCommitment(authentication);
 
         return new TransactionCreationResponse(transaction, analysis);
@@ -84,6 +89,8 @@ public class TransactionController {
 
         InstallmentTransactionResponse installment =
                 createInstallmentTransactionUseCase.execute(command);
+        LOGGER.info("Parcelamento criado com sucesso: installments={}, sourceType={}",
+                installment.totalInstallments(), command.sourceType());
 
         FinancialCommitmentResponse analysis = financialAnalysisService.getFinancialCommitment(authentication);
 
@@ -101,6 +108,8 @@ public class TransactionController {
 
         InstallmentTransactionResponse installment =
                 createExistingInstallmentTransactionUseCase.execute(command);
+        LOGGER.info("Parcelamento existente criado com sucesso: installments={}, sourceType={}",
+                installment.totalInstallments(), command.sourceType());
 
         FinancialCommitmentResponse analysis = financialAnalysisService.getFinancialCommitment(authentication);
 
