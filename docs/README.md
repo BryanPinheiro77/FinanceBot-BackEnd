@@ -10,6 +10,7 @@
 - [Contribuição](contributing.md)
 - [Deploy](deployment.md)
 - [Servidor remoto](operations/remote-server.md)
+- [Observabilidade](observability.md)
 
 | Necessidade | Documento |
 |---|---|
@@ -21,5 +22,6 @@
 | Criar branch, PR e testes | [Contribuição](contributing.md) |
 | Publicar em produção | [Deploy](deployment.md) |
 | Acessar/manter o notebook via Tailscale | [Servidor remoto](operations/remote-server.md) |
+| Consultar métricas, dashboards e logs | [Observabilidade](observability.md) |
 
 Esta documentação deve evoluir junto com o código. Se uma instrução deixar de ser verdadeira, atualize o documento na mesma mudança.

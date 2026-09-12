@@ -1,0 +1,52 @@
+discovery.docker "financebot" {
+	host             = "unix:///var/run/docker.sock"
+	refresh_interval = "5s"
+}
+
+discovery.relabel "financebot" {
+	targets = []
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(financebot-backend|financebot-telegram-bot)"
+		action        = "keep"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "container"
+	}
+}
+
+loki.source.docker "financebot" {
+	host             = "unix:///var/run/docker.sock"
+	targets          = discovery.docker.financebot.targets
+	labels           = {"job" = "financebot"}
+	relabel_rules    = discovery.relabel.financebot.rules
+	forward_to       = [loki.process.financebot.receiver]
+	refresh_interval = "5s"
+}
+
+loki.process "financebot" {
+	stage.json {
+		expressions = {
+			level         = "log.level",
+			correlationId = "correlationId",
+		}
+	}
+
+	stage.labels {
+		values = {
+			level = "",
+		}
+	}
+
+	forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+	endpoint {
+		url = "http://loki:3100/loki/api/v1/push"
+	}
+}

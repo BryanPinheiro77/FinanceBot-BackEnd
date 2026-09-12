@@ -20,12 +20,16 @@ import com.financebot.user.dto.request.UpdateMonthlyBaseIncomeRequest;
 import com.financebot.user.dto.response.TelegramUserProfileResponse;
 import com.financebot.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class TelegramIntegrationService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(TelegramIntegrationService.class);
 
     private final UserRepository userRepository;
     private final FinancialAnalysisService financialAnalysisService;
@@ -110,6 +114,7 @@ public class TelegramIntegrationService {
                 request.categoryName(),
                 request.accountName()
         ));
+        LOGGER.info("Transação criada pelo Telegram com sucesso");
     }
 
     @Transactional
@@ -123,6 +128,7 @@ public class TelegramIntegrationService {
                 request.categoryName(),
                 request.totalInstallments()
         ));
+        LOGGER.info("Parcelamento criado pelo Telegram com sucesso");
     }
 
     @Transactional
@@ -138,6 +144,7 @@ public class TelegramIntegrationService {
                 request.totalInstallments(),
                 request.firstRemainingInstallmentNumber()
         ));
+        LOGGER.info("Parcelamento existente criado pelo Telegram com sucesso");
     }
 
     @Transactional(readOnly = true)

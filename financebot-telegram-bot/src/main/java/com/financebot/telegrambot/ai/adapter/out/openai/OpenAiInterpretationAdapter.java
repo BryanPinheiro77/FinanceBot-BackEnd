@@ -8,6 +8,7 @@ import com.financebot.telegrambot.ai.application.port.out.AiInterpretationPort;
 import com.financebot.telegrambot.ai.application.service.AiInterpretationValidator;
 import com.financebot.telegrambot.config.AiProperties;
 import com.financebot.telegrambot.intent.TelegramIntentType;
+import com.financebot.telegrambot.observability.FinanceBotMetrics;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +42,7 @@ public class OpenAiInterpretationAdapter implements AiInterpretationPort {
             """;
 
     private final AiProperties properties;
+    private final FinanceBotMetrics metrics;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -51,6 +53,7 @@ public class OpenAiInterpretationAdapter implements AiInterpretationPort {
             return Optional.empty();
         }
 
+        long startedAt = System.nanoTime();
         try {
             ObjectNode requestBody = objectMapper.createObjectNode();
             requestBody.put("model", properties.model());
@@ -70,24 +73,34 @@ public class OpenAiInterpretationAdapter implements AiInterpretationPort {
                     .send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 LOGGER.warn("Provedor de IA indisponível; usando parser determinístico (status={})", response.statusCode());
+                recordResult("provider_error", startedAt);
                 return Optional.empty();
             }
 
             JsonNode root = objectMapper.readTree(response.body());
             String content = root.path("choices").path(0).path("message").path("content").asText(null);
             if (content == null) {
+                recordResult("invalid_response", startedAt);
                 return Optional.empty();
             }
 
             AiInterpretation interpretation = parseContent(content);
-            return AiInterpretationValidator.isValid(interpretation)
-                    ? Optional.of(interpretation)
-                    : Optional.empty();
+            if (AiInterpretationValidator.isValid(interpretation)) {
+                recordResult("success", startedAt);
+                return Optional.of(interpretation);
+            }
+            recordResult("invalid_response", startedAt);
+            return Optional.empty();
         } catch (Exception exception) {
             LOGGER.warn("Falha na interpretação por IA; usando parser determinístico ({})",
                     exception.getClass().getSimpleName());
+            recordResult("failure", startedAt);
             return Optional.empty();
         }
+    }
+
+    private void recordResult(String result, long startedAt) {
+        metrics.recordAiInterpretation(result, Duration.ofNanos(System.nanoTime() - startedAt));
     }
 
     private AiInterpretation parseContent(String content) throws Exception {

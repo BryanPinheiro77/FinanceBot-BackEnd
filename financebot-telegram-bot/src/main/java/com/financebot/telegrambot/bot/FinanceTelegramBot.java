@@ -1,9 +1,13 @@
 package com.financebot.telegrambot.bot;
 
 import com.financebot.telegrambot.config.TelegramBotProperties;
+import com.financebot.telegrambot.observability.FinanceBotMetrics;
 import com.financebot.telegrambot.service.TelegramCommandService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
@@ -13,13 +17,19 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import java.util.List;
 
+import static com.financebot.telegrambot.observability.CorrelationIds.MDC_KEY;
+import static com.financebot.telegrambot.observability.CorrelationIds.currentOrCreate;
+
 @Component
 @RequiredArgsConstructor
 public class FinanceTelegramBot implements LongPollingUpdateConsumer {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(FinanceTelegramBot.class);
+
     private final TelegramBotProperties telegramBotProperties;
     private final TelegramCommandService telegramCommandService;
     private final TelegramClient telegramClient;
+    private final FinanceBotMetrics metrics;
     private TelegramBotsLongPollingApplication botsApplication;
 
     @PostConstruct
@@ -29,7 +39,7 @@ public class FinanceTelegramBot implements LongPollingUpdateConsumer {
 
             botsApplication.registerBot(telegramBotProperties.token(), this);
 
-            System.out.println("Bot do Telegram iniciado com sucesso: " + telegramBotProperties.username());
+            LOGGER.info("Bot do Telegram iniciado com sucesso");
         } catch (Exception e) {
             throw new IllegalStateException("Falha ao inicializar o bot do Telegram", e);
         }
@@ -56,7 +66,9 @@ public class FinanceTelegramBot implements LongPollingUpdateConsumer {
                     : null;
             String messageText = update.getMessage().getText();
 
+            MDC.put(MDC_KEY, currentOrCreate());
             try {
+                LOGGER.info("Processando mensagem de texto recebida do Telegram");
                 String responseText = telegramCommandService.handleMessage(
                         messageText,
                         telegramId,
@@ -64,14 +76,24 @@ public class FinanceTelegramBot implements LongPollingUpdateConsumer {
                         telegramFirstName
                 );
 
-                sendMessage(chatId, responseText);
+                boolean delivered = sendMessage(chatId, responseText);
+                metrics.recordTelegramMessage(delivered ? "success" : "delivery_failure");
+                if (delivered) {
+                    LOGGER.info("Mensagem do Telegram processada e respondida com sucesso");
+                } else {
+                    LOGGER.warn("Mensagem do Telegram processada, mas a resposta não foi entregue");
+                }
             } catch (Exception e) {
-                System.err.println("Erro ao processar mensagem no Telegram: " + e.getMessage());
+                metrics.recordTelegramMessage("failure");
+                LOGGER.error("Falha ao processar mensagem do Telegram: errorType={}",
+                        e.getClass().getSimpleName());
                 sendMessage(chatId, """
                         Não consegui processar sua mensagem agora.
 
                         Tente novamente em alguns instantes.
                         """);
+            } finally {
+                MDC.remove(MDC_KEY);
             }
         }
     }
@@ -87,7 +109,8 @@ public class FinanceTelegramBot implements LongPollingUpdateConsumer {
             telegramClient.execute(sendMessage);
             return true;
         } catch (Exception e) {
-            System.err.println("Erro ao enviar mensagem no Telegram: " + e.getMessage());
+            LOGGER.error("Falha ao enviar mensagem ao Telegram: errorType={}",
+                    e.getClass().getSimpleName());
             return false;
         }
     }
