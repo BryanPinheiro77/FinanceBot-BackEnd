@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [v1.8.0]
+
 ### Added
 
 - Adicionado envio assíncrono de lembretes pelo RabbitMQ, com producer na API, consumer no bot Telegram e topologia durável para notificações.
