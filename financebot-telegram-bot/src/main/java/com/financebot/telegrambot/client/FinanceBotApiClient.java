@@ -8,9 +8,6 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import java.util.Arrays;
-import java.util.List;
-
 @Component
 public class FinanceBotApiClient implements com.financebot.telegrambot.reminder.application.port.out.ReminderGateway {
 
@@ -187,19 +184,23 @@ public class FinanceBotApiClient implements com.financebot.telegrambot.reminder.
                 .body(TelegramActiveInstallmentSummaryResponse.class);
     }
 
-    public List<PendingReminderResponse> claimPendingReminders() {
-        PendingReminderResponse[] reminders = restClient.post()
-                .uri("/telegram/reminders/pending/claim")
-                .retrieve()
-                .body(PendingReminderResponse[].class);
-        return reminders == null ? List.of() : Arrays.asList(reminders);
-    }
-
     public void markReminderSent(Long reminderId) {
         restClient.patch()
                 .uri("/telegram/reminders/{id}/sent", reminderId)
                 .retrieve()
                 .toBodilessEntity();
+    }
+
+    @Override
+    public boolean isDeliverable(Long reminderId, java.time.LocalDate reminderDate) {
+        Boolean deliverable = restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/telegram/reminders/{id}/deliverable")
+                        .queryParam("reminderDate", reminderDate)
+                        .build(reminderId))
+                .retrieve()
+                .body(Boolean.class);
+        return Boolean.TRUE.equals(deliverable);
     }
 
     public void releaseReminder(Long reminderId) {

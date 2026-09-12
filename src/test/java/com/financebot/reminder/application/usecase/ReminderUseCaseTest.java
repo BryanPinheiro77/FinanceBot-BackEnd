@@ -95,6 +95,30 @@ class ReminderUseCaseTest {
     }
 
     @Test
+    void acceptsOnlyTheCurrentlyClaimedReminderDelivery() {
+        LocalDate date = LocalDate.of(2026, 9, 9);
+        Reminder reminder = new Reminder();
+        reminder.setId(3L);
+        reminder.setReminderDate(date);
+        reminder.setClaimedAt(LocalDateTime.now());
+        when(persistencePort.findById(3L)).thenReturn(Optional.of(reminder));
+
+        assertThat(useCase.isCurrentDelivery(3L, date)).isTrue();
+        assertThat(useCase.isCurrentDelivery(3L, date.plusDays(1))).isFalse();
+    }
+
+    @Test
+    void rejectsDeliveryThatIsNoLongerClaimed() {
+        LocalDate date = LocalDate.of(2026, 9, 9);
+        Reminder reminder = new Reminder();
+        reminder.setId(3L);
+        reminder.setReminderDate(date);
+        when(persistencePort.findById(3L)).thenReturn(Optional.of(reminder));
+
+        assertThat(useCase.isCurrentDelivery(3L, date)).isFalse();
+    }
+
+    @Test
     void advancesRecurringReminderAfterSending() {
         LocalDate reminderDate = LocalDate.now();
         Reminder reminder = new Reminder();

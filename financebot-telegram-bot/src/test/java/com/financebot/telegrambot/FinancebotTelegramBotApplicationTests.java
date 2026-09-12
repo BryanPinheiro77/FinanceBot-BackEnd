@@ -11,7 +11,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 		"TELEGRAM_BOT_TOKEN=test-token",
 		"TELEGRAM_BOT_USERNAME=test-bot",
 		"telegram.bot.token=test-token",
-		"telegram.bot.username=test-bot"
+		"telegram.bot.username=test-bot",
+		"RABBITMQ_HOST=localhost",
+		"RABBITMQ_PORT=5672",
+		"RABBITMQ_USER=guest",
+		"RABBITMQ_PASSWORD=guest",
+		"spring.rabbitmq.listener.simple.auto-startup=false"
 })
 class FinancebotTelegramBotApplicationTests {
 

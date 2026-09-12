@@ -13,7 +13,7 @@ Em produção, os dois módulos são containers separados conectados à rede Doc
 Cliente web ──HTTP/JWT──> API ──> PostgreSQL
 Telegram ──> Bot ──HTTP──> API
 API ──> Redis
-API ──> RabbitMQ
+API ──evento──> RabbitMQ ──mensagem──> Bot ──> Telegram
 Bot ──> Redis (quando habilitado)
 ```
 
@@ -28,6 +28,18 @@ O código combina organização em camadas e partes já migradas para uma aborda
 - config, security e integrações: detalhes de framework e serviços externos.
 
 A migração é incremental. O objetivo é manter o `domain` independente, expor ports na aplicação e deixar adapters implementarem detalhes externos.
+
+## Notificações assíncronas
+
+A API reserva lembretes vencidos e publica eventos por uma porta de saída. O adapter RabbitMQ
+converte o evento de aplicação para a mensagem de infraestrutura e a envia para a exchange
+`financebot.notifications` com a routing key `notification.reminder.telegram`.
+
+O bot consome a fila durável `financebot.notifications.telegram`, envia a mensagem ao Telegram
+e confirma o lembrete pela API. Antes do envio, valida o identificador e a data na API para
+ignorar cópias antigas que possam permanecer na fila. Se o envio falhar, libera a reserva para
+uma publicação futura. Producer e consumer conhecem RabbitMQ; os casos de uso dependem apenas
+de ports.
 
 ## Persistência
 

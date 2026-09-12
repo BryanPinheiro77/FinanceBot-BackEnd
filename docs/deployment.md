@@ -15,6 +15,8 @@ O diretório do checkout deve ser configurado como variável privada no runner s
 - rede Docker externa `backend-network` criada;
 - `.env` da API na raiz e `.env` do bot em `financebot-telegram-bot/`;
 - `TELEGRAM_INTERNAL_TOKEN` com o mesmo valor nos dois `.env`, mantido em segredo;
+- variáveis `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_USER` e `RABBITMQ_PASSWORD`
+  configuradas também no `.env` do bot;
 - PostgreSQL, Redis e RabbitMQ acessíveis pelos hosts definidos nos `.env`.
 
 No GitHub, configure a variável de repositório `FINANCEBOT_DEPLOY_PATH` com o caminho do checkout no runner. O valor real deve ficar nas configurações privadas do repositório, não em YAML, documentação ou código.

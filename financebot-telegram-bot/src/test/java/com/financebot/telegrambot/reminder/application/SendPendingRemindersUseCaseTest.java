@@ -10,8 +10,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.util.List;
-
+import static com.financebot.telegrambot.reminder.application.ReminderDeliveryResult.DELIVERED;
+import static com.financebot.telegrambot.reminder.application.ReminderDeliveryResult.RELEASED;
+import static com.financebot.telegrambot.reminder.application.ReminderDeliveryResult.SKIPPED;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -26,24 +29,38 @@ class SendPendingRemindersUseCaseTest {
     void setUp() {
         useCase = new SendPendingRemindersUseCase(reminderGateway, notificationPort);
         reminder = new PendingReminderResponse(1L, 123L, "Pagar aluguel", LocalDate.now());
-        when(reminderGateway.claimPendingReminders()).thenReturn(List.of(reminder));
     }
 
     @Test
     void marksReminderAfterSuccessfulDelivery() {
+        when(reminderGateway.isDeliverable(1L, reminder.reminderDate())).thenReturn(true);
         when(notificationPort.send(reminder)).thenReturn(true);
 
-        useCase.execute();
+        ReminderDeliveryResult result = useCase.execute(reminder);
 
         verify(reminderGateway).markReminderSent(1L);
+        assertThat(result).isEqualTo(DELIVERED);
     }
 
     @Test
     void releasesClaimWhenDeliveryFails() {
+        when(reminderGateway.isDeliverable(1L, reminder.reminderDate())).thenReturn(true);
         when(notificationPort.send(reminder)).thenReturn(false);
 
-        useCase.execute();
+        ReminderDeliveryResult result = useCase.execute(reminder);
 
         verify(reminderGateway).releaseReminder(1L);
+        assertThat(result).isEqualTo(RELEASED);
+    }
+
+    @Test
+    void skipsStaleQueuedDeliveryBeforeSendingToTelegram() {
+        when(reminderGateway.isDeliverable(1L, reminder.reminderDate())).thenReturn(false);
+
+        ReminderDeliveryResult result = useCase.execute(reminder);
+
+        assertThat(result).isEqualTo(SKIPPED);
+        verify(notificationPort, never()).send(reminder);
+        verify(reminderGateway, never()).releaseReminder(1L);
     }
 }
