@@ -7,6 +7,7 @@
 - [Política de segurança](../SECURITY.md)
 - [Privacidade](../PRIVACY.md)
 - [Proteção de dados](security/data-protection.md)
+- [Rotação de chaves](security/key-rotation.md)
 - [Suporte](../SUPPORT.md)
 - [Roadmap](roadmap.md)
 - [Desenvolvimento local](development.md)
@@ -27,6 +28,7 @@
 | Reportar vulnerabilidade | [Política de segurança](../SECURITY.md) |
 | Entender privacidade no self-hosted | [Privacidade](../PRIVACY.md) |
 | Entender classificação e criptografia | [Proteção de dados](security/data-protection.md) |
+| Rotacionar ou revogar chaves de dados | [Rotação de chaves](security/key-rotation.md) |
 | Acompanhar direção do projeto | [Roadmap](roadmap.md) |
 | Rodar API, bot e dependências | [Desenvolvimento local](development.md) |
 | Entender módulos e dependências | [Arquitetura](architecture.md) |
