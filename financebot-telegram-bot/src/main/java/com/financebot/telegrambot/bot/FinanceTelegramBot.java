@@ -1,6 +1,7 @@
 package com.financebot.telegrambot.bot;
 
 import com.financebot.telegrambot.config.TelegramBotProperties;
+import com.financebot.telegrambot.media.application.TelegramMediaMessageHandler;
 import com.financebot.telegrambot.observability.FinanceBotMetrics;
 import com.financebot.telegrambot.service.TelegramCommandService;
 import jakarta.annotation.PostConstruct;
@@ -13,6 +14,7 @@ import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import java.util.List;
@@ -30,6 +32,7 @@ public class FinanceTelegramBot implements LongPollingUpdateConsumer {
     private final TelegramCommandService telegramCommandService;
     private final TelegramClient telegramClient;
     private final FinanceBotMetrics metrics;
+    private final TelegramMediaMessageHandler telegramMediaMessageHandler;
     private TelegramBotsLongPollingApplication botsApplication;
 
     @PostConstruct
@@ -52,29 +55,37 @@ public class FinanceTelegramBot implements LongPollingUpdateConsumer {
         }
 
         for (Update update : updates) {
-            if (update == null || !update.hasMessage() || !update.getMessage().hasText()) {
+            if (update == null || !update.hasMessage()) {
                 continue;
             }
 
-            String chatId = update.getMessage().getChatId().toString();
-            Long telegramId = update.getMessage().getChatId();
-            String telegramUsername = update.getMessage().getFrom() != null
-                    ? update.getMessage().getFrom().getUserName()
+            Message message = update.getMessage();
+            if (!message.hasText() && !message.hasDocument()
+                    && !message.hasPhoto() && !message.hasVoice() && !message.hasAudio()) {
+                continue;
+            }
+
+            String chatId = message.getChatId().toString();
+            Long telegramId = message.getChatId();
+            String telegramUsername = message.getFrom() != null
+                    ? message.getFrom().getUserName()
                     : null;
-            String telegramFirstName = update.getMessage().getFrom() != null
-                    ? update.getMessage().getFrom().getFirstName()
+            String telegramFirstName = message.getFrom() != null
+                    ? message.getFrom().getFirstName()
                     : null;
-            String messageText = update.getMessage().getText();
 
             MDC.put(MDC_KEY, currentOrCreate());
             try {
-                LOGGER.info("Processando mensagem de texto recebida do Telegram");
-                String responseText = telegramCommandService.handleMessage(
-                        messageText,
-                        telegramId,
-                        telegramUsername,
-                        telegramFirstName
-                );
+                String responseText;
+                if (message.hasText()) {
+                    LOGGER.info("Processando mensagem de texto recebida do Telegram");
+                    responseText = telegramCommandService.handleMessage(
+                            message.getText(), telegramId, telegramUsername, telegramFirstName);
+                } else {
+                    LOGGER.info("Processando mídia recebida do Telegram");
+                    responseText = telegramMediaMessageHandler.handle(
+                            message, telegramId, telegramUsername, telegramFirstName);
+                }
 
                 boolean delivered = sendMessage(chatId, responseText);
                 metrics.recordTelegramMessage(delivered ? "success" : "delivery_failure");

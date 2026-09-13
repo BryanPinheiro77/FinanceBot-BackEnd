@@ -79,6 +79,8 @@ FINANCEBOT_AI_ENDPOINT=https://seu-provedor.example/v1/chat/completions
 FINANCEBOT_AI_API_KEY=seu-token-do-provedor
 FINANCEBOT_AI_MODEL=gpt-4o-mini
 FINANCEBOT_AI_TIMEOUT=10s
+FINANCEBOT_AI_TRANSCRIPTION_ENDPOINT=https://api.openai.com/v1/audio/transcriptions
+FINANCEBOT_AI_TRANSCRIPTION_MODEL=whisper-1
 ```
 
 Quando habilitada, a IA recebe somente o texto da mensagem e retorna uma intenção
