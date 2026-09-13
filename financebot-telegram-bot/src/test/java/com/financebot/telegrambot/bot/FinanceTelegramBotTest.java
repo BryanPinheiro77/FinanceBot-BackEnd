@@ -2,6 +2,7 @@ package com.financebot.telegrambot.bot;
 
 import com.financebot.telegrambot.config.TelegramBotProperties;
 import com.financebot.telegrambot.observability.FinanceBotMetrics;
+import com.financebot.telegrambot.media.application.TelegramMediaMessageHandler;
 import com.financebot.telegrambot.service.TelegramCommandService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,7 @@ class FinanceTelegramBotTest {
     @Mock private TelegramCommandService commandService;
     @Mock private TelegramClient telegramClient;
     @Mock private FinanceBotMetrics metrics;
+    @Mock private TelegramMediaMessageHandler mediaMessageHandler;
 
     private FinanceTelegramBot bot;
 
@@ -36,7 +38,8 @@ class FinanceTelegramBotTest {
                 new TelegramBotProperties("token", "financebot"),
                 commandService,
                 telegramClient,
-                metrics
+                metrics,
+                mediaMessageHandler
         );
     }
 
