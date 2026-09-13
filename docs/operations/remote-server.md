@@ -37,6 +37,9 @@ Se o SSH falhar, confira o Tailscale no Mac e no notebook e depois o serviço SS
 - [ ] Redis exige autenticação e não publica porta fora da rede privada.
 - [ ] RabbitMQ usa usuário e vhost dedicados; o usuário `guest` não é usado em produção.
 - [ ] Logs e espaço em disco são monitorados.
+- [ ] `OBSERVABILITY_BIND_ADDRESS` aponta para o IPv4 da Tailscale do servidor.
+- [ ] `GRAFANA_ADMIN_PASSWORD` é forte, exclusiva e mantida somente no `.env` protegido.
+- [ ] Grafana, Prometheus e Loki estão acessíveis somente pela interface Tailscale.
 
 ## Inspeção segura
 
