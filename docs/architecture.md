@@ -17,6 +17,19 @@ API ──evento──> RabbitMQ ──mensagem──> Bot ──> Telegram
 Bot ──> Redis (quando habilitado)
 ```
 
+## Mapa do repositório
+
+- `src/main/java/com/financebot`: API REST, domínio, casos de uso, adapters e integrações;
+- `src/main/resources/db/migration`: migrations Flyway da API;
+- `financebot-telegram-bot/src`: aplicação, handlers e adapters do bot;
+- `compose.local.yml`: dependências para desenvolvimento local;
+- `compose.prod.yml` e `financebot-telegram-bot/compose.prod.yml`: execução dos serviços em produção;
+- `observability/` e `compose.observability.yml`: stack local de métricas, logs e dashboards;
+- `docs/`: contratos, operação e decisões úteis para colaboradores.
+
+O frontend não faz parte deste repositório. Seus contratos de integração estão em
+[frontend-integration.md](frontend-integration.md).
+
 ## Organização da API
 
 O código combina organização em camadas e partes já migradas para uma abordagem hexagonal/Clean Architecture:
@@ -53,3 +66,11 @@ O schema é controlado pelo Flyway em `src/main/resources/db/migration`. O Hiber
 - Repositórios Spring Data não devem ser dependência de regras de domínio.
 - Dados monetários usam `BigDecimal`.
 - Mudanças que cruzam API e bot devem atualizar ambos os contratos e seus testes.
+
+## Como evoluir a arquitetura
+
+Ao tocar em uma área existente, preserve o padrão local e migre de forma incremental. Uma
+mudança nova deve manter as regras de negócio longe de Spring, JPA, Telegram e RabbitMQ sempre
+que a separação já existir no módulo. Quando uma mudança precisar introduzir um adapter ou uma
+porta, documente a direção da dependência e cubra o fluxo com testes do caso de uso e da borda
+afetada.

@@ -1,5 +1,7 @@
 # Guia de contribuição
 
+Este guia resume o fluxo técnico. As regras públicas de participação estão em [CONTRIBUTING.md](../CONTRIBUTING.md), o comportamento esperado está em [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) e relatos de segurança devem seguir [SECURITY.md](../SECURITY.md).
+
 ## Antes de começar
 
 1. Confira uma issue ou descreva claramente o objetivo.
@@ -13,6 +15,7 @@
 - Para mudanças de API, atualize exemplos/documentação e considere o bot.
 - Para mudanças de banco, crie uma migration Flyway nova.
 - Nunca inclua secrets, `.env`, dumps ou dados pessoais reais.
+- Nunca use dados reais de usuários para reproduzir um teste; anonimize o exemplo ou crie um fixture.
 
 ## Validação local
 
@@ -27,6 +30,8 @@ git diff --check
 O PR deve explicar objetivo, alterações, testes e impactos operacionais. Use `.github/pull_request_template.md`. Atualize `CHANGELOG.md` para mudanças relevantes e a documentação quando comandos, contratos ou operação forem alterados.
 
 O CI executa os builds/testes dos dois módulos. O deploy de produção só ocorre a partir de `main`, conforme [Deploy](deployment.md).
+
+Pull requests de documentação também devem explicar o que foi atualizado e validar links, comandos e caminhos mencionados.
 
 ## Commits
 

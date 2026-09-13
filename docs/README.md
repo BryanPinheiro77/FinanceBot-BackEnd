@@ -2,6 +2,12 @@
 
 ## Comece por aqui
 
+- [Como contribuir](../CONTRIBUTING.md)
+- [Código de conduta](../CODE_OF_CONDUCT.md)
+- [Política de segurança](../SECURITY.md)
+- [Privacidade](../PRIVACY.md)
+- [Suporte](../SUPPORT.md)
+- [Roadmap](roadmap.md)
 - [Desenvolvimento local](development.md)
 - [Arquitetura](architecture.md)
 - [Back-end da API](api.md)
@@ -14,6 +20,11 @@
 
 | Necessidade | Documento |
 |---|---|
+| Contribuir com o projeto | [Como contribuir](../CONTRIBUTING.md) |
+| Entender regras da comunidade | [Código de conduta](../CODE_OF_CONDUCT.md) |
+| Reportar vulnerabilidade | [Política de segurança](../SECURITY.md) |
+| Entender privacidade no self-hosted | [Privacidade](../PRIVACY.md) |
+| Acompanhar direção do projeto | [Roadmap](roadmap.md) |
 | Rodar API, bot e dependências | [Desenvolvimento local](development.md) |
 | Entender módulos e dependências | [Arquitetura](architecture.md) |
 | Consultar API e contratos | [Back-end da API](api.md) |
