@@ -17,6 +17,7 @@
 - [Contribuição](contributing.md)
 - [Deploy](deployment.md)
 - [Servidor remoto](operations/remote-server.md)
+- [Backup e restauração](operations/backup-restore.md)
 - [Observabilidade](observability.md)
 
 | Necessidade | Documento |

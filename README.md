@@ -163,11 +163,16 @@ DB_PASSWORD=sua-senha
 
 REDIS_HOST=localhost
 REDIS_PORT=6379
+REDIS_USER=default
+REDIS_PASSWORD=sua-senha
+REDIS_SSL_ENABLED=false
 
 RABBITMQ_HOST=localhost
 RABBITMQ_PORT=5672
-RABBITMQ_USER=guest
+RABBITMQ_USER=financebot_local
 RABBITMQ_PASSWORD=sua-senha
+RABBITMQ_VHOST=/financebot
+RABBITMQ_SSL_ENABLED=false
 
 JWT_SECRET=sua_chave_secreta
 JWT_EXPIRATION=86400000
@@ -180,6 +185,7 @@ FINANCEBOT_RECURRING_SCHEDULER_CRON=0 0 0 * * *
 
 # Opcional: publicação de lembretes vencidos (padrão: 60 segundos)
 FINANCEBOT_REMINDERS_PUBLISH_INTERVAL=60000
+FINANCEBOT_REMINDERS_QUEUE_MESSAGE_TTL_MS=86400000
 
 # Opcional: Actuator local da API (padrões: porta 8082 e endereço 127.0.0.1)
 FINANCEBOT_MANAGEMENT_PORT=8082
@@ -209,10 +215,18 @@ Crie um arquivo `.env` em `financebot-telegram-bot/` ou exporte as variáveis no
 TELEGRAM_BOT_TOKEN=seu_token_aqui
 FINANCEBOT_API_URL=http://localhost:8080
 TELEGRAM_INTERNAL_TOKEN=use-o-mesmo-token-configurado-na-api
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_USER=default
+REDIS_PASSWORD=sua-senha
+REDIS_SSL_ENABLED=false
+TELEGRAM_STATE_STORE=redis
 RABBITMQ_HOST=localhost
 RABBITMQ_PORT=5672
-RABBITMQ_USER=guest
-RABBITMQ_PASSWORD=guest
+RABBITMQ_USER=financebot_local
+RABBITMQ_PASSWORD=sua-senha
+RABBITMQ_VHOST=/financebot
+RABBITMQ_SSL_ENABLED=false
 
 # Opcional: Actuator local do bot (padrões: porta 8083 e endereço 127.0.0.1)
 FINANCEBOT_MANAGEMENT_PORT=8083
