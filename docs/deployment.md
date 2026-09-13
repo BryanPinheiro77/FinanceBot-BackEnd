@@ -19,6 +19,9 @@ O diretório do checkout deve ser configurado como variável privada no runner s
   configuradas também no `.env` do bot;
 - `FINANCEBOT_DATA_ENCRYPTION_KEY` configurada no `.env` da API como uma chave Base64
   de 32 bytes; ela não deve ser versionada nem compartilhada;
+- `FINANCEBOT_DATA_ENCRYPTION_ACTIVE_KEY_ID`, `FINANCEBOT_DATA_ENCRYPTION_LEGACY_KEY_ID`
+  e `FINANCEBOT_DATA_ENCRYPTION_PREVIOUS_KEYS` coerentes com o keyring documentado em
+  [security/key-rotation.md](security/key-rotation.md);
 - PostgreSQL, Redis e RabbitMQ acessíveis pelos hosts definidos nos `.env`.
 - Redis configurado com `REDIS_USER` e `REDIS_PASSWORD`, sem porta pública;
 - RabbitMQ configurado com usuário de aplicação, `RABBITMQ_VHOST` e permissões mínimas;

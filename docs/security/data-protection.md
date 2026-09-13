@@ -40,6 +40,7 @@ As classes são uma convenção técnica do projeto. Cada operador deve definir 
 O modelo será ampliado conforme novos campos e integrações forem adicionados. Criptografia não substitui autorização, isolamento de rede, backups protegidos, rotação de secrets ou revisão de logs.
 
 O plano detalhado para Redis, RabbitMQ, logs e backups está em [data-stores-protection.md](data-stores-protection.md).
+O procedimento de versionamento, recriptografia e revogação está em [key-rotation.md](key-rotation.md).
 
 ## Plano de implementação
 

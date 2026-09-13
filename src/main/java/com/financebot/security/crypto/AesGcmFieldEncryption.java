@@ -49,6 +49,14 @@ public final class AesGcmFieldEncryption {
             return null;
         }
 
+        return VERSION + "." + encryptPayload(plaintext, associatedData);
+    }
+
+    String encryptPayload(String plaintext, byte[] associatedData) {
+        if (plaintext == null) {
+            return null;
+        }
+
         byte[] nonce = new byte[NONCE_LENGTH_BYTES];
         secureRandom.nextBytes(nonce);
 
@@ -62,7 +70,7 @@ public final class AesGcmFieldEncryption {
             byte[] payload = new byte[nonce.length + ciphertext.length];
             System.arraycopy(nonce, 0, payload, 0, nonce.length);
             System.arraycopy(ciphertext, 0, payload, nonce.length, ciphertext.length);
-            return VERSION + "." + Base64.getUrlEncoder().withoutPadding().encodeToString(payload);
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(payload);
         } catch (GeneralSecurityException exception) {
             throw new FieldEncryptionException("Não foi possível criptografar o campo", exception);
         }
@@ -82,9 +90,17 @@ public final class AesGcmFieldEncryption {
             throw new FieldEncryptionException("Versão de criptografia inválida");
         }
 
+        return decryptPayload(parts[1], associatedData);
+    }
+
+    String decryptPayload(String encodedPayload, byte[] associatedData) {
+        if (encodedPayload == null) {
+            return null;
+        }
+
         byte[] payload;
         try {
-            payload = Base64.getUrlDecoder().decode(parts[1]);
+            payload = Base64.getUrlDecoder().decode(encodedPayload);
         } catch (IllegalArgumentException exception) {
             throw new FieldEncryptionException("Valor criptografado inválido", exception);
         }
