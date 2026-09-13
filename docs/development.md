@@ -25,7 +25,7 @@ O comando deve mostrar a versão 21.
 
 ## Configuração da API
 
-Crie `.env` na raiz. O arquivo é ignorado pelo Git:
+Copie `.env.example` para `.env` na raiz. O arquivo real é ignorado pelo Git:
 
 ```env
 DB_NAME=financebot
@@ -67,7 +67,7 @@ Endpoints úteis: `http://localhost:8080/api/health` e `http://localhost:8080/sw
 
 ## Configuração do bot
 
-Crie `financebot-telegram-bot/.env`:
+Copie `financebot-telegram-bot/.env.example` para `financebot-telegram-bot/.env`:
 
 ```env
 TELEGRAM_BOT_TOKEN=seu-token-local
