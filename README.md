@@ -2,6 +2,8 @@
 
 Assistente financeiro conversacional com API REST e integração via Telegram para registro, consulta e análise de finanças pessoais em linguagem natural.
 
+> **Estado do projeto:** o FinanceBot está em desenvolvimento inicial. O repositório é open source e prioriza uma instalação self-hosted; um eventual serviço hospedado terá termos, suporte e políticas próprios.
+
 ![Badge](https://img.shields.io/badge/Java-21-red)
 ![Badge](https://img.shields.io/badge/Spring%20Boot-4.x-brightgreen)
 ![Badge](https://img.shields.io/badge/PostgreSQL-17-blue)
@@ -128,6 +130,12 @@ O projeto está evoluindo para reduzir acoplamento entre domínio, aplicação, 
 ## Documentação
 
 - [Índice da documentação](docs/README.md)
+- [Como contribuir](CONTRIBUTING.md)
+- [Código de conduta](CODE_OF_CONDUCT.md)
+- [Política de segurança](SECURITY.md)
+- [Privacidade](PRIVACY.md)
+- [Suporte](SUPPORT.md)
+- [Roadmap](docs/roadmap.md)
 - [Desenvolvimento local](docs/development.md)
 - [Arquitetura](docs/architecture.md)
 - [API](docs/api.md)
