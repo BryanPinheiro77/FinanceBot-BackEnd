@@ -42,6 +42,7 @@ RABBITMQ_USER=guest
 RABBITMQ_PASSWORD=guest
 JWT_SECRET=troque-por-uma-chave-local-com-mais-de-64-caracteres
 JWT_EXPIRATION=86400000
+FINANCEBOT_DATA_ENCRYPTION_KEY=base64_de_32_bytes_gerada_com_seguranca
 CORS_ALLOWED_ORIGINS=http://localhost:5173
 TELEGRAM_INTERNAL_TOKEN=gere-um-token-local-forte-e-nao-compartilhe
 FINANCEBOT_RECURRING_SCHEDULER_CRON=0 0 0 * * *
