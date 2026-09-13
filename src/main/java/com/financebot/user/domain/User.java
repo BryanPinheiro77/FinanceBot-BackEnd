@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import com.financebot.security.crypto.EncryptedBigDecimalConverter;
 
 @Entity
 @Table(
@@ -36,8 +37,15 @@ public class User implements UserDetails {
     @Column(name = "email", nullable = false, length = 150)
     private String email;
 
-    @Column(name = "monthly_base_income", precision = 15, scale = 2)
+    @Column(name = "monthly_base_income_encrypted")
+    @Convert(converter = EncryptedBigDecimalConverter.class)
     private BigDecimal monthlyBaseIncome;
+
+    /**
+     * Coluna legada usada somente durante a migração gradual para o valor cifrado.
+     */
+    @Column(name = "monthly_base_income", precision = 15, scale = 2)
+    private BigDecimal monthlyBaseIncomeLegacy;
 
     @Column(name = "onboarding_completed", nullable = false)
     private Boolean onboardingCompleted = false;
@@ -74,6 +82,20 @@ public class User implements UserDetails {
         if (this.onboardingCompleted == null) {
             this.onboardingCompleted = false;
         }
+
+        this.monthlyBaseIncomeLegacy = null;
+    }
+
+    @PostLoad
+    public void migrateLegacyMonthlyBaseIncome() {
+        if (this.monthlyBaseIncome == null) {
+            this.monthlyBaseIncome = this.monthlyBaseIncomeLegacy;
+        }
+    }
+
+    @PreUpdate
+    public void clearLegacyMonthlyBaseIncome() {
+        this.monthlyBaseIncomeLegacy = null;
     }
 
     @Override
