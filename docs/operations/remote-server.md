@@ -33,7 +33,9 @@ Se o SSH falhar, confira o Tailscale no Mac e no notebook e depois o serviço SS
 - [ ] Os dois `.env` existem e têm permissões restritas.
 - [ ] `TELEGRAM_INTERNAL_TOKEN` existe nos dois `.env` e tem o mesmo valor, sem aparecer em logs.
 - [ ] `backend-network` existe.
-- [ ] Há backup verificável do PostgreSQL.
+- [ ] Há backup criptografado e restauração verificável conforme [backup-restore.md](backup-restore.md).
+- [ ] Redis exige autenticação e não publica porta fora da rede privada.
+- [ ] RabbitMQ usa usuário e vhost dedicados; o usuário `guest` não é usado em produção.
 - [ ] Logs e espaço em disco são monitorados.
 
 ## Inspeção segura
