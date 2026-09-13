@@ -26,6 +26,9 @@ O diretório do checkout deve ser configurado como variável privada no runner s
 - Redis configurado com `REDIS_USER` e `REDIS_PASSWORD`, sem porta pública;
 - RabbitMQ configurado com usuário de aplicação, `RABBITMQ_VHOST` e permissões mínimas;
 - backup criptografado e restauração verificada conforme [operations/backup-restore.md](operations/backup-restore.md).
+- `OBSERVABILITY_BIND_ADDRESS` configurada com o IPv4 da Tailscale do servidor;
+- `GRAFANA_ADMIN_USER` e `GRAFANA_ADMIN_PASSWORD` definidos no `.env` da raiz, com senha longa
+  e exclusiva;
 
 No GitHub, configure a variável de repositório `FINANCEBOT_DEPLOY_PATH` com o caminho do checkout no runner. O valor real deve ficar nas configurações privadas do repositório, não em YAML, documentação ou código.
 
@@ -43,8 +46,11 @@ docker network create backend-network
 
 1. Faça merge na `main` após o CI passar.
 2. Acompanhe o workflow no GitHub.
-3. No servidor, confirme os containers com `docker compose -f compose.prod.yml ps` em cada módulo.
-4. O workflow valida automaticamente `http://localhost:8080/api/health` e `http://localhost:8083/actuator/health`, tentando por até 60 segundos cada. A porta de gerenciamento do bot aceita conexões apenas do próprio servidor.
+3. No servidor, confirme os containers com `docker compose -f compose.prod.yml ps` em cada módulo
+   e `docker compose -f compose.observability.yml -f compose.observability.prod.yml ps`.
+4. O workflow valida automaticamente a API, o bot, Prometheus, Grafana e Loki, tentando por até
+   60 segundos cada. As portas da observabilidade ficam acessíveis somente pelo endereço da
+   Tailscale configurado em `OBSERVABILITY_BIND_ADDRESS`.
 
 ## Rollback operacional
 
