@@ -1,8 +1,14 @@
 package com.financebot.analysis.service;
 
 import com.financebot.analysis.dto.response.InstallmentPurchaseCapacityResponse;
+import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
+import com.financebot.category.domain.Category;
 import com.financebot.recurring.domain.RecurringTransaction;
 import com.financebot.recurring.repository.RecurringTransactionRepository;
+import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
+import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
+import com.financebot.transaction.domain.SourceType;
+import com.financebot.transaction.domain.TransactionType;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.transaction.validation.TransactionCategoryValidator;
 import com.financebot.user.domain.User;
@@ -15,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.Authentication;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -24,6 +31,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class FinancialAnalysisServiceTest {
@@ -43,6 +52,9 @@ class FinancialAnalysisServiceTest {
     @Mock
     private TransactionCategoryValidator transactionCategoryValidator;
 
+    @Mock
+    private Authentication authentication;
+
     @InjectMocks
     private FinancialAnalysisService financialAnalysisService;
 
@@ -54,6 +66,7 @@ class FinancialAnalysisServiceTest {
         user.setId(1L);
         user.setEmail("bryan@email.com");
         user.setMonthlyBaseIncome(new BigDecimal("5000"));
+        lenient().when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
     }
 
     @Test
@@ -202,6 +215,119 @@ class FinancialAnalysisServiceTest {
                 totalAmount,
                 1
         ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Total installments must be at least 2");
+    }
+
+    @Test
+    @DisplayName("deve rejeitar usuario nulo ao consultar comprometimento")
+    void shouldRejectNullUserOnCommitmentQuery() {
+        assertThatThrownBy(() -> financialAnalysisService.getFinancialCommitment((User) null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("User is required");
+    }
+
+    @Test
+    @DisplayName("deve resolver usuario autenticado ao consultar comprometimento")
+    void shouldResolveAuthenticatedUserOnCommitmentQuery() {
+        when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
+        mockCurrentAnalysisData(new BigDecimal("300"), new BigDecimal("1000"), 2L, List.of());
+
+        FinancialCommitmentResponse response = financialAnalysisService.getFinancialCommitment(authentication);
+
+        assertThat(response.monthlyIncomeReference()).isEqualByComparingTo("5000");
+        assertThat(response.nextMonthProjectedExpense()).isEqualByComparingTo("1000");
+        verify(authenticatedUserResolver).resolve(authentication);
+    }
+
+    @Test
+    @DisplayName("deve incluir despesa prevista para o proximo mes na previa")
+    void shouldIncludeNextMonthExpenseInTransactionPreview() {
+        mockCurrentAnalysisData(BigDecimal.ZERO, new BigDecimal("1000"), 2L, List.of());
+        Category category = new Category();
+        CreateTransactionRequest request = new CreateTransactionRequest(
+                new BigDecimal("250"), "mercado", java.time.YearMonth.now().plusMonths(1).atDay(5),
+                TransactionType.EXPENSE, SourceType.WEB, 10L, 20L
+        );
+        when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(category);
+
+        FinancialCommitmentResponse response = financialAnalysisService.previewTransactionAlert(request, authentication);
+
+        assertThat(response.nextMonthProjectedExpense()).isEqualByComparingTo("1250");
+        verify(userResourceResolver).resolveAccount(10L, 1L);
+        verify(transactionCategoryValidator).validate(category, TransactionType.EXPENSE);
+    }
+
+    @Test
+    @DisplayName("deve incluir renda prevista para o proximo mes na previa")
+    void shouldIncludeNextMonthIncomeInTransactionPreview() {
+        mockCurrentAnalysisData(BigDecimal.ZERO, new BigDecimal("1000"), 2L, List.of());
+        CreateTransactionRequest request = new CreateTransactionRequest(
+                new BigDecimal("750"), "salario", java.time.YearMonth.now().plusMonths(1).atDay(5),
+                TransactionType.INCOME, SourceType.WEB, 10L, 20L
+        );
+        when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(new Category());
+
+        FinancialCommitmentResponse response = financialAnalysisService.previewTransactionAlert(request, authentication);
+
+        assertThat(response.nextMonthProjectedIncome()).isEqualByComparingTo("5750");
+        assertThat(response.projectedNetNextMonth()).isEqualByComparingTo("4750");
+    }
+
+    @Test
+    @DisplayName("nao deve alterar projecao para transacao do mes atual")
+    void shouldKeepProjectionForCurrentMonthTransaction() {
+        mockCurrentAnalysisData(BigDecimal.ZERO, new BigDecimal("1000"), 2L, List.of());
+        CreateTransactionRequest request = new CreateTransactionRequest(
+                new BigDecimal("750"), "compra", java.time.LocalDate.now(),
+                TransactionType.EXPENSE, SourceType.WEB, 10L, 20L
+        );
+        when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(new Category());
+
+        FinancialCommitmentResponse response = financialAnalysisService.previewTransactionAlert(request, authentication);
+
+        assertThat(response.nextMonthProjectedExpense()).isEqualByComparingTo("1000");
+    }
+
+    @Test
+    @DisplayName("deve projetar parcelas futuras e incrementar grupos ativos")
+    void shouldProjectInstallmentsInPreview() {
+        mockCurrentAnalysisData(BigDecimal.ZERO, BigDecimal.ZERO, 2L, List.of());
+        CreateInstallmentTransactionRequest request = new CreateInstallmentTransactionRequest(
+                new BigDecimal("1000"), "celular", java.time.YearMonth.now().plusMonths(1).atDay(1),
+                TransactionType.EXPENSE, SourceType.WEB, 10L, 20L, 3
+        );
+        when(userResourceResolver.resolveCategory(20L, 1L)).thenReturn(new Category());
+
+        FinancialCommitmentResponse response = financialAnalysisService.previewInstallmentAlert(request, authentication);
+
+        assertThat(response.totalFutureInstallments()).isEqualByComparingTo("1000");
+        assertThat(response.nextMonthProjectedExpense()).isEqualByComparingTo("333.33");
+        assertThat(response.activeInstallmentCount()).isEqualTo(3L);
+    }
+
+    @Test
+    @DisplayName("deve rejeitar parcelas para receitas")
+    void shouldRejectInstallmentIncomePreview() {
+        CreateInstallmentTransactionRequest request = new CreateInstallmentTransactionRequest(
+                new BigDecimal("1000"), "salario", java.time.LocalDate.now(),
+                TransactionType.INCOME, SourceType.WEB, 10L, 20L, 3
+        );
+
+        assertThatThrownBy(() -> financialAnalysisService.previewInstallmentAlert(request, authentication))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Installment transactions are allowed only for expenses");
+    }
+
+    @Test
+    @DisplayName("deve rejeitar quantidade invalida de parcelas na previa")
+    void shouldRejectInvalidInstallmentCountInPreview() {
+        CreateInstallmentTransactionRequest request = new CreateInstallmentTransactionRequest(
+                new BigDecimal("1000"), "compra", java.time.LocalDate.now(),
+                TransactionType.EXPENSE, SourceType.WEB, 10L, 20L, 1
+        );
+
+        assertThatThrownBy(() -> financialAnalysisService.previewInstallmentAlert(request, authentication))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Total installments must be at least 2");
     }
