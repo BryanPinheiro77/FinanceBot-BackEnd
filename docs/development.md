@@ -42,6 +42,7 @@ RABBITMQ_USER=guest
 RABBITMQ_PASSWORD=guest
 JWT_SECRET=troque-por-uma-chave-local-com-mais-de-64-caracteres
 JWT_EXPIRATION=86400000
+FINANCEBOT_DATA_ENCRYPTION_KEY=base64_de_32_bytes_gerada_com_seguranca
 CORS_ALLOWED_ORIGINS=http://localhost:5173
 TELEGRAM_INTERNAL_TOKEN=gere-um-token-local-forte-e-nao-compartilhe
 FINANCEBOT_RECURRING_SCHEDULER_CRON=0 0 0 * * *
@@ -78,6 +79,8 @@ FINANCEBOT_AI_ENDPOINT=https://seu-provedor.example/v1/chat/completions
 FINANCEBOT_AI_API_KEY=seu-token-do-provedor
 FINANCEBOT_AI_MODEL=gpt-4o-mini
 FINANCEBOT_AI_TIMEOUT=10s
+FINANCEBOT_AI_TRANSCRIPTION_ENDPOINT=https://api.openai.com/v1/audio/transcriptions
+FINANCEBOT_AI_TRANSCRIPTION_MODEL=whisper-1
 ```
 
 Quando habilitada, a IA recebe somente o texto da mensagem e retorna uma intenção

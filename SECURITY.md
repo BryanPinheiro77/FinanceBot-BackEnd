@@ -29,4 +29,4 @@ O reporte pode envolver a API, o bot Telegram, autenticação, integrações Rab
 - atualize dependências e imagens de infraestrutura;
 - defina retenção adequada para dados financeiros e contextos do Telegram.
 
-Detalhes de classificação e criptografia de dados serão definidos na Issue 81. Esta política não substitui avaliação jurídica, requisitos de privacidade ou o threat model de cada instalação.
+Veja a [classificação e estratégia de proteção de dados](docs/security/data-protection.md). Esta política não substitui avaliação jurídica, requisitos de privacidade ou o threat model de cada instalação.
