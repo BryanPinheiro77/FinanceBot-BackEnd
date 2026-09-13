@@ -273,6 +273,27 @@ class CategoryServiceTest {
     class UpdateTests {
 
         @Test
+        @DisplayName("deve atualizar sem consultar duplicidade quando nome e tipo permanecem iguais")
+        void shouldUpdateWithoutDuplicateLookupWhenNameAndTypeAreUnchanged() {
+            User user = buildUser();
+            Category category = buildCategory(20L, "Alimentação", CategoryType.EXPENSE, true, false);
+            UpdateCategoryRequest request = new UpdateCategoryRequest(" alimentação ", CategoryType.EXPENSE);
+            CategoryResponse response = buildResponse(category);
+
+            when(authenticatedUserResolver.resolve(authentication)).thenReturn(user);
+            when(categoryRepository.findByIdAndUserIdAndActiveTrue(20L, user.getId()))
+                    .thenReturn(Optional.of(category));
+            when(categoryRepository.save(category)).thenReturn(category);
+            when(categoryMapper.toResponse(category)).thenReturn(response);
+
+            assertThat(categoryService.update(20L, request, authentication)).isEqualTo(response);
+
+            verify(categoryRepository, never()).existsByNameIgnoreCaseAndTypeAndUserId(any(), any(), any());
+            verify(categoryMapper).updateEntity(request, category);
+            verify(categoryRepository).save(category);
+        }
+
+        @Test
         @DisplayName("deve atualizar categoria ativa quando encontrada")
         void shouldUpdateActiveCategoryWhenFound() {
             User user = buildUser();
@@ -439,6 +460,52 @@ class CategoryServiceTest {
             verify(categoryRepository, never()).save(any());
             verify(categoryRepository, never()).delete(any());
             verifyNoInteractions(categoryMapper);
+        }
+    }
+
+    @Nested
+    @DisplayName("createDefaultCategoriesForUser")
+    class DefaultCategoryTests {
+
+        @Test
+        @DisplayName("deve rejeitar usuario nulo ou nao persistido")
+        void shouldRejectNullOrUnpersistedUser() {
+            assertThatThrownBy(() -> categoryService.createDefaultCategoriesForUser(null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("User must be persisted before creating default categories");
+
+            User userWithoutId = new User();
+            assertThatThrownBy(() -> categoryService.createDefaultCategoriesForUser(userWithoutId))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("User must be persisted before creating default categories");
+        }
+
+        @Test
+        @DisplayName("deve criar as categorias padrao ausentes")
+        void shouldCreateMissingDefaultCategories() {
+            User user = buildUser();
+            when(categoryRepository.existsByNameIgnoreCaseAndTypeAndUserId(any(), any(), eq(user.getId())))
+                    .thenReturn(false);
+
+            categoryService.createDefaultCategoriesForUser(user);
+
+            verify(categoryRepository, times(8)).save(any(Category.class));
+            verify(categoryRepository, times(8))
+                    .existsByNameIgnoreCaseAndTypeAndUserId(any(), any(), eq(user.getId()));
+        }
+
+        @Test
+        @DisplayName("nao deve recriar categorias padrao existentes")
+        void shouldNotRecreateExistingDefaultCategories() {
+            User user = buildUser();
+            when(categoryRepository.existsByNameIgnoreCaseAndTypeAndUserId(any(), any(), eq(user.getId())))
+                    .thenReturn(true);
+
+            categoryService.createDefaultCategoriesForUser(user);
+
+            verify(categoryRepository, times(8))
+                    .existsByNameIgnoreCaseAndTypeAndUserId(any(), any(), eq(user.getId()));
+            verify(categoryRepository, never()).save(any());
         }
     }
 
