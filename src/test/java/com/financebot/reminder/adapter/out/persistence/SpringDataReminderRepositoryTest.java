@@ -5,6 +5,7 @@ import com.financebot.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
@@ -15,6 +16,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
+@Import(com.financebot.security.config.DataEncryptionConfig.class)
 class SpringDataReminderRepositoryTest {
     @Autowired private SpringDataReminderRepository reminderRepository;
     @Autowired private UserRepository userRepository;

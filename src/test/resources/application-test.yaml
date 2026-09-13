@@ -36,6 +36,8 @@ app:
   jwt:
     secret: 1234567890123456789012345678901234567890123456789012345678901234
     expiration: 86400000
+  data-encryption:
+    key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
 
 management:
   health:

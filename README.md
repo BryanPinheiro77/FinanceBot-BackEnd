@@ -171,6 +171,7 @@ RABBITMQ_PASSWORD=sua-senha
 
 JWT_SECRET=sua_chave_secreta
 JWT_EXPIRATION=86400000
+FINANCEBOT_DATA_ENCRYPTION_KEY=base64_de_32_bytes_gerada_com_seguranca
 
 CORS_ALLOWED_ORIGINS=http://localhost:5173
 
