@@ -2,6 +2,7 @@ package com.financebot.telegrambot.media.application;
 
 import com.financebot.telegrambot.media.application.exception.MediaExtractionException;
 import com.financebot.telegrambot.media.application.port.out.DocumentTextExtractor;
+import com.financebot.telegrambot.media.application.port.out.AudioTextExtractor;
 import com.financebot.telegrambot.media.application.port.out.ImageTextExtractor;
 import com.financebot.telegrambot.media.application.port.out.TelegramFileDownloader;
 import com.financebot.telegrambot.service.TelegramCommandService;
@@ -26,6 +27,7 @@ class TelegramMediaMessageHandlerTest {
 
     @Mock private DocumentTextExtractor extractor;
     @Mock private ImageTextExtractor imageExtractor;
+    @Mock private AudioTextExtractor audioExtractor;
     @Mock private TelegramFileDownloader downloader;
     @Mock private TelegramCommandService commandService;
 
@@ -33,7 +35,7 @@ class TelegramMediaMessageHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new TelegramMediaMessageHandler(extractor, imageExtractor, downloader, commandService);
+        handler = new TelegramMediaMessageHandler(extractor, imageExtractor, audioExtractor, downloader, commandService);
     }
 
     @Test
@@ -94,6 +96,22 @@ class TelegramMediaMessageHandlerTest {
         when(imageExtractor.extract(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("image/jpeg")))
                 .thenReturn("gastei 30 na farmácia");
         when(commandService.handleMessage("gastei 30 na farmácia", 123L, "bryan", "Bryan"))
+                .thenReturn("Preview");
+
+        String response = handler.handle(message, 123L, "bryan", "Bryan");
+
+        assertThat(response).isEqualTo("Preview");
+    }
+
+    @Test
+    void shouldSendTranscribedVoiceToExistingCommandFlow() {
+        var voice = org.telegram.telegrambots.meta.api.objects.Voice.builder()
+                .fileId("voice-id").mimeType("audio/ogg").build();
+        Message message = Message.builder().voice(voice).build();
+        when(downloader.download("voice-id")).thenReturn(new ByteArrayInputStream(new byte[]{1}));
+        when(audioExtractor.extract(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("telegram-voice.ogg"),
+                org.mockito.ArgumentMatchers.eq("audio/ogg"))).thenReturn("me lembre de pagar o aluguel");
+        when(commandService.handleMessage("me lembre de pagar o aluguel", 123L, "bryan", "Bryan"))
                 .thenReturn("Preview");
 
         String response = handler.handle(message, 123L, "bryan", "Bryan");

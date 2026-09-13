@@ -2,6 +2,7 @@ package com.financebot.telegrambot.media.application;
 
 import com.financebot.telegrambot.media.application.exception.MediaExtractionException;
 import com.financebot.telegrambot.media.application.port.out.DocumentTextExtractor;
+import com.financebot.telegrambot.media.application.port.out.AudioTextExtractor;
 import com.financebot.telegrambot.media.application.port.out.ImageTextExtractor;
 import com.financebot.telegrambot.media.application.port.out.TelegramFileDownloader;
 import com.financebot.telegrambot.service.TelegramCommandService;
@@ -19,6 +20,7 @@ public class TelegramMediaMessageHandler {
 
     private final DocumentTextExtractor documentTextExtractor;
     private final ImageTextExtractor imageTextExtractor;
+    private final AudioTextExtractor audioTextExtractor;
     private final TelegramFileDownloader telegramFileDownloader;
     private final TelegramCommandService telegramCommandService;
 
@@ -36,8 +38,11 @@ public class TelegramMediaMessageHandler {
         if (document == null && message.hasPhoto()) {
             return handlePhoto(message, telegramId, telegramUsername, telegramFirstName);
         }
+        if (document == null && (message.hasVoice() || message.hasAudio())) {
+            return handleAudio(message, telegramId, telegramUsername, telegramFirstName);
+        }
         if (document == null) {
-            return "Por enquanto consigo processar documentos PDF e imagens. Áudios serão adicionados em breve.";
+            return "Por enquanto consigo processar documentos PDF, imagens e áudios.";
         }
 
         if (!documentTextExtractor.supports(document.getMimeType(), document.getFileName())) {
@@ -60,7 +65,7 @@ public class TelegramMediaMessageHandler {
     }
 
     private String unsupportedMediaMessage() {
-        return "Por enquanto consigo processar documentos PDF e imagens. Áudios serão adicionados em breve.";
+        return "Por enquanto consigo processar documentos PDF, imagens e áudios.";
     }
 
     private String handlePhoto(
@@ -89,6 +94,40 @@ public class TelegramMediaMessageHandler {
             return "Não consegui ler o texto dessa imagem. Verifique se ela está nítida e tente novamente.";
         } catch (Exception exception) {
             return "Não consegui processar essa imagem agora. Tente novamente em alguns instantes.";
+        }
+    }
+
+    private String handleAudio(
+            Message message,
+            Long telegramId,
+            String telegramUsername,
+            String telegramFirstName
+    ) {
+        String fileId;
+        String fileName;
+        String contentType;
+        if (message.hasVoice()) {
+            fileId = message.getVoice().getFileId();
+            fileName = "telegram-voice.ogg";
+            contentType = message.getVoice().getMimeType();
+        } else {
+            fileId = message.getAudio().getFileId();
+            fileName = message.getAudio().getFileName();
+            contentType = message.getAudio().getMimeType();
+        }
+
+        try (InputStream content = telegramFileDownloader.download(fileId)) {
+            String extractedText = audioTextExtractor.extract(content, fileName, contentType);
+            return telegramCommandService.handleMessage(
+                    extractedText,
+                    telegramId,
+                    telegramUsername,
+                    telegramFirstName
+            );
+        } catch (MediaExtractionException exception) {
+            return "Não consegui transcrever esse áudio. Tente enviar uma gravação mais nítida.";
+        } catch (Exception exception) {
+            return "Não consegui processar esse áudio agora. Tente novamente em alguns instantes.";
         }
     }
 }
