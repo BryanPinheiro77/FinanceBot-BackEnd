@@ -2,6 +2,7 @@ package com.financebot.telegrambot.media.application;
 
 import com.financebot.telegrambot.media.application.exception.MediaExtractionException;
 import com.financebot.telegrambot.media.application.port.out.DocumentTextExtractor;
+import com.financebot.telegrambot.media.application.port.out.ImageTextExtractor;
 import com.financebot.telegrambot.media.application.port.out.TelegramFileDownloader;
 import com.financebot.telegrambot.service.TelegramCommandService;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.telegram.telegrambots.meta.api.objects.Document;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
+import org.telegram.telegrambots.meta.api.objects.photo.PhotoSize;
 
 import java.io.ByteArrayInputStream;
 
@@ -23,6 +25,7 @@ import static org.mockito.Mockito.when;
 class TelegramMediaMessageHandlerTest {
 
     @Mock private DocumentTextExtractor extractor;
+    @Mock private ImageTextExtractor imageExtractor;
     @Mock private TelegramFileDownloader downloader;
     @Mock private TelegramCommandService commandService;
 
@@ -30,7 +33,7 @@ class TelegramMediaMessageHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new TelegramMediaMessageHandler(extractor, downloader, commandService);
+        handler = new TelegramMediaMessageHandler(extractor, imageExtractor, downloader, commandService);
     }
 
     @Test
@@ -81,6 +84,21 @@ class TelegramMediaMessageHandlerTest {
                 org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any()
         );
+    }
+
+    @Test
+    void shouldSendExtractedImageTextToExistingCommandFlow() {
+        PhotoSize photo = PhotoSize.builder().fileId("photo-id").fileSize(100).build();
+        Message message = Message.builder().photo(java.util.List.of(photo)).build();
+        when(downloader.download("photo-id")).thenReturn(new ByteArrayInputStream(new byte[]{1}));
+        when(imageExtractor.extract(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("image/jpeg")))
+                .thenReturn("gastei 30 na farmácia");
+        when(commandService.handleMessage("gastei 30 na farmácia", 123L, "bryan", "Bryan"))
+                .thenReturn("Preview");
+
+        String response = handler.handle(message, 123L, "bryan", "Bryan");
+
+        assertThat(response).isEqualTo("Preview");
     }
 
     private Document pdfDocument() {
