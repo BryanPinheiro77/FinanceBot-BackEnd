@@ -4,6 +4,7 @@ import com.financebot.analysis.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.category.domain.Category;
 import com.financebot.recurring.domain.RecurringTransaction;
+import com.financebot.recurring.domain.RecurrenceFrequency;
 import com.financebot.recurring.repository.RecurringTransactionRepository;
 import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
@@ -241,6 +242,25 @@ class FinancialAnalysisServiceTest {
     }
 
     @Test
+    @DisplayName("deve projetar receitas e despesas recorrentes ativas no proximo mes")
+    void shouldProjectActiveRecurringTransactionsForNextMonth() {
+        java.time.YearMonth nextMonth = java.time.YearMonth.now().plusMonths(1);
+        RecurringTransaction expense = recurring(new BigDecimal("300"), TransactionType.EXPENSE,
+                nextMonth.atDay(1), RecurrenceFrequency.MONTHLY, true);
+        RecurringTransaction income = recurring(new BigDecimal("800"), TransactionType.INCOME,
+                nextMonth.atDay(2), RecurrenceFrequency.MONTHLY, true);
+        RecurringTransaction inactive = recurring(new BigDecimal("999"), TransactionType.EXPENSE,
+                nextMonth.atDay(3), RecurrenceFrequency.MONTHLY, false);
+        mockCurrentAnalysisData(BigDecimal.ZERO, BigDecimal.ZERO, 0L, List.of(expense, income, inactive));
+
+        FinancialCommitmentResponse response = financialAnalysisService.getFinancialCommitment(user);
+
+        assertThat(response.projectedRecurringExpenseNextMonth()).isEqualByComparingTo("300");
+        assertThat(response.projectedRecurringIncomeNextMonth()).isEqualByComparingTo("800");
+        assertThat(response.nextMonthProjectedExpense()).isEqualByComparingTo("300");
+    }
+
+    @Test
     @DisplayName("deve incluir despesa prevista para o proximo mes na previa")
     void shouldIncludeNextMonthExpenseInTransactionPreview() {
         mockCurrentAnalysisData(BigDecimal.ZERO, new BigDecimal("1000"), 2L, List.of());
@@ -349,5 +369,22 @@ class FinancialAnalysisServiceTest {
 
         when(recurringTransactionRepository.findAllByUserIdAndActiveTrue(1L))
                 .thenReturn(recurringTransactions);
+    }
+
+    private RecurringTransaction recurring(
+            BigDecimal amount,
+            TransactionType type,
+            java.time.LocalDate nextExecutionDate,
+            RecurrenceFrequency frequency,
+            boolean active
+    ) {
+        RecurringTransaction recurring = new RecurringTransaction();
+        recurring.setAmount(amount);
+        recurring.setType(type);
+        recurring.setFrequency(frequency);
+        recurring.setStartDate(nextExecutionDate);
+        recurring.setNextExecutionDate(nextExecutionDate);
+        recurring.setActive(active);
+        return recurring;
     }
 }

@@ -5,6 +5,7 @@ import com.financebot.reminder.application.port.out.ReminderPersistencePort;
 import com.financebot.reminder.application.port.out.ReminderReferencePort;
 import com.financebot.reminder.application.command.CreateReminderCommand;
 import com.financebot.reminder.application.command.CreateTelegramReminderCommand;
+import com.financebot.reminder.application.command.UpdateReminderCommand;
 import com.financebot.reminder.domain.Reminder;
 import com.financebot.reminder.domain.ReminderRecurrence;
 import org.junit.jupiter.api.BeforeEach;
@@ -149,5 +150,51 @@ class ReminderUseCaseTest {
 
         verify(persistencePort).findById(5L);
         verifyNoMoreInteractions(persistencePort, referencePort);
+    }
+
+    @Test
+    void updatesAndDeletesReminderOwnedByUser() {
+        Reminder reminder = new Reminder();
+        reminder.setId(7L);
+        when(persistencePort.findByIdAndUserId(7L, 10L)).thenReturn(Optional.of(reminder));
+        when(persistencePort.save(reminder)).thenReturn(reminder);
+
+        Reminder updated = useCase.update(7L, new UpdateReminderCommand(
+                "  Atualizado ", LocalDate.of(2026, 10, 10), 2, true, 10L));
+
+        assertThat(updated.getDescription()).isEqualTo("Atualizado");
+        assertThat(updated.getSentAt()).isNull();
+        useCase.delete(7L, 10L);
+        verify(persistencePort).delete(reminder);
+    }
+
+    @Test
+    void rejectsUnknownReminderAndTelegramReferences() {
+        when(persistencePort.findByIdAndUserId(7L, 10L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> useCase.update(7L,
+                new UpdateReminderCommand("x", LocalDate.now(), 0, false, 10L)))
+                .isInstanceOf(jakarta.persistence.EntityNotFoundException.class);
+
+        when(referencePort.findUserIdByTelegramId(99L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> useCase.createForTelegram(
+                new CreateTelegramReminderCommand(99L, "x", LocalDate.now(), 0, null)))
+                .isInstanceOf(jakarta.persistence.EntityNotFoundException.class);
+    }
+
+    @Test
+    void marksStandaloneReminderSentAndReleasesClaim() {
+        Reminder reminder = new Reminder();
+        reminder.setId(8L);
+        reminder.setActive(true);
+        reminder.setReminderDate(LocalDate.now());
+        when(persistencePort.findById(8L)).thenReturn(Optional.of(reminder));
+        when(persistencePort.save(reminder)).thenReturn(reminder);
+
+        useCase.markSent(8L);
+        assertThat(reminder.getSentAt()).isNotNull();
+
+        reminder.setClaimedAt(LocalDateTime.now());
+        useCase.releaseClaim(8L);
+        assertThat(reminder.getClaimedAt()).isNull();
     }
 }
