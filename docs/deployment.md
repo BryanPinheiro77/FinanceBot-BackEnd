@@ -20,6 +20,9 @@ O diretório do checkout deve ser configurado como variável privada no runner s
 - `FINANCEBOT_DATA_ENCRYPTION_KEY` configurada no `.env` da API como uma chave Base64
   de 32 bytes; ela não deve ser versionada nem compartilhada;
 - PostgreSQL, Redis e RabbitMQ acessíveis pelos hosts definidos nos `.env`.
+- Redis configurado com `REDIS_USER` e `REDIS_PASSWORD`, sem porta pública;
+- RabbitMQ configurado com usuário de aplicação, `RABBITMQ_VHOST` e permissões mínimas;
+- backup criptografado e restauração verificada conforme [operations/backup-restore.md](operations/backup-restore.md).
 
 No GitHub, configure a variável de repositório `FINANCEBOT_DEPLOY_PATH` com o caminho do checkout no runner. O valor real deve ficar nas configurações privadas do repositório, não em YAML, documentação ou código.
 
@@ -48,6 +51,5 @@ O rollback atual é manual: identifique o commit anterior saudável, volte o che
 
 - substituir `git pull` no servidor por checkout imutável do SHA do workflow;
 - adicionar health check pós-deploy e notificação de falha;
-- documentar backup/restauração do PostgreSQL;
 - separar ambientes e usar aprovação para produção;
 - avaliar armazenamento seguro de secrets.
