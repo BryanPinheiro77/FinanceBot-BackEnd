@@ -4,13 +4,22 @@
 
 ### Added
 
+- Adicionado keyring versionado para leitura com chaves anteriores e escrita exclusiva com a chave ativa.
+- Adicionado job opt-in de recriptografia em lotes, condicionado à confirmação explícita de backup.
+- Adicionado procedimento operacional de rotação, rollback e revogação de chaves.
 - Adicionada stack local de observabilidade com Prometheus, Grafana, Loki e Grafana Alloy.
 - Adicionados dashboard inicial, métricas dos fluxos de Telegram, OpenAI, recorrências e lembretes, além de correlação entre logs do bot e da API.
 - Adicionados guias públicos de contribuição, conduta, segurança, privacidade, suporte e roadmap.
 
 ### Changed
 
+- Valores cifrados novos passam a registrar o ID da chave no envelope `v2`, mantendo leitura do formato legado `v1`.
 - Padronizados os logs da API e do bot em JSON, sem conteúdo financeiro ou dados pessoais.
+
+### Security
+
+- A rotação falha de forma segura diante de chave ausente, ciphertext inválido ou alteração concorrente.
+- Chaves antigas só podem ser revogadas depois da recriptografia e da verificação explícita dos dados.
 
 ## [v1.8.0]
 
