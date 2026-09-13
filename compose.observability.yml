@@ -10,7 +10,7 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     ports:
-      - "127.0.0.1:9090:9090"
+      - "${OBSERVABILITY_BIND_ADDRESS:?Configure OBSERVABILITY_BIND_ADDRESS no arquivo .env}:9090:9090"
     volumes:
       - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - financebot_prometheus_data:/prometheus
@@ -21,7 +21,7 @@ services:
     container_name: financebot-loki
     command: -config.file=/etc/loki/local-config.yml
     ports:
-      - "127.0.0.1:3100:3100"
+      - "${OBSERVABILITY_BIND_ADDRESS:?Configure OBSERVABILITY_BIND_ADDRESS no arquivo .env}:3100:3100"
     volumes:
       - ./observability/loki/config.yml:/etc/loki/local-config.yml:ro
       - financebot_loki_data:/loki
@@ -48,10 +48,10 @@ services:
       - loki
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Configure GRAFANA_ADMIN_PASSWORD no arquivo .env}
       GF_USERS_ALLOW_SIGN_UP: "false"
     ports:
-      - "127.0.0.1:3000:3000"
+      - "${OBSERVABILITY_BIND_ADDRESS:?Configure OBSERVABILITY_BIND_ADDRESS no arquivo .env}:3000:3000"
     volumes:
       - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro

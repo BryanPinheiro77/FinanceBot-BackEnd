@@ -154,7 +154,8 @@ O projeto está evoluindo para reduzir acoplamento entre domínio, aplicação, 
 - token de bot do Telegram
 
 ### Variáveis de ambiente da API
-Crie um arquivo `.env` na raiz do projeto ou exporte as variáveis no terminal:
+Copie `.env.example` para `.env` na raiz do projeto e substitua os valores locais. O arquivo `.env`
+é ignorado pelo Git e nunca deve ser versionado:
 
 ```env
 DB_URL=jdbc:postgresql://localhost:5432/financebot
@@ -212,7 +213,8 @@ Com PostgreSQL, Redis e RabbitMQ já disponíveis:
 ```
 
 ### Variáveis de ambiente do bot
-Crie um arquivo `.env` em `financebot-telegram-bot/` ou exporte as variáveis no terminal:
+Copie `financebot-telegram-bot/.env.example` para `financebot-telegram-bot/.env` e substitua os
+valores locais. O arquivo `.env` é ignorado pelo Git e nunca deve ser versionado:
 
 ```env
 TELEGRAM_BOT_TOKEN=seu_token_aqui

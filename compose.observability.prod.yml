@@ -1,0 +1,14 @@
+services:
+  prometheus:
+    command:
+      - --config.file=/etc/prometheus/prometheus.prod.yml
+      - --storage.tsdb.retention.time=15d
+    volumes:
+      - ./observability/prometheus/prometheus.prod.yml:/etc/prometheus/prometheus.prod.yml:ro
+    networks:
+      - default
+      - backend-network
+
+networks:
+  backend-network:
+    external: true

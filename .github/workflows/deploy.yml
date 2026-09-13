@@ -35,6 +35,17 @@ jobs:
           git pull
           docker compose -f compose.prod.yml up -d --build
 
+      - name: Deploy observability
+        env:
+          DEPLOY_PATH: ${{ vars.FINANCEBOT_DEPLOY_PATH }}
+        run: |
+          test -n "$DEPLOY_PATH"
+          cd "$DEPLOY_PATH"
+          docker compose \
+            -f compose.observability.yml \
+            -f compose.observability.prod.yml \
+            up -d
+
       - name: Health check API
         run: |
           for attempt in {1..12}; do
@@ -55,6 +66,34 @@ jobs:
             sleep 5
           done
           echo "Telegram bot health check failed after 12 attempts"
+          exit 1
+
+      - name: Health check observability
+        env:
+          DEPLOY_PATH: ${{ vars.FINANCEBOT_DEPLOY_PATH }}
+        run: |
+          set -e
+          cd "$DEPLOY_PATH"
+          COMPOSE="docker compose -f compose.observability.yml -f compose.observability.prod.yml"
+          for attempt in {1..12}; do
+            running_services=$($COMPOSE ps --status running --services)
+            if echo "$running_services" | grep -qx prometheus \
+              && echo "$running_services" | grep -qx loki \
+              && echo "$running_services" | grep -qx alloy \
+              && echo "$running_services" | grep -qx grafana; then
+              prometheus_address=$($COMPOSE port prometheus 9090 | cut -d: -f1)
+              grafana_address=$($COMPOSE port grafana 3000 | cut -d: -f1)
+              loki_address=$($COMPOSE port loki 3100 | cut -d: -f1)
+              if curl --fail --silent "http://${prometheus_address}:9090/-/ready" \
+                && curl --fail --silent "http://${grafana_address}:3000/api/health" \
+                && curl --fail --silent "http://${loki_address}:3100/ready"; then
+                exit 0
+              fi
+            fi
+            sleep 5
+          done
+          echo "Observability health check failed after 12 attempts"
+          $COMPOSE ps
           exit 1
 
   notify-failure:
