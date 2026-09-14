@@ -1,5 +1,6 @@
 package com.financebot.transaction.repository;
 
+import com.financebot.alert.port.ExpenseHistoryPort;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,7 +13,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-public interface TransactionRepository extends JpaRepository<Transaction, Long>, JpaSpecificationExecutor<Transaction> {
+public interface TransactionRepository extends JpaRepository<Transaction, Long>, JpaSpecificationExecutor<Transaction>, ExpenseHistoryPort {
 
     Optional<Transaction> findByIdAndUserId(Long id, Long userId);
 
@@ -198,6 +199,20 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
          and t.date between :startDate and :endDate
        """)
     Long countInstallmentsByUserBetweenDates(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    @Query("""
+       select t.amount as amount, t.date as date, t.category.name as categoryName
+       from Transaction t
+       where t.user.id = :userId
+         and t.type = com.financebot.transaction.domain.TransactionType.EXPENSE
+         and t.date between :startDate and :endDate
+       order by t.date asc
+       """)
+    List<ExpenseByCategoryAndDateProjection> findExpensesByCategoryAndDateBetween(
             @Param("userId") Long userId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
