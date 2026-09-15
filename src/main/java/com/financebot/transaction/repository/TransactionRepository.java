@@ -1,6 +1,7 @@
 package com.financebot.transaction.repository;
 
 import com.financebot.alert.port.ExpenseHistoryPort;
+import com.financebot.alert.port.InstallmentRiskPort;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,7 +14,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-public interface TransactionRepository extends JpaRepository<Transaction, Long>, JpaSpecificationExecutor<Transaction>, ExpenseHistoryPort {
+public interface TransactionRepository extends JpaRepository<Transaction, Long>, JpaSpecificationExecutor<Transaction>,
+        ExpenseHistoryPort, InstallmentRiskPort {
 
     Optional<Transaction> findByIdAndUserId(Long id, Long userId);
 
