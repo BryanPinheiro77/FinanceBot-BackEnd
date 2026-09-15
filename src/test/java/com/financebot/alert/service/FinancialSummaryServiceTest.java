@@ -51,6 +51,17 @@ class FinancialSummaryServiceTest {
                 .hasMessage("User with id is required");
     }
 
+    @Test
+    void shouldBuildPreviousCompletedMonthSummary() {
+        var summary = service.previousCompletedMonth(user);
+
+        assertThat(summary.periodType()).isEqualTo("MONTHLY");
+        assertThat(summary.startDate()).isEqualTo(LocalDate.of(2026, 8, 1));
+        assertThat(summary.endDate()).isEqualTo(LocalDate.of(2026, 8, 31));
+        assertThat(summary.balance()).isEqualByComparingTo("800");
+        assertThat(summary.explanation()).contains("Resumo mensal");
+    }
+
     private static final class FakeSummaryPort implements SummaryTransactionPort {
         private BigDecimal income;
         private BigDecimal expense;
