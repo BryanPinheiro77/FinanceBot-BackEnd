@@ -8,9 +8,14 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import com.financebot.telegrambot.alert.AlertPreferences;
+import com.financebot.telegrambot.alert.NotificationDeliveryClaim;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
+import java.time.Duration;
 
 @Component
-public class FinanceBotApiClient implements com.financebot.telegrambot.reminder.application.port.out.ReminderGateway {
+public class FinanceBotApiClient implements com.financebot.telegrambot.reminder.application.port.out.ReminderGateway,
+        com.financebot.telegrambot.alert.FinancialNotificationGateway {
 
     private final RestClient restClient;
 
@@ -18,7 +23,11 @@ public class FinanceBotApiClient implements com.financebot.telegrambot.reminder.
             @Value("${financebot.api.base-url}") String baseUrl,
             @Value("${financebot.api.internal-token:}") String internalToken
     ) {
+        JdkClientHttpRequestFactory requests = new JdkClientHttpRequestFactory(
+                java.net.http.HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build());
+        requests.setReadTimeout(Duration.ofSeconds(15));
         this.restClient = RestClient.builder()
+                .requestFactory(requests)
                 .baseUrl(baseUrl)
                 .defaultHeader("X-Internal-Service-Token", internalToken)
                 .requestInterceptor((request, body, execution) -> {
@@ -27,6 +36,30 @@ public class FinanceBotApiClient implements com.financebot.telegrambot.reminder.
                 })
                 .build();
     }
+
+    @Override
+    public NotificationDeliveryClaim claim(String id) {
+        return restClient.post().uri("/telegram/financial-notifications/{id}/claim", id)
+                .retrieve().body(NotificationDeliveryClaim.class);
+    }
+
+    @Override
+    public void complete(String id, String token, String outcome) {
+        restClient.patch().uri("/telegram/financial-notifications/{id}/delivery", id)
+                .body(new DeliveryResult(token, outcome)).retrieve().toBodilessEntity();
+    }
+
+    public AlertPreferences getAlertPreferences(Long telegramId) {
+        return restClient.get().uri("/telegram/financial-notifications/preferences?telegramId={telegramId}", telegramId)
+                .retrieve().body(AlertPreferences.class);
+    }
+
+    public AlertPreferences updateAlertPreferences(Long telegramId, AlertPreferences preferences) {
+        return restClient.patch().uri("/telegram/financial-notifications/preferences?telegramId={telegramId}", telegramId)
+                .body(preferences).retrieve().body(AlertPreferences.class);
+    }
+
+    private record DeliveryResult(String token, String outcome) { }
 
     public void createTransaction(CreateTransactionFromTelegramRequest request) {
         restClient.post()

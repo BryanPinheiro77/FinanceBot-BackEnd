@@ -34,7 +34,42 @@ public class TelegramBasicCommandHandler {
     }
 
     public String handleHelp() {
-        return telegramAccountMessageFormatter.formatHelpMessage();
+        return telegramAccountMessageFormatter.formatHelpMessage()
+                + "\n/alertas — consultar preferências\n/alertas ligar ou desligar — controlar notificações\n"
+                + "/alertas semanal ligar|desligar e /alertas mensal ligar|desligar — controlar resumos";
+    }
+
+    public String handleAlerts(String text, Long telegramId) {
+        String[] parts = text.toLowerCase(java.util.Locale.ROOT).split("\\s+");
+        boolean valid = parts.length == 1
+                || (parts.length == 2 && (parts[1].equals("ligar") || parts[1].equals("desligar")))
+                || (parts.length == 3 && (parts[1].equals("semanal") || parts[1].equals("mensal"))
+                    && (parts[2].equals("ligar") || parts[2].equals("desligar")));
+        if (!valid) {
+            return "Use /alertas, /alertas ligar|desligar ou /alertas semanal|mensal ligar|desligar.";
+        }
+        try {
+            var preferences = financeBotApiClient.getAlertPreferences(telegramId);
+            if (parts.length == 2) {
+                boolean enabled = parts[1].equals("ligar");
+                preferences = new com.financebot.telegrambot.alert.AlertPreferences(enabled, enabled, enabled);
+            } else if (parts.length == 3) {
+                boolean enabled = parts[2].equals("ligar");
+                preferences = new com.financebot.telegrambot.alert.AlertPreferences(preferences.alerts(),
+                        parts[1].equals("semanal") ? enabled : preferences.weeklySummary(),
+                        parts[1].equals("mensal") ? enabled : preferences.monthlySummary());
+            }
+            if (parts.length > 1) {
+                preferences = financeBotApiClient.updateAlertPreferences(telegramId, preferences);
+            }
+            return "Alertas: " + (preferences.alerts() ? "ligados" : "desligados")
+                    + "; resumo semanal: " + (preferences.weeklySummary() ? "ligado" : "desligado")
+                    + "; resumo mensal: " + (preferences.monthlySummary() ? "ligado" : "desligado") + ".";
+        } catch (RestClientResponseException exception) {
+            return telegramBotErrorMapper.mapDefaultBotErrors(exception);
+        } catch (Exception exception) {
+            return "Não foi possível consultar ou atualizar os alertas agora. Tente novamente.";
+        }
     }
 
     public String handleGreeting(String telegramFirstName, String telegramUsername) {

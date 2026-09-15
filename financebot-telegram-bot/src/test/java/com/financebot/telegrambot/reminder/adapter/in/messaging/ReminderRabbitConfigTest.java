@@ -12,6 +12,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ReminderRabbitConfigTest {
 
     @Test
+    void readsFinancialNotificationContractContainingOnlyOpaqueId() {
+        MessageProperties properties = new MessageProperties();
+        properties.setContentType(MessageProperties.CONTENT_TYPE_JSON);
+        properties.setHeader("__TypeId__", "financial-alert-notification-v1");
+        Message message = new Message("{\"notificationId\":\"opaque-id\"}".getBytes(StandardCharsets.UTF_8), properties);
+        Object result = new ReminderRabbitConfig().rabbitMessageConverter().fromMessage(message);
+        assertThat(result).isEqualTo(new com.financebot.telegrambot.alert.FinancialAlertNotificationMessage("opaque-id"));
+    }
+
+    @Test
     void readsVersionedReminderNotificationContract() {
         MessageProperties properties = new MessageProperties();
         properties.setContentType(MessageProperties.CONTENT_TYPE_JSON);
