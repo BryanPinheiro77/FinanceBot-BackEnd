@@ -5,6 +5,9 @@ public final class QueueNames {
     public static final String REMINDER_NOTIFICATION_QUEUE = "financebot.notifications.telegram";
     public static final String REMINDER_NOTIFICATION_ROUTING_KEY = "notification.reminder.telegram";
     public static final String REMINDER_NOTIFICATION_MESSAGE_TYPE = "reminder-notification-v1";
+    public static final String FINANCIAL_ALERT_NOTIFICATION_QUEUE = "financebot.notifications.financial-alert";
+    public static final String FINANCIAL_ALERT_NOTIFICATION_ROUTING_KEY = "notification.financial-alert.telegram";
+    public static final String FINANCIAL_ALERT_NOTIFICATION_MESSAGE_TYPE = "financial-alert-notification-v1";
 
     private QueueNames() {
     }

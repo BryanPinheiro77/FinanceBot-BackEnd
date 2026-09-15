@@ -20,6 +20,7 @@
 - [Servidor remoto](operations/remote-server.md)
 - [Backup e restauração](operations/backup-restore.md)
 - [Observabilidade](observability.md)
+- [Alertas e resumos financeiros](alerts.md)
 
 | Necessidade | Documento |
 |---|---|
