@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
 
 @Service
@@ -28,6 +29,12 @@ public class FinancialSummaryService {
         LocalDate currentWeekStart = LocalDate.now(clock)
                 .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         return buildSummary(user, "WEEKLY", currentWeekStart.minusWeeks(1), currentWeekStart.minusDays(1));
+    }
+
+    public FinancialSummary previousCompletedMonth(User user) {
+        validateUser(user);
+        YearMonth month = YearMonth.now(clock).minusMonths(1);
+        return buildSummary(user, "MONTHLY", month.atDay(1), month.atEndOfMonth());
     }
 
     private FinancialSummary buildSummary(User user, String periodType, LocalDate startDate, LocalDate endDate) {
