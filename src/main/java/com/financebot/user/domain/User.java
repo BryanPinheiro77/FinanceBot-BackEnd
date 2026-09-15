@@ -60,6 +60,15 @@ public class User implements UserDetails {
     @Column(name = "telegram_id", unique = true)
     private Long telegramId;
 
+    @Column(name = "financial_alerts_enabled", nullable = false)
+    private boolean financialAlertsEnabled = true;
+
+    @Column(name = "weekly_summary_enabled", nullable = false)
+    private boolean weeklySummaryEnabled = true;
+
+    @Column(name = "monthly_summary_enabled", nullable = false)
+    private boolean monthlySummaryEnabled = true;
+
     @Column(name = "telegram_link_code", length = 30)
     private String telegramLinkCode;
 

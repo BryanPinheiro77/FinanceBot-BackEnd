@@ -1,5 +1,6 @@
 package com.financebot.telegrambot.reminder.adapter.in.messaging;
 
+import com.financebot.telegrambot.alert.FinancialAlertNotificationMessage;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
@@ -34,11 +35,28 @@ class ReminderRabbitConfig {
     }
 
     @Bean
+    Queue financialAlertNotificationQueue() {
+        return new Queue("financebot.notifications.financial-alert", true);
+    }
+
+    @Bean
+    Binding financialAlertNotificationBinding(
+            Queue financialAlertNotificationQueue,
+            TopicExchange reminderNotificationExchange
+    ) {
+        return BindingBuilder.bind(financialAlertNotificationQueue)
+                .to(reminderNotificationExchange)
+                .with("notification.financial-alert.telegram");
+    }
+
+    @Bean
     MessageConverter rabbitMessageConverter() {
         DefaultJacksonJavaTypeMapper typeMapper = new DefaultJacksonJavaTypeMapper();
         typeMapper.setIdClassMapping(Map.of(
                 ReminderMessagingTopology.REMINDER_NOTIFICATION_MESSAGE_TYPE,
-                ReminderNotificationMessage.class
+                ReminderNotificationMessage.class,
+                "financial-alert-notification-v1",
+                FinancialAlertNotificationMessage.class
         ));
         JacksonJsonMessageConverter converter = new JacksonJsonMessageConverter();
         converter.setJavaTypeMapper(typeMapper);

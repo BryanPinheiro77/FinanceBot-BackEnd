@@ -1,6 +1,7 @@
 package com.financebot.infra.messaging;
 
 import com.financebot.reminder.adapter.out.messaging.ReminderNotificationMessage;
+import com.financebot.alert.application.FinancialAlertNotificationEvent;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
@@ -27,6 +28,21 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    Queue financialAlertNotificationQueue() {
+        return new Queue(QueueNames.FINANCIAL_ALERT_NOTIFICATION_QUEUE, true);
+    }
+
+    @Bean
+    Binding financialAlertNotificationBinding(
+            Queue financialAlertNotificationQueue,
+            TopicExchange notificationExchange
+    ) {
+        return BindingBuilder.bind(financialAlertNotificationQueue)
+                .to(notificationExchange)
+                .with(QueueNames.FINANCIAL_ALERT_NOTIFICATION_ROUTING_KEY);
+    }
+
+    @Bean
     Binding reminderNotificationBinding(Queue reminderNotificationQueue, TopicExchange notificationExchange) {
         return BindingBuilder.bind(reminderNotificationQueue)
                 .to(notificationExchange)
@@ -38,7 +54,9 @@ public class RabbitMQConfig {
         DefaultJacksonJavaTypeMapper typeMapper = new DefaultJacksonJavaTypeMapper();
         typeMapper.setIdClassMapping(Map.of(
                 QueueNames.REMINDER_NOTIFICATION_MESSAGE_TYPE,
-                ReminderNotificationMessage.class
+                ReminderNotificationMessage.class,
+                QueueNames.FINANCIAL_ALERT_NOTIFICATION_MESSAGE_TYPE,
+                FinancialAlertNotificationEvent.class
         ));
         JacksonJsonMessageConverter converter = new JacksonJsonMessageConverter();
         converter.setJavaTypeMapper(typeMapper);

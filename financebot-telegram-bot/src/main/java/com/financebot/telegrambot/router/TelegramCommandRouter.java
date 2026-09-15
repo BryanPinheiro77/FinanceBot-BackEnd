@@ -36,6 +36,10 @@ public class TelegramCommandRouter {
 
         String normalizedMessage = messageText.trim();
 
+        if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/alertas")) {
+            return telegramBasicCommandHandler.handleAlerts(normalizedMessage, telegramId);
+        }
+
         if (telegramCommandMatcher.startsWithCommand(normalizedMessage, "/start", "/iniciar")) {
             return telegramBasicCommandHandler.handleStart(telegramFirstName, telegramUsername);
         }
