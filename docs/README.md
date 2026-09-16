@@ -10,6 +10,7 @@
 - [Rotação de chaves](security/key-rotation.md)
 - [Suporte](../SUPPORT.md)
 - [Roadmap](roadmap.md)
+- [Governança de releases](releases.md)
 - [Desenvolvimento local](development.md)
 - [Arquitetura](architecture.md)
 - [Back-end da API](api.md)

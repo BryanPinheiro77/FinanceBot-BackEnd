@@ -27,6 +27,8 @@ Descreva brevemente o objetivo deste PR.
 - [ ] Não introduzi novas issues críticas de Security ou Reliability
 - [ ] Mantive ou aumentei a cobertura de New Code quando houve código novo
 - [ ] Atualizei o `CHANGELOG.md` quando necessário
+- [ ] Atualizei o roadmap quando o estado de uma frente mudou
+- [ ] Em promoção: reconciliei versão, changelog, roadmap, issues e impactos operacionais conforme `docs/releases.md`
 - [ ] Atualizei o `README.md` ou documentação quando necessário
 - [ ] Verifiquei que não foram adicionados tokens, senhas ou secrets
 
