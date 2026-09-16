@@ -44,7 +44,7 @@ docker network create backend-network
 
 ## Publicação
 
-1. Faça merge na `main` após o CI passar.
+1. Prepare a promoção conforme [Governança de releases](releases.md) e faça merge na `main` após revisão, CI e autorização.
 2. Acompanhe o workflow no GitHub.
 3. No servidor, confirme os containers com `docker compose -f compose.prod.yml ps` em cada módulo
    e `docker compose -f compose.observability.yml -f compose.observability.prod.yml ps`.
@@ -59,6 +59,5 @@ O rollback atual é manual: identifique o commit anterior saudável, volte o che
 ## Melhorias planejadas
 
 - substituir `git pull` no servidor por checkout imutável do SHA do workflow;
-- adicionar health check pós-deploy e notificação de falha;
 - separar ambientes e usar aprovação para produção;
 - avaliar armazenamento seguro de secrets.
