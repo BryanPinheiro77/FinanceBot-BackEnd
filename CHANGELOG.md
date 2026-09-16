@@ -4,6 +4,8 @@
 
 ### Added
 
+- Adicionados alertas financeiros explicáveis, resumos de períodos fechados e preferências individuais pelo comando `/alertas`.
+- Adicionada outbox PostgreSQL para notificações Telegram, com reservas por token, confirmação de entrega e recuperação de publicação interrompida.
 - Adicionado keyring versionado para leitura com chaves anteriores e escrita exclusiva com a chave ativa.
 - Adicionado job opt-in de recriptografia em lotes, condicionado à confirmação explícita de backup.
 - Adicionado procedimento operacional de rotação, rollback e revogação de chaves.
@@ -20,6 +22,10 @@
 
 - A rotação falha de forma segura diante de chave ausente, ciphertext inválido ou alteração concorrente.
 - Chaves antigas só podem ser revogadas depois da recriptografia e da verificação explícita dos dados.
+
+### Tests
+
+- Adicionados testes de idempotência, falhas de publicação, reservas, retry de ACK, entrega incerta, preferências e vínculo Telegram das notificações financeiras.
 
 ## [v1.8.0]
 
