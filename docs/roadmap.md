@@ -1,6 +1,6 @@
 # Roadmap
 
-O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não uma promessa de datas. Estado reconciliado em 16/09/2026 (UTC), após a v1.10.0.
+O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não uma promessa de datas. Estado reconciliado em 16/09/2026 (UTC). Última release publicada: v1.10.0; v1.10.1 em preparação.
 
 ## Entregue
 
@@ -12,14 +12,16 @@ O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não 
 - Rotação segura de chaves, com execução opt-in: [v1.9.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.9.0), issue [#187](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/187).
 - Alertas financeiros, resumos automáticos e preferências Telegram: [v1.10.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.10.0), issue [#119](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/119) e subtarefas #140–#145.
 
-## Em andamento
+## Preparado para publicação
 
-- [Governança de releases (#123)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/123): reconciliação do histórico e definição do fluxo de atualização contínua.
+- [Governança de releases (#123)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/123): implementada em develop no PR #207; publicação prevista na v1.10.1.
 
 ## Próximos temas
 
+- [Melhorias da landing page (#208)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/208): identidade visual, animações, responsividade e acessibilidade, no repositório do frontend.
+
 - [Planos, assinatura e limites (#121)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/121): definir o contrato do produto antes de cobrança; preservar a instalação self-hosted.
-- [Dashboard web inicial (#122)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/122): neste repositório, limitar o trabalho aos contratos e endpoints da API; o frontend não está aqui.
+- [Dashboard web inicial (#122)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/122): neste repositório, limitar o trabalho aos contratos e endpoints da API; o frontend não está aqui. A [#164](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/164) detalha a finalização visual e funcional dos cards e gráficos.
 - [IA como camada de enriquecimento com fallback determinístico (#120)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/120): evolução além da interpretação OpenAI já disponível.
 
 ## Frentes abertas de manutenção
