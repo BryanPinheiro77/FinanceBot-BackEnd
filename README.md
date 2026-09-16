@@ -136,6 +136,7 @@ O projeto está evoluindo para reduzir acoplamento entre domínio, aplicação, 
 - [Privacidade](PRIVACY.md)
 - [Suporte](SUPPORT.md)
 - [Roadmap](docs/roadmap.md)
+- [Governança de releases](docs/releases.md)
 - [Desenvolvimento local](docs/development.md)
 - [Arquitetura](docs/architecture.md)
 - [API](docs/api.md)

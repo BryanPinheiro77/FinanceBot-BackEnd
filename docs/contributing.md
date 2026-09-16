@@ -36,3 +36,7 @@ Pull requests de documentação também devem explicar o que foi atualizado e va
 ## Commits
 
 Use mensagens curtas e descritivas, preferencialmente no formato `tipo: descrição`, por exemplo `fix: valida valor de parcela`. Um commit deve representar uma mudança coerente.
+
+## Roadmap e releases
+
+Atualize o changelog em Unreleased e o roadmap no mesmo PR que altera o estado de uma frente. Antes da promoção, reconcilie ambos com o conjunto entregue. Versionamento, tags e publicação seguem [Governança de releases](releases.md).
