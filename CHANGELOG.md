@@ -1,31 +1,253 @@
 # Changelog
 
+As versões do produto seguem as [regras de release](docs/releases.md). O histórico abaixo foi reconciliado com as releases publicadas; as tags antigas foram preservadas. Datas usam UTC, conforme o GitHub.
+
 ## [Unreleased]
-
-### Added
-
-- Adicionados alertas financeiros explicáveis, resumos de períodos fechados e preferências individuais pelo comando `/alertas`.
-- Adicionada outbox PostgreSQL para notificações Telegram, com reservas por token, confirmação de entrega e recuperação de publicação interrompida.
-- Adicionado keyring versionado para leitura com chaves anteriores e escrita exclusiva com a chave ativa.
-- Adicionado job opt-in de recriptografia em lotes, condicionado à confirmação explícita de backup.
-- Adicionado procedimento operacional de rotação, rollback e revogação de chaves.
-- Adicionada stack local de observabilidade com Prometheus, Grafana, Loki e Grafana Alloy.
-- Adicionados dashboard inicial, métricas dos fluxos de Telegram, OpenAI, recorrências e lembretes, além de correlação entre logs do bot e da API.
-- Adicionados guias públicos de contribuição, conduta, segurança, privacidade, suporte e roadmap.
 
 ### Changed
 
-- Valores cifrados novos passam a registrar o ID da chave no envelope `v2`, mantendo leitura do formato legado `v1`.
-- Padronizados os logs da API e do bot em JSON, sem conteúdo financeiro ou dados pessoais.
+- Reconciliados changelog e roadmap com as releases publicadas e o estado das issues.
+- Formalizados versionamento, promoção, notas de release e atualização contínua da documentação.
+
+## [v1.10.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.10.0) — 2026-09-16
+
+### Added
+
+- alertas explicáveis de gastos fora do padrão por categoria, excesso de parcelas e orçamento apertado;
+- resumos financeiros da última semana e do último mês completos, enviados pelo Telegram;
+- comando `/alertas` para consultar preferências e habilitar ou desabilitar alertas, resumos semanais e mensais separadamente.
+
+### Changed
+
+- geração de notificações e publicação no RabbitMQ separadas, com recuperação de trabalho pendente;
+- recuperação do último período fechado quando uma execução agendada é perdida;
+- processamento de usuários e notificações em lotes, com configurações documentadas no `.env.example`;
+- documentação das regras, contratos internos e procedimentos operacionais em `docs/alerts.md`.
+
+### Fixed
+
+- indisponibilidade do broker mantém notificações pendentes na outbox PostgreSQL;
+- reservas transacionais e confirmação idempotente evitam envio simultâneo por consumidores duplicados;
+- falhas na confirmação da API não provocam novo envio ao Telegram;
+- preferências, vínculo Telegram e expiração são verificados antes da entrega.
 
 ### Security
 
-- A rotação falha de forma segura diante de chave ausente, ciphertext inválido ou alteração concorrente.
-- Chaves antigas só podem ser revogadas depois da recriptografia e da verificação explícita dos dados.
+- RabbitMQ recebe apenas o ID opaco da notificação; destino e conteúdo são obtidos pela API interna autenticada;
+- migration V15 adiciona a outbox e as preferências individuais, habilitadas por padrão;
+- configurações novas têm valores padrão e não exigem novos secrets;
+- o Telegram não oferece idempotência em `sendMessage`: entregas incertas ficam `UNKNOWN`, sem reenvio automático, e exigem acompanhamento operacional;
+- recuperação de resumos limitada ao último período fechado.
 
 ### Tests
 
-- Adicionados testes de idempotência, falhas de publicação, reservas, retry de ACK, entrega incerta, preferências e vínculo Telegram das notificações financeiras.
+- 358 testes da API e 188 do bot aprovados no código final da implementação;
+- happy path e cenários de erro cobrem detectores, períodos, publicação, duplicatas, reservas expiradas, confirmação perdida e preferências;
+- CI do PR de promoção aprovado; verificação final de CI e deploy da main registrada abaixo.
+
+### Referências
+
+- issue #119 e subtarefas #140–#145;
+- PRs #200–#205 — implementação;
+- PR #206 — promoção para `main`;
+- comparação: https://github.com/BryanPinheiro77/FinanceBot-BackEnd/compare/v1.9.1...v1.10.0
+
+CI da `main` aprovado: https://github.com/BryanPinheiro77/FinanceBot-BackEnd/actions/runs/35044646112
+
+Deploy concluído com health checks da API, bot e observabilidade aprovados: https://github.com/BryanPinheiro77/FinanceBot-BackEnd/actions/runs/35044646082
+
+## [v1.9.1](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.9.1) — 2026-09-13
+
+### Added
+
+- adicionada publicação automática da stack de observabilidade no deploy;
+- adicionada configuração de produção para Prometheus coletar API e bot pela `backend-network`;
+- adicionado acesso privado de Grafana, Prometheus e Loki pelo endereço da Tailscale.
+
+### Changed
+
+- Grafana agora exige `GRAFANA_ADMIN_PASSWORD` configurada no ambiente;
+- removido o fallback de senha `admin/admin` para a configuração de produção;
+- workflow passou a validar API, bot, Prometheus, Grafana e Loki após o deploy;
+- adicionados exemplos de ambiente para API, bot e observabilidade.
+
+### Security
+
+- portas da observabilidade ficam vinculadas somente ao IPv4 da Tailscale do servidor;
+- métricas da API e do bot trafegam pela rede Docker privada;
+- nenhum token, senha ou endereço privado foi versionado;
+- a rotação de chaves continua desabilitada por padrão.
+
+### Tests
+
+- CI da `main` aprovado;
+- configuração dos Compose local e de produção validada;
+- deploy de produção concluído com health checks da API, bot e observabilidade;
+- Prometheus confirmou API e bot com `up=1`.
+
+### Referências
+
+- PR #198 — implementação da observabilidade;
+- PR #199 — promoção para `main`.
+
+## [v1.9.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.9.0) — 2026-09-13
+
+### Added
+
+- adicionado chaveiro versionado para criptografia de campos sensíveis;
+- adicionada escrita com a chave ativa e leitura compatível com chaves anteriores;
+- adicionado job opt-in para recriptografar dados em lotes, com transações e atualização otimista;
+- adicionados health check e interrupção segura quando a rotação falha.
+
+### Changed
+
+- novos envelopes usam o formato `v2.<key-id>.<payload>`;
+- valores legados `v1` podem ser migrados sem indisponibilidade da API;
+- configuração permite manter chaves anteriores somente para leitura e revogá-las após a migração;
+- documentação de desenvolvimento, deploy e segurança foi atualizada com o procedimento de rotação.
+
+### Fixed
+
+- a troca direta da chave deixou de tornar os valores existentes ilegíveis durante a transição;
+- alterações concorrentes durante a migração são detectadas e interrompem o lote afetado.
+
+### Tests
+
+- suíte completa da API validada com 315 testes, sem falhas ou erros;
+- suíte completa do bot Telegram validada com 170 testes, sem falhas ou erros;
+- testes de criptografia, chaveiro, seleção SQL, migração em lotes, concorrência, conclusão e falha aprovados;
+- CI dos PRs #195 e #196 aprovado.
+
+### Security
+
+- a rotação permanece desabilitada por padrão;
+- a execução exige `FINANCEBOT_DATA_ENCRYPTION_ROTATION_BACKUP_CONFIRMED=true`;
+- as chaves não são registradas no log nem versionadas;
+- a documentação inclui backup restaurável, rollback, validação e revogação da chave antiga;
+- nenhuma alteração de chave foi ativada automaticamente no deploy desta release.
+
+### Referências
+
+- Issue #187 — rotação de chaves de criptografia;
+- PR #195 — implementação em `develop`;
+- PR #196 — promoção para `main`.
+
+## [v1.8.4](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.8.4) — 2026-09-13
+
+### Added
+
+- adicionada autenticação configurável para Redis nos módulos da API e do bot Telegram;
+- adicionado vhost exclusivo `/financebot` e suporte configurável a TLS para RabbitMQ;
+- adicionada documentação de backup criptografado, restauração isolada e resposta a falhas;
+- adicionado modelo de ameaças STRIDE/DREAD para os armazenamentos de dados.
+
+### Changed
+
+- mensagens de lembrete no RabbitMQ agora expiram após 24 horas por padrão;
+- logs SQL detalhados ficam desativados por padrão em produção;
+- portas administrativas de Redis e RabbitMQ foram limitadas ao localhost no servidor;
+- Redis passou a utilizar autenticação e volume persistente;
+- credenciais de infraestrutura foram isoladas nos arquivos de ambiente protegidos.
+
+### Fixed
+
+- removido o usuário padrão `guest` do RabbitMQ;
+- removidos o usuário legado e as permissões temporárias do vhost raiz após a migração;
+- eliminada a exposição pública das portas `6379`, `5672` e `15672` no servidor.
+
+### Tests
+
+- suíte completa da API validada com `./mvnw clean verify`;
+- suíte completa do bot Telegram validada com `./mvnw clean verify`;
+- expiração das mensagens RabbitMQ coberta por teste unitário;
+- CI e health checks de produção aprovados após o deploy.
+
+### Security
+
+- API e bot utilizam o usuário dedicado `financebot_app` no vhost `/financebot`;
+- Redis rejeita conexões sem autenticação;
+- API e bot permaneceram com health `UP` após a rotação das configurações;
+- procedimentos de backup, verificação de integridade e restauração estão documentados.
+
+### Referências
+
+- Issue #188 — proteger Redis, RabbitMQ, logs e backups;
+- PR #193 — implementação e documentação em `develop`;
+- PR #194 — promoção para `main`.
+
+## [v1.8.3](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.8.3) — 2026-09-13
+
+### Added
+
+- adicionada cobertura automatizada para os principais fluxos financeiros, Telegram, lembretes e segurança;
+- adicionados testes dos mappers principais e dos controllers de integração;
+- adicionados testes para o scheduler de transações recorrentes.
+
+### Changed
+
+- aumentada a cobertura geral do backend para 90,1% de linhas e 73,6% de branches;
+- ampliada a validação dos cenários de análise financeira e projeções recorrentes;
+- ampliada a cobertura dos fluxos de cadastro, login, JWT e autenticação de requisições;
+- ampliada a cobertura de consultas e operações financeiras do bot Telegram.
+
+- nenhum código de produção foi alterado nesta entrega;
+- branches de trabalho continuam sendo removidas automaticamente após o merge;
+- `develop` permanece preservada no fluxo de promoção para `main`.
+
+### Tests
+
+- cobertos caminhos de erro para credenciais inválidas, tokens expirados ou malformados e usuários Telegram inexistentes;
+- cobertos cenários de validação de parcelamentos, categorias duplicadas, lembretes e exceções globais;
+- cobertos cenários de recorrências ativas, inativas, vencidas e reagendamento de lembretes.
+
+- suíte completa validada com `./mvnw clean verify`;
+- testes unitários adicionados para análise financeira, autenticação, Telegram, lembretes, mappers, controllers e scheduler;
+- caminhos de sucesso, erro e limite incluídos na cobertura.
+
+### Referências
+
+- Issue #42 — aumentar cobertura geral de testes para 60%;
+- PR #191 — implementação dos testes em `develop`;
+- PR #192 — promoção para `main`.
+
+## [v1.8.2](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.8.2) — 2026-09-13
+
+### Security
+
+- adiciona criptografia AES-256-GCM para a renda mensal;
+- adiciona configuração externa de chave de criptografia;
+- documenta classificação e proteção de dados sensíveis.
+
+### Added
+
+- adiciona processamento de documentos PDF;
+- adiciona OCR opcional para imagens via endpoint compatível com OpenAI;
+- adiciona transcrição opcional de áudio;
+- encaminha conteúdo extraído ao fluxo existente de interpretação, preview e confirmação;
+- adiciona limites de tamanho e tratamento de erros para mídias.
+
+### Changed
+
+- atualiza Compose e documentação para configuração de IA e transcrição;
+- deploy de produção validado com API e bot saudáveis.
+
+## [v1.8.1](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.8.1) — 2026-09-12
+
+### Added
+
+- Observabilidade inicial da API e do bot Telegram.
+- Métricas Prometheus para requisições, lembretes, recorrências e IA.
+- Correlation IDs e logs estruturados em ECS.
+- Stack local com Prometheus, Grafana, Loki e Grafana Alloy.
+- Documentação operacional atualizada.
+
+### Tests
+
+- API: 225 testes aprovados.
+- Bot: 161 testes aprovados.
+- CI da branch `develop` aprovado.
+
+Inclui as alterações do PR #115, promovidas no PR #116.
 
 ## [v1.8.0]
 
@@ -79,7 +301,7 @@
 - Adicionada cobertura para resposta válida da IA, prioridade sobre o parser determinístico, resposta inválida e fallback em caso de indisponibilidade.
 - Mantida a suíte completa do bot Telegram e da API passando após as refatorações.
 
- ## [v1.5.0]
+## [v1.5.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/1.5.0) — 2026-06-20
 
 ### Added
 
