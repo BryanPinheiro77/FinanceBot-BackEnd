@@ -4,10 +4,13 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ## [Unreleased]
 
+## [v1.10.1] — 2026-09-16
+
 ### Changed
 
 - Reconciliados changelog e roadmap com as releases publicadas e o estado das issues.
 - Formalizados versionamento, promoção, notas de release e atualização contínua da documentação.
+- Registradas melhorias da landing page (#208) e detalhado o escopo de finalização do dashboard (#164), sem implementação de frontend nesta release.
 
 ## [v1.10.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.10.0) — 2026-09-16
 
