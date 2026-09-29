@@ -4,6 +4,15 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ## [Unreleased]
 
+### Changed
+
+- Novos usuários passam a iniciar com resumos semanais e mensais desativados, preservando as preferências existentes.
+- A confirmação do vínculo Telegram explica como consultar e ativar cada resumo com `/alertas`.
+
+### Tests
+
+- Adicionada cobertura para o padrão opt-in dos resumos, preservação das preferências na reconexão e orientação após o vínculo.
+
 ## [v1.10.1] — 2026-09-16
 
 ### Changed
