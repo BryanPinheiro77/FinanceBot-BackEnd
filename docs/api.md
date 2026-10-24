@@ -35,6 +35,12 @@ configuráveis e compartilhadas pelo Redis. Excesso retorna `429` com
 contador retorna `503`. Consulte [Limites de autenticação](security/auth-rate-limiting.md)
 para padrões, proxies confiáveis e limites operacionais.
 
+Parcelamentos novos e existentes exigem valores representáveis em centavos e
+total suficiente para pelo menos R$ 0,01 por parcela do plano completo. A
+pré-checagem usa o mesmo cálculo da criação; entradas inválidas retornam `400`.
+Garantias de rollback, concorrência e limites de reenvio estão em
+[Consistência de transações](transaction-consistency.md).
+
 A API reserva lembretes pendentes em lotes e publica uma solicitação de envio no RabbitMQ.
 Depois de consumir a mensagem, o bot confirma o lembrete em
 `PATCH /telegram/reminders/{id}/sent` usando o token interno. Em caso de falha antes do envio,

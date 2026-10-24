@@ -16,6 +16,13 @@ esse prazo antes de repetir. Se o contador de autenticação estiver indisponív
 a resposta será `503`, também com `Retry-After`. Detalhes em
 [Limites de autenticação](security/auth-rate-limiting.md).
 
+Na criação ou importação de parcelamentos, valores com fração de centavo e totais
+insuficientes para manter cada parcela em pelo menos R$ 0,01 retornam `400`.
+`monthlyAmount` também deve ser representável em centavos. A prévia usa o plano
+da criação; evite reenviar automaticamente uma criação se a resposta foi perdida,
+pois esses endpoints não oferecem chave de idempotência. Consulte
+[Consistência de transações](transaction-consistency.md).
+
 ## Quando o frontend for adicionado
 
 O repositório do frontend deve ter seu próprio `AGENTS.md`, README e documentação de setup. Nesse projeto, devemos registrar apenas contratos compartilhados: URL da API, autenticação, endpoints utilizados, variáveis públicas e compatibilidade de versões.

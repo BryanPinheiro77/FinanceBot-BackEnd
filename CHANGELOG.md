@@ -4,6 +4,11 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ## [Unreleased]
 
+### Fixed
+
+- Parcelamentos novos e existentes preservam o total em centavos sem gerar parcelas zeradas ou negativas por arredondamento; valores fracionários ou insuficientes retornam `400` (#182).
+- Pré-checagem de parcelamento reutiliza o plano da criação para projetar os mesmos valores efetivamente gravados.
+
 ### Security
 
 - Adicionado limite configurável por IP para login e cadastro, com contadores atômicos no Redis, `429` e `Retry-After`, resolução de proxies confiáveis e `503` quando o contador estiver indisponível (#132).
@@ -16,6 +21,7 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ### Tests
 
+- Adicionada integração com PostgreSQL 17 e Flyway para rollback de parcelamentos/edições, concorrência e retomada de recorrências, precisão de centavos e consistência da prévia (#182).
 - Adicionados testes de limite de autenticação com Redis real via Testcontainers, incluindo concorrência, expiração, spoofing de IP, CORS e indisponibilidade do contador.
 - Adicionada suíte de integração para isolamento entre usuários (#134), com JWT real, H2, tentativas de acesso e escrita cruzados, referências alheias e verificação de preservação dos dados.
 - Adicionada cobertura para o padrão opt-in dos resumos, preservação das preferências na reconexão e orientação após o vínculo.

@@ -10,6 +10,7 @@ import com.financebot.transaction.application.dto.request.CreateInstallmentTrans
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
 import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.TransactionType;
+import com.financebot.transaction.domain.installment.InstallmentPlanFactory;
 import com.financebot.transaction.repository.TransactionRepository;
 import com.financebot.transaction.validation.TransactionCategoryValidator;
 import com.financebot.user.domain.User;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 
@@ -58,6 +60,9 @@ class FinancialAnalysisServiceTest {
 
     @InjectMocks
     private FinancialAnalysisService financialAnalysisService;
+
+    @Spy
+    private InstallmentPlanFactory installmentPlanFactory = new InstallmentPlanFactory();
 
     private User user;
 

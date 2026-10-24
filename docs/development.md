@@ -126,8 +126,10 @@ apontar para a mesma instância do RabbitMQ.
 
 ## Testes e qualidade
 
-Mantenha Docker ativo: os testes de limite de autenticação iniciam e removem um
-Redis isolado via Testcontainers. Eles não dependem do Redis configurado no `.env`.
+Mantenha Docker ativo: os testes de limite de autenticação e consistência de
+transações iniciam Redis e PostgreSQL isolados via Testcontainers. Eles não usam
+as instâncias configuradas no `.env`. A suíte PostgreSQL aplica Flyway e valida o
+schema; detalhes em [Consistência de transações](transaction-consistency.md).
 Se usar um contexto como Colima, exponha o socket ao Testcontainers na sessão:
 
 ```bash

@@ -16,6 +16,7 @@
 - [Desenvolvimento local](development.md)
 - [Arquitetura](architecture.md)
 - [Back-end da API](api.md)
+- [Consistência de transações](transaction-consistency.md)
 - [Back-end do bot Telegram](telegram-bot.md)
 - [Frontend e integração](frontend-integration.md)
 - [Contribuição](contributing.md)
