@@ -8,6 +8,11 @@ O diretório do checkout deve ser configurado como variável privada no runner s
 
 ## Pré-requisitos
 
+As imagens Java usam JRE 21 e UID/GID `10001:10001`, com somente o JAR em `/app`.
+O `.env` continua sendo configuração de runtime do Compose. Validar permissões
+de eventuais mounts de escrita e o [contrato dos builds](security/container-builds.md)
+antes da publicação.
+
 - Tailscale conectado;
 - runner self-hosted online;
 - Docker e Docker Compose funcionando para o usuário do runner;

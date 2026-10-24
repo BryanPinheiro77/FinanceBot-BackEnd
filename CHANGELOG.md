@@ -19,6 +19,9 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ### Security
 
+- Builds Docker da API e do bot passam a usar contextos restritos e estágios separados,
+  com apenas o JAR no runtime JRE 21 e usuário sem root; o CI valida contexto,
+  permissões e exclusão de configurações fictícias nos dois módulos.
 - Adicionado limite configurável por IP para login e cadastro, com contadores atômicos no Redis, `429` e `Retry-After`, resolução de proxies confiáveis e `503` quando o contador estiver indisponível (#132).
 - `Retry-After` exposto pelo CORS; timeouts de conexão e comandos Redis da API passam a ter padrão de 2 segundos.
 
