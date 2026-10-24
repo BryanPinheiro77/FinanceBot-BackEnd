@@ -13,6 +13,11 @@ O `.env` continua sendo configuração de runtime do Compose. Validar permissõe
 de eventuais mounts de escrita e o [contrato dos builds](security/container-builds.md)
 antes da publicação.
 
+As portas HTTP 8080/8081 e as portas de management são publicadas somente em
+loopback. O proxy HTTPS do host deve apontar para `127.0.0.1:8080`, e o bot deve
+usar o DNS interno da API na rede Docker. Consumidores por IP:porta do host
+precisam migrar para a origem HTTPS antes da promoção.
+
 - Tailscale conectado;
 - runner self-hosted online;
 - Docker e Docker Compose funcionando para o usuário do runner;

@@ -21,6 +21,7 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ### Security
 
+- Compose de produção publica API e bot somente em loopback, preservando o acesso da API pelo proxy HTTPS e do bot pela rede Docker.
 - API e bot alinhados ao Spring Boot 4.0.9 e cliente RabbitMQ 5.37.0, com consulta das 171 combinações de dependência/versão de runtime ao OSV sem avisos retornados em 24/10/2026. A consulta não cobre imagens do host nem vulnerabilidades desconhecidas.
 - Variantes `.env.*` passam a ser ignoradas pelo Git, preservando os arquivos de exemplo.
 - Builds Docker da API e do bot passam a usar contextos restritos e estágios separados,
