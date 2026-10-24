@@ -1,6 +1,6 @@
 # Roadmap
 
-O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não uma promessa de datas. Estado reconciliado em 16/09/2026 (UTC). Última release publicada: v1.10.0; v1.10.1 em preparação.
+O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não uma promessa de datas. Estado reconciliado em 24/10/2026 (UTC). Última release publicada: v1.10.1; candidata v1.11.0 em preparação.
 
 ## Entregue
 
@@ -12,9 +12,14 @@ O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não 
 - Rotação segura de chaves, com execução opt-in: [v1.9.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.9.0), issue [#187](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/187).
 - Alertas financeiros, resumos automáticos e preferências Telegram: [v1.10.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.10.0), issue [#119](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/119) e subtarefas #140–#145.
 
+- Governança de releases e documentação reconciliada: [v1.10.1](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.10.1), issue [#123](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/123).
+
 ## Preparado para publicação
 
-- [Governança de releases (#123)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/123): implementada em develop no PR #207; publicação prevista na v1.10.1.
+Candidata **v1.11.0**: resumos opt-in, isolamento, limites de autenticação,
+consistência de centavos, idempotência REST/Telegram, imagens Java sem root e
+atualizações de segurança das dependências. [Notas e preparação](releases/v1.11.0.md).
+A publicação depende da promoção revisada e da autorização operacional.
 
 ## Próximos temas
 

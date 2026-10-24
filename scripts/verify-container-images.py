@@ -74,6 +74,23 @@ def verify_context(context, work):
     print("Contexto validado: configuração fictícia excluída e fontes/migrations preservadas.", flush=True)
 
 
+def verify_compose_bindings(source, work):
+    compose = work / "compose.prod.yml"
+    shutil.copy2(source / "compose.prod.yml", compose)
+    env = work / ".env"
+    env.write_text("# Configuração fictícia; sem interpolação ou resolução de env_file.\n")
+    result = run("docker", "compose", "--project-directory", str(work), "--env-file", str(env),
+                 "--file", str(compose), "config", "--no-interpolate", "--no-env-resolution",
+                 "--format", "json", capture_output=True, text=True)
+    services = json.loads(result.stdout)["services"]
+    require(len(services) == 1, "Compose do módulo deve declarar somente seu serviço")
+    ports = next(iter(services.values())).get("ports", [])
+    require(len(ports) == 2, "Compose deve preservar as portas HTTP e management")
+    require(all(port.get("host_ip") == "127.0.0.1" for port in ports),
+            "Portas do serviço devem ser publicadas somente em loopback")
+    print("Compose validado: portas HTTP e management publicadas somente em loopback.", flush=True)
+
+
 def verify_runtime(image, work):
     metadata = json.loads(run("docker", "image", "inspect", image,
                               capture_output=True, text=True).stdout)[0]["Config"]
@@ -120,6 +137,7 @@ def main():
         context = work / "context"
         prepare_context(source, context)
         verify_context(context, work)
+        verify_compose_bindings(source, work)
         try:
             run("docker", "build", "--progress=plain", "--target", "runtime", "--tag", image, str(context))
             verify_runtime(image, work)

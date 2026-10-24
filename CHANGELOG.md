@@ -4,6 +4,8 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ## [Unreleased]
 
+## [v1.11.0] — 2026-10-24
+
 ### Added
 
 - Confirmações idempotentes do Telegram nos três endpoints internos de criação,
@@ -19,6 +21,9 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ### Security
 
+- Compose de produção publica API e bot somente em loopback, preservando o acesso da API pelo proxy HTTPS e do bot pela rede Docker.
+- API e bot alinhados ao Spring Boot 4.0.9 e cliente RabbitMQ 5.37.0, com consulta das 171 combinações de dependência/versão de runtime ao OSV sem avisos retornados em 24/10/2026. A consulta não cobre imagens do host nem vulnerabilidades desconhecidas.
+- Variantes `.env.*` passam a ser ignoradas pelo Git, preservando os arquivos de exemplo.
 - Builds Docker da API e do bot passam a usar contextos restritos e estágios separados,
   com apenas o JAR no runtime JRE 21 e usuário sem root; o CI valida contexto,
   permissões e exclusão de configurações fictícias nos dois módulos.
@@ -32,6 +37,9 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ### Tests
 
+- Validação da candidata: 550 testes da API e 200 do bot aprovados, além das duas verificações Docker de contexto, JAR e execução sem root.
+- Novo teste com RabbitMQ real cobre publisher confirms, reentrega e acknowledgement com o cliente atualizado.
+- Testes Redis/PostgreSQL da confirmação Telegram cobrem retry, retomada, concorrência, congelamento e mudança do vínculo durante a reserva (#217).
 - Adicionados testes PostgreSQL de idempotência, incluindo concorrência de chaves novas/expiradas, rollback, isolamento, cifragem, retenção e CORS (#215).
 - Adicionada integração com PostgreSQL 17 e Flyway para rollback de parcelamentos/edições, concorrência e retomada de recorrências, precisão de centavos e consistência da prévia (#182).
 - Adicionados testes de limite de autenticação com Redis real via Testcontainers, incluindo concorrência, expiração, spoofing de IP, CORS e indisponibilidade do contador.
