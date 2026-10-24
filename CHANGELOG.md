@@ -4,6 +4,11 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ## [Unreleased]
 
+### Security
+
+- Adicionado limite configurável por IP para login e cadastro, com contadores atômicos no Redis, `429` e `Retry-After`, resolução de proxies confiáveis e `503` quando o contador estiver indisponível (#132).
+- `Retry-After` exposto pelo CORS; timeouts de conexão e comandos Redis da API passam a ter padrão de 2 segundos.
+
 ### Changed
 
 - Novos usuários passam a iniciar com resumos semanais e mensais desativados, preservando as preferências existentes.
@@ -11,6 +16,7 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ### Tests
 
+- Adicionados testes de limite de autenticação com Redis real via Testcontainers, incluindo concorrência, expiração, spoofing de IP, CORS e indisponibilidade do contador.
 - Adicionada suíte de integração para isolamento entre usuários (#134), com JWT real, H2, tentativas de acesso e escrita cruzados, referências alheias e verificação de preservação dos dados.
 - Adicionada cobertura para o padrão opt-in dos resumos, preservação das preferências na reconexão e orientação após o vínculo.
 - Testes de criptografia e rotação restauram o chaveiro anterior, evitando falhas nos testes JPA por dependência da ordem de execução.

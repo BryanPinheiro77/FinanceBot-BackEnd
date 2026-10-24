@@ -29,6 +29,12 @@ Por padrão, a API escuta na porta `8080`. O health check público é `GET /api/
 
 Endpoints protegidos usam autenticação JWT. Consulte o Swagger e os controllers para o contrato vigente; esta página é um mapa, não substitui a especificação OpenAPI.
 
+`POST /auth/login` e `POST /auth/register` têm cotas independentes por IP,
+configuráveis e compartilhadas pelo Redis. Excesso retorna `429` com
+`application/problem+json` e `Retry-After` em segundos. Indisponibilidade do
+contador retorna `503`. Consulte [Limites de autenticação](security/auth-rate-limiting.md)
+para padrões, proxies confiáveis e limites operacionais.
+
 A API reserva lembretes pendentes em lotes e publica uma solicitação de envio no RabbitMQ.
 Depois de consumir a mensagem, o bot confirma o lembrete em
 `PATCH /telegram/reminders/{id}/sent` usando o token interno. Em caso de falha antes do envio,
