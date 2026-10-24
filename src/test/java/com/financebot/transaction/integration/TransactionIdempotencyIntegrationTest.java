@@ -60,6 +60,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = {
         "spring.datasource.driver-class-name=org.postgresql.Driver",
         "spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect",
+        "telegram.internal-token=test-internal-token",
         "spring.jpa.hibernate.ddl-auto=validate", "spring.flyway.enabled=true",
         "spring.datasource.hikari.maximum-pool-size=8",
         "spring.datasource.hikari.connection-init-sql=SET lock_timeout = '15s'; SET statement_timeout = '20s'",
@@ -96,6 +97,7 @@ class TransactionIdempotencyIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired TransactionIdempotencyService idempotency;
+    @Autowired com.financebot.transaction.idempotency.TransactionIdempotencyProperties idempotencyProperties;
     private Actor first;
     private Actor second;
 
@@ -323,6 +325,127 @@ class TransactionIdempotencyIntegrationTest {
                         .header("Access-Control-Request-Headers", "Idempotency-Key, Content-Type"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Access-Control-Allow-Headers", containsString("Idempotency-Key")));
+    }
+
+    @ParameterizedTest
+    @EnumSource(Endpoint.class)
+    void telegramReplaysAndConflictsUseCommittedUserScopedMarkers(Endpoint endpoint) throws Exception {
+        linkTelegram(first, 123L);
+        String body = telegramBody(endpoint, 123L);
+        telegramCreate(endpoint, KEY, body, 200);
+        telegramCreate(endpoint, KEY, body, 200);
+        telegramCreate(endpoint, KEY, body.replace("Compra privada", "Outra compra"), 409);
+        assertThat(transactionCount()).isEqualTo(endpoint.rows);
+        assertThat(markerCount()).isEqualTo(1);
+        // Replay independe da resolução atual de contas/categorias.
+        jdbc.update("UPDATE accounts SET name = 'Renomeada' WHERE id = ?", first.accountId);
+        telegramCreate(endpoint, KEY, body, 200);
+        assertThat(transactionCount()).isEqualTo(endpoint.rows);
+    }
+
+    @ParameterizedTest
+    @EnumSource(Endpoint.class)
+    void telegramRequiresInternalAuthenticationAndKeepsLegacyContract(Endpoint endpoint) throws Exception {
+        linkTelegram(first, 123L);
+        String body = telegramBody(endpoint, 123L);
+        mvc.perform(post("/telegram" + endpoint.path).contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", KEY).content(body))
+                .andExpect(status().isUnauthorized());
+        assertThat(markerCount()).isZero();
+        telegramCreate(endpoint, null, body, 200);
+        telegramCreate(endpoint, null, body, 200);
+        assertThat(transactionCount()).isEqualTo(endpoint.rows * 2);
+        assertThat(markerCount()).isZero();
+    }
+
+    @Test
+    void telegramKeysAreIsolatedFromRestAndOtherLinkedUsers() throws Exception {
+        linkTelegram(first, 123L);
+        linkTelegram(second, 456L);
+        telegramCreate(Endpoint.TRANSACTION, KEY, telegramBody(Endpoint.TRANSACTION, 123L), 200);
+        telegramCreate(Endpoint.TRANSACTION, KEY, telegramBody(Endpoint.TRANSACTION, 456L), 200);
+        create(Endpoint.TRANSACTION, first, KEY, body(Endpoint.TRANSACTION, first), 201);
+        assertThat(transactionCount()).isEqualTo(3);
+        assertThat(markerCount()).isEqualTo(3);
+    }
+
+    @ParameterizedTest
+    @EnumSource(Endpoint.class)
+    void concurrentTelegramConfirmationsCommitOneOperation(Endpoint endpoint) throws Exception {
+        linkTelegram(first, 123L);
+        try (var holder = dataSource.getConnection(); var executor = Executors.newFixedThreadPool(2)) {
+            holder.setAutoCommit(false);
+            try (var lock = holder.prepareStatement("SELECT id FROM users WHERE id = ? FOR UPDATE")) {
+                lock.setLong(1, first.userId);
+                lock.executeQuery().close();
+            }
+            try {
+                var a = executor.submit(() -> telegramCreate(endpoint, KEY, telegramBody(endpoint, 123L), 200));
+                var b = executor.submit(() -> telegramCreate(endpoint, KEY, telegramBody(endpoint, 123L), 200));
+                await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> assertThat(jdbc.queryForObject("""
+                        SELECT count(*) FROM pg_stat_activity WHERE datname = current_database()
+                          AND wait_event_type = 'Lock'
+                          AND query ILIKE 'INSERT INTO transaction_idempotency_requests%'
+                        """, Integer.class)).isEqualTo(2));
+                holder.commit();
+                assertThat(a.get(20, TimeUnit.SECONDS)).isEmpty();
+                assertThat(b.get(20, TimeUnit.SECONDS)).isEmpty();
+            } finally { holder.rollback(); }
+        }
+        assertThat(transactionCount()).isEqualTo(endpoint.rows);
+        assertThat(markerCount()).isEqualTo(1);
+    }
+
+    @Test
+    void telegramFailureRollsBackMarkerAndAllowsRetry() throws Exception {
+        linkTelegram(first, 123L);
+        jdbc.execute("ALTER TABLE transactions ADD CONSTRAINT test_idempotency_failure CHECK (amount < 0)");
+        assertCheckFailure(() -> telegramCreate(Endpoint.TRANSACTION, KEY,
+                telegramBody(Endpoint.TRANSACTION, 123L), 200));
+        assertThat(transactionCount()).isZero();
+        assertThat(markerCount()).isZero();
+        removeFailureConstraints();
+        telegramCreate(Endpoint.TRANSACTION, KEY, telegramBody(Endpoint.TRANSACTION, 123L), 200);
+        assertThat(transactionCount()).isEqualTo(1);
+    }
+
+    @Test
+    void telegramRetentionOutlastsPendingWindowEvenWhenRestTtlIsMinimal() throws Exception {
+        linkTelegram(first, 123L);
+        long previous = idempotencyProperties.getTtlSeconds();
+        try {
+            idempotencyProperties.setTtlSeconds(60);
+            telegramCreate(Endpoint.TRANSACTION, KEY, telegramBody(Endpoint.TRANSACTION, 123L), 200);
+            assertThat(jdbc.queryForObject("SELECT EXTRACT(EPOCH FROM (expires_at-created_at)) "
+                    + "FROM transaction_idempotency_requests", BigDecimal.class)).isEqualByComparingTo("3600");
+        } finally { idempotencyProperties.setTtlSeconds(previous); }
+    }
+
+    @Test
+    void telegramRejectsInvalidKeysAndUnknownLinksWithoutCreatingMarkers() throws Exception {
+        linkTelegram(first, 123L);
+        telegramCreate(Endpoint.TRANSACTION, "bad", telegramBody(Endpoint.TRANSACTION, 123L), 400);
+        telegramCreate(Endpoint.TRANSACTION, KEY, telegramBody(Endpoint.TRANSACTION, 999L), 404);
+        assertThat(markerCount()).isZero();
+        assertThat(transactionCount()).isZero();
+    }
+
+    private void linkTelegram(Actor actor, long telegramId) {
+        jdbc.update("UPDATE users SET telegram_id = ? WHERE id = ?", telegramId, actor.userId);
+    }
+
+    private String telegramBody(Endpoint endpoint, long telegramId) {
+        var tree = (tools.jackson.databind.node.ObjectNode) json.readTree(body(endpoint, first));
+        tree.remove("accountId"); tree.remove("categoryId"); tree.remove("sourceType");
+        tree.put("telegramId", telegramId); tree.put("accountName", "Conta"); tree.put("categoryName", "Categoria");
+        return json.writeValueAsString(tree);
+    }
+
+    private String telegramCreate(Endpoint endpoint, String key, String body, int expected) throws Exception {
+        var request = post("/telegram" + endpoint.path).contentType(MediaType.APPLICATION_JSON)
+                .header("X-Internal-Service-Token", "test-internal-token").content(body);
+        if (key != null) request.header("Idempotency-Key", key);
+        return mvc.perform(request).andExpect(status().is(expected)).andReturn().getResponse().getContentAsString();
     }
 
     private String create(Endpoint endpoint, Actor actor, String key, String body, int status) throws Exception {

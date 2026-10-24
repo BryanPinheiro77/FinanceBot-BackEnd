@@ -1,5 +1,7 @@
 package com.financebot.telegram.controller;
 
+import com.financebot.transaction.idempotency.TransactionIdempotencyService.Operation;
+import com.financebot.telegram.service.TelegramTransactionIdempotencyService;
 import com.financebot.analysis.dto.response.FinancialCommitmentResponse;
 import com.financebot.analysis.dto.response.InstallmentPurchaseCapacityResponse;
 import com.financebot.telegram.dto.request.*;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class TelegramIntegrationController {
 
     private final TelegramIntegrationService telegramIntegrationService;
+    private final TelegramTransactionIdempotencyService idempotency;
 
     @GetMapping("/users/me")
     public TelegramUserProfileResponse getMe(@RequestParam Long telegramId) {
@@ -52,22 +55,31 @@ public class TelegramIntegrationController {
     }
 
     @PostMapping("/transactions")
-    public void createTransaction(@RequestBody CreateTransactionFromTelegramRequest request) {
-        telegramIntegrationService.createTransactionFromTelegram(request);
+    public void createTransaction(@RequestBody CreateTransactionFromTelegramRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String key) {
+        idempotency.execute(request.telegramId(),
+                Operation.TELEGRAM_TRANSACTION,
+                key, request, () -> telegramIntegrationService.createTransactionFromTelegram(request));
     }
 
     @PostMapping("/transactions/installments")
     public void createInstallmentTransaction(
-            @RequestBody CreateInstallmentTransactionFromTelegramRequest request
+            @RequestBody CreateInstallmentTransactionFromTelegramRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String key
     ) {
-        telegramIntegrationService.createInstallmentTransactionFromTelegram(request);
+        idempotency.execute(request.telegramId(),
+                Operation.TELEGRAM_INSTALLMENT,
+                key, request, () -> telegramIntegrationService.createInstallmentTransactionFromTelegram(request));
     }
 
     @PostMapping("/transactions/installments/existing")
     public void createExistingInstallmentTransaction(
-            @RequestBody CreateExistingInstallmentTransactionFromTelegramRequest request
+            @RequestBody CreateExistingInstallmentTransactionFromTelegramRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String key
     ) {
-        telegramIntegrationService.createExistingInstallmentTransactionFromTelegram(request);
+        idempotency.execute(request.telegramId(),
+                Operation.TELEGRAM_EXISTING_INSTALLMENT,
+                key, request, () -> telegramIntegrationService.createExistingInstallmentTransactionFromTelegram(request));
     }
 
     @PostMapping("/transactions/summary")

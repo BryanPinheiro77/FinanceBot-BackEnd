@@ -38,9 +38,14 @@ public class TransactionIdempotencyService {
         String requestHash = fingerprint.requestHash(request);
         byte[] context = (userId + ":" + operation + ":" + keyHash + ":" + requestHash)
                 .getBytes(StandardCharsets.UTF_8);
+        long ttlSeconds = switch (operation) {
+            case TELEGRAM_TRANSACTION, TELEGRAM_INSTALLMENT, TELEGRAM_EXISTING_INSTALLMENT ->
+                    Math.max(3600, properties.getTtlSeconds());
+            default -> properties.getTtlSeconds();
+        };
         try {
             return transaction.execute(status -> {
-                if (!store.claim(userId, operation.name(), keyHash, requestHash, properties.getTtlSeconds())) {
+                if (!store.claim(userId, operation.name(), keyHash, requestHash, ttlSeconds)) {
                     var stored = store.find(userId, operation.name(), keyHash);
                     if (!requestHash.equals(stored.requestHash())) throw new IdempotencyConflictException();
                     if (stored.encryptedResponse() == null) {
@@ -62,5 +67,6 @@ public class TransactionIdempotencyService {
         return store.deleteExpired(properties.getCleanupBatchSize());
     }
 
-    public enum Operation { CREATE_TRANSACTION, CREATE_INSTALLMENT, CREATE_EXISTING_INSTALLMENT }
+    public enum Operation { CREATE_TRANSACTION, CREATE_INSTALLMENT, CREATE_EXISTING_INSTALLMENT,
+        TELEGRAM_TRANSACTION, TELEGRAM_INSTALLMENT, TELEGRAM_EXISTING_INSTALLMENT }
 }

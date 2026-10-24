@@ -22,7 +22,7 @@ Este documento registra a classificação inicial dos dados do FinanceBot e a es
 | nome, e-mail e `telegramId` | PostgreSQL, autenticação/vínculo | Confidencial | Não criptografar nesta etapa por causa de unicidade e buscas |
 | código de vínculo Telegram | PostgreSQL | Restrito | Avaliar hash com expiração e uso único |
 | JWT, OpenAI, Telegram e RabbitMQ credentials | ambiente/secrets | Restrito | Não persistir no banco; usar secret manager ou variáveis protegidas |
-| contexto de conversa | Redis | Restrito | TTL mínimo, acesso autenticado e revisão específica de retenção |
+| contexto de conversa e confirmações pendentes | Redis | Restrito | TTL mínimo, acesso autenticado e revisão específica de retenção |
 | notificações financeiras | PostgreSQL, Telegram | Confidencial | Outbox com expiração, retenção limitada, preferências por usuário e payload RabbitMQ contendo apenas ID opaco |
 | mensagens de lembrete | RabbitMQ | Restrito | TLS, autenticação, filas privadas e payload mínimo |
 | logs e backups | infraestrutura | Restrito | Redação de dados, acesso mínimo, retenção e criptografia operacional |

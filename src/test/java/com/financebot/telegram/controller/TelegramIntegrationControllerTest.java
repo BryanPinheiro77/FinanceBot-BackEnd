@@ -20,10 +20,13 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class TelegramIntegrationControllerTest {
     @Mock TelegramIntegrationService service;
+    @Mock com.financebot.telegram.service.TelegramTransactionIdempotencyService idempotency;
     @InjectMocks TelegramIntegrationController controller;
 
     @Test
     void shouldDelegateAllTelegramEndpoints() {
+        doAnswer(invocation -> { ((Runnable) invocation.getArgument(4)).run(); return null; })
+                .when(idempotency).execute(any(), any(), any(), any(), any());
         TelegramUserProfileResponse profile = mock(TelegramUserProfileResponse.class);
         when(service.getMe(1L)).thenReturn(profile);
         when(service.updateMonthlyBaseIncome(eq(1L), any())).thenReturn(profile);
@@ -43,9 +46,9 @@ class TelegramIntegrationControllerTest {
         controller.getFinancialAnalysis(1L);
         controller.getCurrentMonthExpenseSummary(1L);
         controller.getCurrentMonthIncomeSummary(1L);
-        controller.createTransaction(mock(CreateTransactionFromTelegramRequest.class));
-        controller.createInstallmentTransaction(mock(CreateInstallmentTransactionFromTelegramRequest.class));
-        controller.createExistingInstallmentTransaction(mock(CreateExistingInstallmentTransactionFromTelegramRequest.class));
+        controller.createTransaction(mock(CreateTransactionFromTelegramRequest.class), null);
+        controller.createInstallmentTransaction(mock(CreateInstallmentTransactionFromTelegramRequest.class), null);
+        controller.createExistingInstallmentTransaction(mock(CreateExistingInstallmentTransactionFromTelegramRequest.class), null);
         controller.getTransactionSummary(mock(TelegramTransactionSummaryRequest.class));
         controller.getDefaultAccount(1L);
         controller.getInstallmentCount(mock(TelegramInstallmentCountRequest.class));

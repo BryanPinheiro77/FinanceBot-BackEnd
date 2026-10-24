@@ -17,7 +17,7 @@
 - [Arquitetura](architecture.md)
 - [Back-end da API](api.md)
 - [Consistência de transações](transaction-consistency.md)
-- [Idempotência de criação REST](transaction-idempotency.md)
+- [Idempotência de criação REST e Telegram](transaction-idempotency.md)
 - [Back-end do bot Telegram](telegram-bot.md)
 - [Frontend e integração](frontend-integration.md)
 - [Contribuição](contributing.md)
