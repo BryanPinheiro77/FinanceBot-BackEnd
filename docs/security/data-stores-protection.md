@@ -4,10 +4,14 @@ Este documento registra o estado atual e o plano de proteção dos dados que fic
 
 ## Estado atual
 
+Os requisitos abaixo são controles do projeto; a implantação e a verificação
+periódica dependem do operador. Não interpretar documentação como comprovação de
+automação ou proteção integral de uma instalação.
+
 | Superfície | Uso atual | Risco identificado |
 | --- | --- | --- |
-| Redis | O bot guarda contexto de conversa e consultas com TTL configurável. | O compose local publica a porta sem senha; autenticação e TLS não estão documentados para produção. |
-| RabbitMQ | A API publica lembretes e o bot consome a fila privada de notificações. | Usuário, senha, vhost, TLS e permissões mínimas não estão documentados como requisitos operacionais. |
+| Redis | Contextos e consultas com TTL configurável; confirmações com TTL de 15 minutos. | Exigir autenticação, rede privada, retenção e TLS quando necessário; verificar a instalação. |
+| RabbitMQ | Publicação/consumo de lembretes e notificações. | Validar usuário/vhost dedicados, permissões, TTL e proteção do transporte conforme os requisitos abaixo. |
 | Logs | API e bot usam logs estruturados em formato ECS. | Não há política automatizada de redação e retenção para tokens, conteúdo financeiro e identificadores. |
 | Backups | O deploy depende de backup verificável do PostgreSQL antes de operações de risco. | Retenção, criptografia, teste de restauração e proteção contra acesso indevido ainda precisam ser definidos. |
 

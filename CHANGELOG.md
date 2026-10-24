@@ -4,6 +4,15 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ## [Unreleased]
 
+### Added
+
+- Runbook de rotina e playbook de incidentes, com triagem, critérios de recuperação e proteção de evidências.
+
+### Fixed
+
+- Guia de backup exige `pipefail`, arquivo parcial e parâmetros explícitos de derivação na criação/restauração; diferencia cópias antigas e recuperação pontual de rotina automatizada.
+- Corrigidas orientações operacionais de rollback, acesso à observabilidade e estado de proteção de Redis/RabbitMQ.
+
 ## [v1.11.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.11.0) — 2026-10-24
 
 ### Added

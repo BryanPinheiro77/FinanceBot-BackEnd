@@ -34,6 +34,8 @@ O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não 
   [manutenção e privilégios (#221)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/221):
   acompanhamento da instalação self-hosted; dados operacionais e achados sensíveis ficam privados.
   Política dos artefatos Java em [Builds e imagens](security/container-builds.md).
+  Procedimentos em [Runbook](operations/runbook.md) e [Playbook](operations/incident-playbook.md);
+  guias manuais não encerram a automação/verificação contínua dessas frentes.
 - [Evolução gradual da arquitetura (#37)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/37).
 - [Governança e contribuição open source (#117)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/117): guias públicos já existem; conferir os critérios e subtarefas restantes antes de fechar.
 - [Proteção de campos textuais pesquisáveis (#186)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/186): extensão da proteção inicial, com análise de impacto nas buscas.

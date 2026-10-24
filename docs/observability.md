@@ -72,7 +72,7 @@ GRAFANA_ADMIN_USER=seu-usuario GRAFANA_ADMIN_PASSWORD=sua-senha \
 - Bot: `http://localhost:8083/actuator/prometheus`
 
 Actuator usa portas de gerenciamento separadas. Nos containers de produção, `8082` e `8083`
-são acessíveis somente pela rede privada do Compose de produção; métricas e detalhes operacionais
+são acessíveis pelo host em loopback e pela rede Docker privada; métricas e detalhes operacionais
 não ficam expostos pela interface pública da API ou do bot.
 
 Além das métricas automáticas de HTTP, JVM, banco e RabbitMQ, o projeto registra:
@@ -96,6 +96,11 @@ Para mensagens de lembrete, o consumidor usa `reminder-<id>` como identificador 
 O ID técnico ajuda a seguir publicação, consumo e confirmação sem registrar o texto do lembrete.
 
 ## Diagnóstico rápido
+
+Os comandos com `localhost` abaixo se aplicam ao bind local. Em produção, use o
+endereço privado configurado em `OBSERVABILITY_BIND_ADDRESS`, com acesso pela
+Tailscale. A rotina e os critérios de recuperação ficam no
+[runbook](operations/runbook.md) e no [playbook](operations/incident-playbook.md).
 
 ```bash
 docker compose -f compose.observability.yml ps

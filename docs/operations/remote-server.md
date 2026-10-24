@@ -13,6 +13,10 @@ Host financebot-server
   IdentityFile ~/.ssh/<chave-privada>
 ```
 
+Para rotina e resposta a falhas, use o [runbook](runbook.md) e o
+[playbook de incidentes](incident-playbook.md). Este inventário é genérico e não
+comprova a implementação de todos os controles em uma instalação.
+
 ## Diagnóstico inicial
 
 ```bash
