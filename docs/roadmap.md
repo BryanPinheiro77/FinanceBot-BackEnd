@@ -26,6 +26,7 @@ O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não 
 
 ## Frentes abertas de manutenção
 
+- [Idempotência REST (#215)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/215): reservas transacionais, resposta original cifrada, conflitos e retenção; publicação pendente. Contrato em [Idempotência de criação REST](transaction-idempotency.md).
 - [Consistência de transações (#182)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/182): testes PostgreSQL de rollback, concorrência e retomada, com correção de centavos nos parcelamentos; escopo e limites em [Consistência de transações](transaction-consistency.md). Publicação pendente.
 - [Limites de autenticação (#132)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/132): integrado em develop pelo PR #213; publicação pendente. Contrato em [Limites de autenticação](security/auth-rate-limiting.md).
 - [Isolamento entre usuários (#134)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/134): integrado em develop pelo PR #212; publicação pendente. Escopo e execução em [Isolamento entre usuários](security/user-isolation.md).

@@ -44,6 +44,11 @@ docker network create backend-network
 
 ## Publicação
 
+Idempotência de criação REST adiciona a migration V17 e snapshots cifrados com o
+keyring existente. Nenhum secret novo é necessário. Confirme a política de retenção,
+limpeza e preservação das chaves antigas em [Idempotência de criação REST](transaction-idempotency.md)
+antes de promover essa mudança; variáveis opcionais seguem pelo `env_file` existente.
+
 Login e cadastro passam a depender do contador Redis: falha de acesso retorna `503`.
 Antes de promover a mudança de limites de autenticação, confirme disponibilidade,
 permissão para executar scripts Redis e a topologia do proxy. Os valores padrão não
