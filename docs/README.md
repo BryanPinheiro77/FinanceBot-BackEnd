@@ -10,6 +10,7 @@
 - [Isolamento entre usuários](security/user-isolation.md)
 - [Limites de autenticação](security/auth-rate-limiting.md)
 - [Rotação de chaves](security/key-rotation.md)
+- [Builds e imagens dos serviços Java](security/container-builds.md)
 - [Suporte](../SUPPORT.md)
 - [Roadmap](roadmap.md)
 - [Governança de releases](releases.md)
