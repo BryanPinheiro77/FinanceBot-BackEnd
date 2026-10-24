@@ -132,7 +132,7 @@ dados confirmados depende das garantias de durabilidade e backup da instalação
 
 ## Confirmações do Telegram
 
-Validação da #217: `./mvnw clean verify` aprovado com 548 testes da API e
+Validação da #217: `./mvnw clean verify` aprovado com 549 testes da API e
 200 testes do bot, sem falhas, erros ou skips (PostgreSQL e Redis via containers).
 
 Os três endpoints internos `POST /telegram/transactions`,
@@ -145,7 +145,10 @@ conteúdo diferente retorna `409` e indisponibilidade retorna `503`.
 O usuário vinculado ao `telegramId` define o escopo da chave. As operações
 Telegram têm namespaces separados dos endpoints REST. Resolução de conta e
 categoria, criação e marcador participam da mesma transação; um replay válido
-não resolve novamente contas/categorias e não cria lançamentos. O marcador
+não resolve novamente contas/categorias e não cria lançamentos. Antes da criação,
+o vínculo é relido com lock na mesma transação. Se tiver mudado para outro usuário
+enquanto a reserva aguardava, a tentativa retorna `404` e reverte o marcador,
+sem criar uma transação para o novo usuário usando o escopo antigo. O marcador
 armazena uma confirmação booleana criptografada, sem payload financeiro.
 
 O bot gera um UUID por pendência e persiste junto com o conteúdo e a expiração.

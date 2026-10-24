@@ -20,6 +20,9 @@ public class TelegramTransactionIdempotencyService {
         }
         var user = users.findByTelegramId(telegramId).orElseThrow(TelegramUserNotFoundException::new);
         idempotency.execute(user.getId(), operation, key, request, Boolean.class, () -> {
+            // O vínculo pode ter mudado enquanto a reserva aguardava outra transação.
+            var linkedUser = users.lockByTelegramId(telegramId).orElseThrow(TelegramUserNotFoundException::new);
+            if (!user.getId().equals(linkedUser.getId())) throw new TelegramUserNotFoundException();
             action.run();
             return Boolean.TRUE;
         });

@@ -430,6 +430,39 @@ class TransactionIdempotencyIntegrationTest {
         assertThat(transactionCount()).isZero();
     }
 
+    @Test
+    void telegramRelinkWhileReservationWaitsCannotCreateUnderAnotherUser() throws Exception {
+        linkTelegram(first, 123L);
+        String body = telegramBody(Endpoint.TRANSACTION, 123L);
+        try (var holder = dataSource.getConnection(); var executor = Executors.newSingleThreadExecutor()) {
+            holder.setAutoCommit(false);
+            try (var lock = holder.prepareStatement("SELECT id FROM users WHERE id = ? FOR UPDATE")) {
+                lock.setLong(1, first.userId);
+                lock.executeQuery().close();
+            }
+            try {
+                var pending = executor.submit(() -> telegramCreate(Endpoint.TRANSACTION, KEY, body, 404));
+                await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> assertThat(jdbc.queryForObject("""
+                        SELECT count(*) FROM pg_stat_activity WHERE datname = current_database()
+                          AND wait_event_type = 'Lock'
+                          AND query ILIKE 'INSERT INTO transaction_idempotency_requests%'
+                        """, Integer.class)).isEqualTo(1));
+                try (var unlink = holder.prepareStatement("UPDATE users SET telegram_id = NULL WHERE id = ?");
+                     var relink = holder.prepareStatement("UPDATE users SET telegram_id = 123 WHERE id = ?")) {
+                    unlink.setLong(1, first.userId); unlink.executeUpdate();
+                    relink.setLong(1, second.userId); relink.executeUpdate();
+                }
+                holder.commit();
+                pending.get(20, TimeUnit.SECONDS);
+            } finally { holder.rollback(); }
+        }
+        assertThat(transactionCount()).isZero();
+        assertThat(markerCount()).isZero();
+        telegramCreate(Endpoint.TRANSACTION, KEY, body, 200);
+        assertThat(jdbc.queryForObject("SELECT user_id FROM transactions", Long.class)).isEqualTo(second.userId);
+        assertThat(jdbc.queryForObject("SELECT user_id FROM transaction_idempotency_requests", Long.class)).isEqualTo(second.userId);
+    }
+
     private void linkTelegram(Actor actor, long telegramId) {
         jdbc.update("UPDATE users SET telegram_id = ? WHERE id = ?", telegramId, actor.userId);
     }
