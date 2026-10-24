@@ -1,6 +1,6 @@
 # Roadmap
 
-O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não uma promessa de datas. Estado reconciliado em 24/10/2026 (UTC). Última release publicada: v1.10.1; candidata v1.11.0 em preparação.
+O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não uma promessa de datas. Estado reconciliado em 24/10/2026 (UTC). Última release publicada: v1.11.0.
 
 ## Entregue
 
@@ -14,12 +14,10 @@ O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não 
 
 - Governança de releases e documentação reconciliada: [v1.10.1](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.10.1), issue [#123](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/123).
 
-## Preparado para publicação
-
-Candidata **v1.11.0**: resumos opt-in, isolamento, limites de autenticação,
-consistência de centavos, idempotência REST/Telegram, imagens Java sem root e
-atualizações de segurança das dependências. [Notas e preparação](releases/v1.11.0.md).
-A publicação depende da promoção revisada e da autorização operacional.
+- Idempotência REST/Telegram, consistência de centavos, limites de autenticação,
+  isolamento, resumos opt-in e builds Java sem root: [v1.11.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.11.0).
+  Issues #132, #134, #182, #215 e #217; promoção no PR #224.
+  [Notas e evidências da publicação](releases/v1.11.0.md).
 
 ## Próximos temas
 
@@ -36,11 +34,6 @@ A publicação depende da promoção revisada e da autorização operacional.
   [manutenção e privilégios (#221)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/221):
   acompanhamento da instalação self-hosted; dados operacionais e achados sensíveis ficam privados.
   Política dos artefatos Java em [Builds e imagens](security/container-builds.md).
-- [Confirmação idempotente Telegram (#217)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/217): chave e pendência persistidas no Redis, retry e congelamento após tentativa; publicação pendente de promoção para `main`.
-- [Idempotência REST (#215)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/215): reservas transacionais, resposta original cifrada, conflitos e retenção; publicação pendente. Contrato em [Idempotência de criação REST](transaction-idempotency.md).
-- [Consistência de transações (#182)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/182): testes PostgreSQL de rollback, concorrência e retomada, com correção de centavos nos parcelamentos; escopo e limites em [Consistência de transações](transaction-consistency.md). Publicação pendente.
-- [Limites de autenticação (#132)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/132): integrado em develop pelo PR #213; publicação pendente. Contrato em [Limites de autenticação](security/auth-rate-limiting.md).
-- [Isolamento entre usuários (#134)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/134): integrado em develop pelo PR #212; publicação pendente. Escopo e execução em [Isolamento entre usuários](security/user-isolation.md).
 - [Evolução gradual da arquitetura (#37)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/37).
 - [Governança e contribuição open source (#117)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/117): guias públicos já existem; conferir os critérios e subtarefas restantes antes de fechar.
 - [Proteção de campos textuais pesquisáveis (#186)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/186): extensão da proteção inicial, com análise de impacto nas buscas.
