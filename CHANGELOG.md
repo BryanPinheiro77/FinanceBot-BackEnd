@@ -11,6 +11,7 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ### Tests
 
+- Adicionada suíte de integração para isolamento entre usuários (#134), com JWT real, H2, tentativas de acesso e escrita cruzados, referências alheias e verificação de preservação dos dados.
 - Adicionada cobertura para o padrão opt-in dos resumos, preservação das preferências na reconexão e orientação após o vínculo.
 - Testes de criptografia e rotação restauram o chaveiro anterior, evitando falhas nos testes JPA por dependência da ordem de execução.
 
