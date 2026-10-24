@@ -12,6 +12,7 @@ import java.util.UUID;
 public class InstallmentPlanFactory {
 
     private static final int MONEY_SCALE = 2;
+    private static final BigDecimal MINIMUM_INSTALLMENT_AMOUNT = new BigDecimal("0.01");
     private static final String INSTALLMENT_ONLY_EXPENSE_MESSAGE =
             "Installment transactions are allowed only for expenses";
     private static final String MINIMUM_INSTALLMENTS_MESSAGE =
@@ -25,6 +26,7 @@ public class InstallmentPlanFactory {
             Integer totalInstallments
     ) {
         validate(type, totalInstallments);
+        validateTotalAmount(totalAmount, totalInstallments);
 
         String installmentGroupId = UUID.randomUUID().toString();
 
@@ -76,6 +78,7 @@ public class InstallmentPlanFactory {
             Integer firstRemainingInstallmentNumber
     ) {
         validate(type, totalInstallments, firstRemainingInstallmentNumber);
+        validateTotalAmount(totalAmount, totalInstallments);
 
         String installmentGroupId = UUID.randomUUID().toString();
 
@@ -132,6 +135,21 @@ public class InstallmentPlanFactory {
         }
     }
 
+    private void validateTotalAmount(BigDecimal totalAmount, int totalInstallments) {
+        if (totalAmount == null || totalAmount.signum() <= 0) {
+            throw new IllegalArgumentException("Total amount must be greater than zero");
+        }
+        try {
+            totalAmount.setScale(MONEY_SCALE, RoundingMode.UNNECESSARY);
+        } catch (ArithmeticException exception) {
+            throw new IllegalArgumentException("Total amount must have at most two decimal places", exception);
+        }
+        BigDecimal minimumTotal = MINIMUM_INSTALLMENT_AMOUNT.multiply(BigDecimal.valueOf(totalInstallments));
+        if (totalAmount.compareTo(minimumTotal) < 0) {
+            throw new IllegalArgumentException("Total amount must allow at least 0.01 per installment");
+        }
+    }
+
     private void validate(
             TransactionType type,
             Integer totalInstallments,
@@ -158,7 +176,11 @@ public class InstallmentPlanFactory {
             BigDecimal accumulated
     ) {
         if (currentInstallment < totalInstallments) {
-            return installmentAmount;
+            // Reserva ao menos um centavo para cada parcela restante antes de arredondar esta.
+            BigDecimal reserved = MINIMUM_INSTALLMENT_AMOUNT
+                    .multiply(BigDecimal.valueOf(totalInstallments - currentInstallment));
+            BigDecimal maximumCurrentAmount = totalAmount.subtract(accumulated).subtract(reserved);
+            return installmentAmount.min(maximumCurrentAmount);
         }
 
         return totalAmount.subtract(accumulated);

@@ -28,6 +28,7 @@ import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.TransactionType;
 import com.financebot.transaction.dto.TransactionFilter;
 import com.financebot.transaction.mapper.TransactionMapper;
+import com.financebot.transaction.idempotency.TransactionIdempotencyService;
 import com.financebot.user.domain.User;
 import com.financebot.user.service.AuthenticatedUserResolver;
 import jakarta.validation.Valid;
@@ -61,59 +62,65 @@ public class TransactionController {
     private final FindTransactionByIdUseCase findTransactionByIdUseCase;
     private final UpdateTransactionUseCase updateTransactionUseCase;
     private final DeleteTransactionUseCase deleteTransactionUseCase;
+    private final TransactionIdempotencyService idempotency;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public TransactionCreationResponse create(
             @RequestBody @Valid CreateTransactionRequest request,
-            Authentication authentication
+            Authentication authentication,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey
     ) {
         User user = authenticatedUserResolver.resolve(authentication);
         CreateTransactionCommand command = transactionMapper.toCommand(request, user);
 
-        TransactionResponse transaction = createTransactionUseCase.execute(command);
-        LOGGER.info("Transação criada com sucesso: sourceType={}", command.sourceType());
-        FinancialCommitmentResponse analysis = financialAnalysisService.getFinancialCommitment(authentication);
-
-        return new TransactionCreationResponse(transaction, analysis);
+        return idempotency.execute(user.getId(), TransactionIdempotencyService.Operation.CREATE_TRANSACTION,
+                idempotencyKey, request, TransactionCreationResponse.class, () -> {
+                    TransactionResponse transaction = createTransactionUseCase.execute(command);
+                    LOGGER.info("Transação preparada: sourceType={}", command.sourceType());
+                    FinancialCommitmentResponse analysis = financialAnalysisService.getFinancialCommitment(authentication);
+                    return new TransactionCreationResponse(transaction, analysis);
+                });
     }
 
     @PostMapping("/installments")
     @ResponseStatus(HttpStatus.CREATED)
     public InstallmentTransactionCreationResponse createInstallment(
             @RequestBody @Valid CreateInstallmentTransactionRequest request,
-            Authentication authentication
+            Authentication authentication,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey
     ) {
         User user = authenticatedUserResolver.resolve(authentication);
         CreateInstallmentTransactionCommand command = transactionMapper.toCommand(request, user);
 
-        InstallmentTransactionResponse installment =
-                createInstallmentTransactionUseCase.execute(command);
-        LOGGER.info("Parcelamento criado com sucesso: installments={}, sourceType={}",
-                installment.totalInstallments(), command.sourceType());
-
-        FinancialCommitmentResponse analysis = financialAnalysisService.getFinancialCommitment(authentication);
-
-        return new InstallmentTransactionCreationResponse(installment, analysis);
+        return idempotency.execute(user.getId(), TransactionIdempotencyService.Operation.CREATE_INSTALLMENT,
+                idempotencyKey, request, InstallmentTransactionCreationResponse.class, () -> {
+                    InstallmentTransactionResponse installment = createInstallmentTransactionUseCase.execute(command);
+                    LOGGER.info("Parcelamento preparado: installments={}, sourceType={}",
+                            installment.totalInstallments(), command.sourceType());
+                    FinancialCommitmentResponse analysis = financialAnalysisService.getFinancialCommitment(authentication);
+                    return new InstallmentTransactionCreationResponse(installment, analysis);
+                });
     }
 
     @PostMapping("/installments/existing")
     @ResponseStatus(HttpStatus.CREATED)
     public InstallmentTransactionCreationResponse createExistingInstallment(
             @RequestBody @Valid CreateExistingInstallmentTransactionRequest request,
-            Authentication authentication
+            Authentication authentication,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey
     ) {
         User user = authenticatedUserResolver.resolve(authentication);
         CreateExistingInstallmentTransactionCommand command = transactionMapper.toCommand(request, user);
 
-        InstallmentTransactionResponse installment =
-                createExistingInstallmentTransactionUseCase.execute(command);
-        LOGGER.info("Parcelamento existente criado com sucesso: installments={}, sourceType={}",
-                installment.totalInstallments(), command.sourceType());
-
-        FinancialCommitmentResponse analysis = financialAnalysisService.getFinancialCommitment(authentication);
-
-        return new InstallmentTransactionCreationResponse(installment, analysis);
+        return idempotency.execute(user.getId(), TransactionIdempotencyService.Operation.CREATE_EXISTING_INSTALLMENT,
+                idempotencyKey, request, InstallmentTransactionCreationResponse.class, () -> {
+                    InstallmentTransactionResponse installment = createExistingInstallmentTransactionUseCase.execute(command);
+                    LOGGER.info("Parcelamento existente preparado: installments={}, sourceType={}",
+                            installment.totalInstallments(), command.sourceType());
+                    FinancialCommitmentResponse analysis = financialAnalysisService.getFinancialCommitment(authentication);
+                    return new InstallmentTransactionCreationResponse(installment, analysis);
+                });
     }
 
     @GetMapping

@@ -1,0 +1,31 @@
+# Somente entradas necessárias à compilação entram no contexto.
+**
+!Dockerfile
+!.mvn/
+!.mvn/**
+!mvnw
+!pom.xml
+!src/
+!src/**
+
+# Aplicar também aos subdiretórios permitidos acima.
+**/.env
+**/.env.*
+**/*.env
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.jks
+**/.git/
+**/.git/**
+**/.ssh/
+**/.ssh/**
+**/.m2/
+**/.m2/**
+**/*.dump
+**/*.dump.*
+**/*.sql.gz
+**/*.sql.bz2
+**/backups/
+**/backups/**

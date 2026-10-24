@@ -48,6 +48,20 @@ jobs:
       - name: Test Telegram bot
         run: ./mvnw --batch-mode --no-transfer-progress clean verify
 
+  containers:
+    name: Docker - ${{ matrix.module }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [api, telegram-bot]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify build context and runtime image
+        run: python3 scripts/verify-container-images.py --module "${{ matrix.module }}"
+
   hygiene:
     name: Repository hygiene
     runs-on: ubuntu-latest

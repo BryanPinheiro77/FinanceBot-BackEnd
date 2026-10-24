@@ -31,6 +31,10 @@ telegram:
     username: test-bot
 
 app:
+  transaction-idempotency:
+    cleanup-interval: 86400000
+  auth-rate-limit:
+    enabled: false
   cors:
     allowed-origins: http://localhost:5173
   jwt:

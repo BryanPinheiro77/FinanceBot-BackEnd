@@ -1,5 +1,6 @@
 package com.financebot.telegrambot.handler;
 
+import com.financebot.telegrambot.confirmation.PendingConfirmationLockedException;
 import com.financebot.telegrambot.conversation.application.TelegramConversationContextService;
 import com.financebot.telegrambot.conversation.domain.TelegramConversationContext;
 import com.financebot.telegrambot.conversation.domain.TelegramConversationContextType;
@@ -70,7 +71,11 @@ public class TelegramTransactionPreviewHandler {
             );
         }
 
-        telegramPendingConfirmationService.savePending(telegramId, pendingTransaction);
+        try {
+            telegramPendingConfirmationService.savePending(telegramId, pendingTransaction);
+        } catch (PendingConfirmationLockedException exception) {
+            return PendingConfirmationLockedException.MESSAGE;
+        }
 
         return telegramTransactionMessageFormatter.formatTransactionPreview(
                 pendingTransaction,
@@ -97,7 +102,11 @@ public class TelegramTransactionPreviewHandler {
             return buildInstallmentDueDayQuestion(pendingTransaction);
         }
 
-        telegramPendingConfirmationService.savePending(telegramId, pendingTransaction);
+        try {
+            telegramPendingConfirmationService.savePending(telegramId, pendingTransaction);
+        } catch (PendingConfirmationLockedException exception) {
+            return PendingConfirmationLockedException.MESSAGE;
+        }
 
         return formatInstallmentPreview(pendingTransaction, accountName);
     }

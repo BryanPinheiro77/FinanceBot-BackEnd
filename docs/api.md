@@ -29,6 +29,24 @@ Por padrão, a API escuta na porta `8080`. O health check público é `GET /api/
 
 Endpoints protegidos usam autenticação JWT. Consulte o Swagger e os controllers para o contrato vigente; esta página é um mapa, não substitui a especificação OpenAPI.
 
+`POST /auth/login` e `POST /auth/register` têm cotas independentes por IP,
+configuráveis e compartilhadas pelo Redis. Excesso retorna `429` com
+`application/problem+json` e `Retry-After` em segundos. Indisponibilidade do
+contador retorna `503`. Consulte [Limites de autenticação](security/auth-rate-limiting.md)
+para padrões, proxies confiáveis e limites operacionais.
+
+Parcelamentos novos e existentes exigem valores representáveis em centavos e
+total suficiente para pelo menos R$ 0,01 por parcela do plano completo. A
+pré-checagem usa o mesmo cálculo da criação; entradas inválidas retornam `400`.
+Garantias de rollback, concorrência e limites de reenvio estão em
+[Consistência de transações](transaction-consistency.md).
+
+Os três endpoints REST de criação de transações/parcelamentos aceitam o header
+opcional `Idempotency-Key`. Dentro da validade padrão de 24 horas, repetir a mesma
+chave, usuário, endpoint e conteúdo retorna o `201` e a resposta original; conteúdo
+diferente retorna `409`. Sem o header, cada chamada cria novamente. Contrato,
+retenção e respostas `503` estão em [Idempotência de criação REST](transaction-idempotency.md).
+
 A API reserva lembretes pendentes em lotes e publica uma solicitação de envio no RabbitMQ.
 Depois de consumir a mensagem, o bot confirma o lembrete em
 `PATCH /telegram/reminders/{id}/sent` usando o token interno. Em caso de falha antes do envio,

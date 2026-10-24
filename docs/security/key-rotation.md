@@ -107,6 +107,22 @@ as duas colunas nulas e devem ser desconsiderados na validação operacional.
 
 ### 4. Desabilitar o job e revogar a chave antiga
 
+Antes de revogar, verifique também as respostas de idempotência da migration V17.
+O job de renda não as recriptografa. Mantenha as chaves de leitura anteriores até
+que esses snapshots expirem e sejam removidos pela limpeza. Adapte o ID ativo do
+exemplo abaixo e confirme que a contagem é zero:
+
+```sql
+SELECT COUNT(*) FROM transaction_idempotency_requests
+WHERE response_encrypted IS NOT NULL
+  AND response_encrypted NOT LIKE 'v2.key_2026_09.%';
+```
+
+Não apague reservas ainda válidas para acelerar a revogação: isso permitiria
+duplicar uma criação reenviada. A conclusão do job de renda, sozinha, não comprova
+que todas as respostas de idempotência já deixaram de depender da chave antiga.
+Detalhes de validade e limpeza estão em [Idempotência de criação REST](../transaction-idempotency.md).
+
 Primeiro volte `FINANCEBOT_DATA_ENCRYPTION_ROTATION_ENABLED` e
 `FINANCEBOT_DATA_ENCRYPTION_ROTATION_BACKUP_CONFIRMED` para `false`. Após nova validação, remova
 `primary` de `FINANCEBOT_DATA_ENCRYPTION_PREVIOUS_KEYS` e deixe

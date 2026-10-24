@@ -38,6 +38,9 @@ class FinancialAlertSchedulerTest {
                 analysis, notifications, Clock.fixed(Instant.parse("2026-09-15T09:00:00Z"), ZoneOffset.UTC));
         ReflectionTestUtils.setField(scheduler, "alertsEnabled", true);
         user = new User(); user.setId(1L); user.setTelegramId(123L);
+        user.setFinancialAlertsEnabled(true);
+        user.setWeeklySummaryEnabled(true);
+        user.setMonthlySummaryEnabled(true);
     }
 
     @Test

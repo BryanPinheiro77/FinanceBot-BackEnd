@@ -64,10 +64,10 @@ public class User implements UserDetails {
     private boolean financialAlertsEnabled = true;
 
     @Column(name = "weekly_summary_enabled", nullable = false)
-    private boolean weeklySummaryEnabled = true;
+    private boolean weeklySummaryEnabled = false;
 
     @Column(name = "monthly_summary_enabled", nullable = false)
-    private boolean monthlySummaryEnabled = true;
+    private boolean monthlySummaryEnabled = false;
 
     @Column(name = "telegram_link_code", length = 30)
     private String telegramLinkCode;

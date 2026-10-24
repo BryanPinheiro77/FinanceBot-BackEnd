@@ -1,5 +1,6 @@
 package com.financebot.telegrambot.handler;
 
+import com.financebot.telegrambot.confirmation.PendingConfirmationLockedException;
 import com.financebot.telegrambot.dto.PendingTelegramTransaction;
 import com.financebot.telegrambot.formatter.TelegramTransactionMessageFormatter;
 import com.financebot.telegrambot.service.TelegramPendingConfirmationService;
@@ -57,7 +58,11 @@ public class TelegramPendingEditHandler {
                 pending.originalMessage()
         );
 
-        telegramPendingConfirmationService.savePending(telegramId, updated);
+        try {
+            telegramPendingConfirmationService.savePending(telegramId, updated);
+        } catch (PendingConfirmationLockedException exception) {
+            return PendingConfirmationLockedException.MESSAGE;
+        }
 
         return buildUpdatedPendingMessage(telegramId, updated);
     }

@@ -4,6 +4,49 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ## [Unreleased]
 
+## [v1.11.0] — 2026-10-24
+
+### Added
+
+- Confirmações idempotentes do Telegram nos três endpoints internos de criação,
+  com pendência e chave persistidas no Redis por 15 minutos, retry após reinício
+  e proteção contra edição/substituição após uma tentativa de confirmação (#217).
+- Header opcional `Idempotency-Key` nos três endpoints REST de criação de transações/parcelamentos, com replay da resposta original, conflito `409` e reserva atômica com o lançamento (#215).
+- Migration V17 para respostas cifradas, validade padrão de 24 horas e limpeza em lotes; atualizado o procedimento de revogação de chaves para considerar esses snapshots.
+
+### Fixed
+
+- Parcelamentos novos e existentes preservam o total em centavos sem gerar parcelas zeradas ou negativas por arredondamento; valores fracionários ou insuficientes retornam `400` (#182).
+- Pré-checagem de parcelamento reutiliza o plano da criação para projetar os mesmos valores efetivamente gravados.
+
+### Security
+
+- Compose de produção publica API e bot somente em loopback, preservando o acesso da API pelo proxy HTTPS e do bot pela rede Docker.
+- API e bot alinhados ao Spring Boot 4.0.9 e cliente RabbitMQ 5.37.0, com consulta das 171 combinações de dependência/versão de runtime ao OSV sem avisos retornados em 24/10/2026. A consulta não cobre imagens do host nem vulnerabilidades desconhecidas.
+- Variantes `.env.*` passam a ser ignoradas pelo Git, preservando os arquivos de exemplo.
+- Builds Docker da API e do bot passam a usar contextos restritos e estágios separados,
+  com apenas o JAR no runtime JRE 21 e usuário sem root; o CI valida contexto,
+  permissões e exclusão de configurações fictícias nos dois módulos.
+- Adicionado limite configurável por IP para login e cadastro, com contadores atômicos no Redis, `429` e `Retry-After`, resolução de proxies confiáveis e `503` quando o contador estiver indisponível (#132).
+- `Retry-After` exposto pelo CORS; timeouts de conexão e comandos Redis da API passam a ter padrão de 2 segundos.
+
+### Changed
+
+- Novos usuários passam a iniciar com resumos semanais e mensais desativados, preservando as preferências existentes.
+- A confirmação do vínculo Telegram explica como consultar e ativar cada resumo com `/alertas`.
+
+### Tests
+
+- Validação da candidata: 550 testes da API e 200 do bot aprovados, além das duas verificações Docker de contexto, JAR e execução sem root.
+- Novo teste com RabbitMQ real cobre publisher confirms, reentrega e acknowledgement com o cliente atualizado.
+- Testes Redis/PostgreSQL da confirmação Telegram cobrem retry, retomada, concorrência, congelamento e mudança do vínculo durante a reserva (#217).
+- Adicionados testes PostgreSQL de idempotência, incluindo concorrência de chaves novas/expiradas, rollback, isolamento, cifragem, retenção e CORS (#215).
+- Adicionada integração com PostgreSQL 17 e Flyway para rollback de parcelamentos/edições, concorrência e retomada de recorrências, precisão de centavos e consistência da prévia (#182).
+- Adicionados testes de limite de autenticação com Redis real via Testcontainers, incluindo concorrência, expiração, spoofing de IP, CORS e indisponibilidade do contador.
+- Adicionada suíte de integração para isolamento entre usuários (#134), com JWT real, H2, tentativas de acesso e escrita cruzados, referências alheias e verificação de preservação dos dados.
+- Adicionada cobertura para o padrão opt-in dos resumos, preservação das preferências na reconexão e orientação após o vínculo.
+- Testes de criptografia e rotação restauram o chaveiro anterior, evitando falhas nos testes JPA por dependência da ordem de execução.
+
 ## [v1.10.1] — 2026-09-16
 
 ### Changed

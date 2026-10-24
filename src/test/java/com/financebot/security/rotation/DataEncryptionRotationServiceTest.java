@@ -3,10 +3,12 @@ package com.financebot.security.rotation;
 import com.financebot.security.crypto.AesGcmFieldEncryption;
 import com.financebot.security.crypto.EncryptionKeyHolder;
 import com.financebot.security.crypto.FieldEncryptionException;
+import com.financebot.security.crypto.RotatingFieldEncryption;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.Base64;
@@ -29,14 +31,19 @@ class DataEncryptionRotationServiceTest {
     private final DataEncryptionRotationRepository repository = mock(DataEncryptionRotationRepository.class);
     private final DataEncryptionRotationService service = new DataEncryptionRotationService(repository);
 
+    private RotatingFieldEncryption previousEncryption;
+
     @BeforeEach
     void configureKeys() {
+        previousEncryption = (RotatingFieldEncryption) ReflectionTestUtils.getField(
+                EncryptionKeyHolder.class, "encryption");
         EncryptionKeyHolder.configure("new", NEW_KEY, "old", "old=" + OLD_KEY);
     }
 
     @AfterEach
-    void clearKeys() {
-        EncryptionKeyHolder.configure("");
+    void restoreKeys() {
+        // Contextos Spring em cache continuam usando o chaveiro anterior ao teste.
+        ReflectionTestUtils.setField(EncryptionKeyHolder.class, "encryption", previousEncryption);
     }
 
     @Test

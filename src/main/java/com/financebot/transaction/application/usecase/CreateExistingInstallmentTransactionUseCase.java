@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 @Component
@@ -86,6 +87,11 @@ public class CreateExistingInstallmentTransactionUseCase {
         }
 
         validatePositiveAmount(command.monthlyAmount(), "Monthly amount must be greater than zero");
+        try {
+            command.monthlyAmount().setScale(2, RoundingMode.UNNECESSARY);
+        } catch (ArithmeticException exception) {
+            throw new IllegalArgumentException("Monthly amount must have at most two decimal places", exception);
+        }
 
         return command.monthlyAmount()
                 .multiply(BigDecimal.valueOf(command.totalInstallments()));

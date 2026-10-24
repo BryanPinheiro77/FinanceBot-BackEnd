@@ -126,6 +126,17 @@ apontar para a mesma instância do RabbitMQ.
 
 ## Testes e qualidade
 
+Mantenha Docker ativo: os testes de limite de autenticação e consistência de
+transações iniciam Redis e PostgreSQL isolados via Testcontainers. Eles não usam
+as instâncias configuradas no `.env`. A suíte PostgreSQL aplica Flyway e valida o
+schema; detalhes em [Consistência de transações](transaction-consistency.md).
+Se usar um contexto como Colima, exponha o socket ao Testcontainers na sessão:
+
+```bash
+export DOCKER_HOST="$(docker context inspect --format '{{.Endpoints.docker.Host}}')"
+export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
+```
+
 ```bash
 ./mvnw clean verify
 (cd financebot-telegram-bot && ./mvnw clean verify)

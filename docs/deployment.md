@@ -8,6 +8,16 @@ O diretório do checkout deve ser configurado como variável privada no runner s
 
 ## Pré-requisitos
 
+As imagens Java usam JRE 21 e UID/GID `10001:10001`, com somente o JAR em `/app`.
+O `.env` continua sendo configuração de runtime do Compose. Validar permissões
+de eventuais mounts de escrita e o [contrato dos builds](security/container-builds.md)
+antes da publicação.
+
+As portas HTTP 8080/8081 e as portas de management são publicadas somente em
+loopback. O proxy HTTPS do host deve apontar para `127.0.0.1:8080`, e o bot deve
+usar o DNS interno da API na rede Docker. Consumidores por IP:porta do host
+precisam migrar para a origem HTTPS antes da promoção.
+
 - Tailscale conectado;
 - runner self-hosted online;
 - Docker e Docker Compose funcionando para o usuário do runner;
@@ -44,6 +54,18 @@ docker network create backend-network
 
 ## Publicação
 
+Idempotência de criação REST adiciona a migration V17 e snapshots cifrados com o
+keyring existente. Nenhum secret novo é necessário. Confirme a política de retenção,
+limpeza e preservação das chaves antigas em [Idempotência de criação REST](transaction-idempotency.md)
+antes de promover essa mudança; variáveis opcionais seguem pelo `env_file` existente.
+
+Login e cadastro passam a depender do contador Redis: falha de acesso retorna `503`.
+Antes de promover a mudança de limites de autenticação, confirme disponibilidade,
+permissão para executar scripts Redis e a topologia do proxy. Os valores padrão não
+exigem novas variáveis; para ajustar cotas, janelas e proxies, consulte
+[Limites de autenticação](security/auth-rate-limiting.md). O Compose carrega essas
+variáveis opcionais pelo `env_file` existente.
+
 1. Prepare a promoção conforme [Governança de releases](releases.md) e faça merge na `main` após revisão, CI e autorização.
 2. Acompanhe o workflow no GitHub.
 3. No servidor, confirme os containers com `docker compose -f compose.prod.yml ps` em cada módulo
@@ -61,3 +83,12 @@ O rollback atual é manual: identifique o commit anterior saudável, volte o che
 - substituir `git pull` no servidor por checkout imutável do SHA do workflow;
 - separar ambientes e usar aprovação para produção;
 - avaliar armazenamento seguro de secrets.
+
+## Ordem de atualização da idempotência Telegram
+
+Ao publicar a #217, atualize a API antes do bot. A API antiga ignora o header e
+não oferece deduplicação ao bot novo. Use `TELEGRAM_STATE_STORE=redis` para retomar
+confirmações após reinícios; o modo `memory` não preserva esse estado. As pendências
+anteriores guardadas só em memória não são migradas. O Redis precisa permitir os
+scripts Lua de leitura, gravação com TTL e remoção condicional. Detalhes em
+[Idempotência](transaction-idempotency.md#confirmações-do-telegram).

@@ -23,6 +23,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByTelegramId(Long telegramId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from User u where u.telegramId = :telegramId")
+    Optional<User> lockByTelegramId(@Param("telegramId") Long telegramId);
+
     Slice<User> findByTelegramIdIsNotNullOrderByIdAsc(Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

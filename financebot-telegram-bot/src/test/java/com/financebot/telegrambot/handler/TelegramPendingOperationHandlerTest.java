@@ -1,5 +1,6 @@
 package com.financebot.telegrambot.handler;
 
+import com.financebot.telegrambot.confirmation.PendingConfirmation;
 import com.financebot.telegrambot.client.FinanceBotApiClient;
 import com.financebot.telegrambot.conversation.application.TelegramConversationContextService;
 import com.financebot.telegrambot.dto.PendingTelegramTransaction;
@@ -68,9 +69,9 @@ class TelegramPendingOperationHandlerTest {
         String result = handler.handleConfirmation(TELEGRAM_ID);
 
         assertThat(result).isEqualTo("Não há nenhuma operação pendente para confirmar.");
-        verify(financeBotApiClient, never()).createTransaction(any());
-        verify(financeBotApiClient, never()).createInstallmentTransaction(any());
-        verify(financeBotApiClient, never()).createExistingInstallmentTransaction(any());
+        verify(financeBotApiClient, never()).createTransaction(any(), any());
+        verify(financeBotApiClient, never()).createInstallmentTransaction(any(), any());
+        verify(financeBotApiClient, never()).createExistingInstallmentTransaction(any(), any());
         verify(telegramPendingConfirmationService, never()).clearPending(TELEGRAM_ID);
     }
 
@@ -78,17 +79,17 @@ class TelegramPendingOperationHandlerTest {
     @DisplayName("deve confirmar parcelamento existente usando endpoint especifico")
     void shouldConfirmExistingInstallmentUsingSpecificEndpoint() {
         PendingTelegramTransaction pending = existingInstallmentPending();
-        when(telegramPendingConfirmationService.getPending(TELEGRAM_ID)).thenReturn(pending);
+        when(telegramPendingConfirmationService.beginConfirmation(TELEGRAM_ID)).thenReturn(confirmation(pending));
 
         String result = handler.handleConfirmation(TELEGRAM_ID);
 
         ArgumentCaptor<CreateExistingInstallmentTransactionFromTelegramRequest> requestCaptor =
                 ArgumentCaptor.forClass(CreateExistingInstallmentTransactionFromTelegramRequest.class);
 
-        verify(financeBotApiClient).createExistingInstallmentTransaction(requestCaptor.capture());
-        verify(financeBotApiClient, never()).createInstallmentTransaction(any());
-        verify(financeBotApiClient, never()).createTransaction(any());
-        verify(telegramPendingConfirmationService).clearPending(TELEGRAM_ID);
+        verify(financeBotApiClient).createExistingInstallmentTransaction(requestCaptor.capture(), any());
+        verify(financeBotApiClient, never()).createInstallmentTransaction(any(), any());
+        verify(financeBotApiClient, never()).createTransaction(any(), any());
+        verify(telegramPendingConfirmationService).clearConfirmed(TELEGRAM_ID, "test-key-123");
 
         CreateExistingInstallmentTransactionFromTelegramRequest request = requestCaptor.getValue();
         assertThat(request.telegramId()).isEqualTo(TELEGRAM_ID);
@@ -107,14 +108,14 @@ class TelegramPendingOperationHandlerTest {
     @DisplayName("deve confirmar parcelamento existente usando somente valor mensal")
     void shouldConfirmExistingInstallmentUsingOnlyMonthlyAmount() {
         PendingTelegramTransaction pending = existingInstallmentPendingWithMonthlyAmount();
-        when(telegramPendingConfirmationService.getPending(TELEGRAM_ID)).thenReturn(pending);
+        when(telegramPendingConfirmationService.beginConfirmation(TELEGRAM_ID)).thenReturn(confirmation(pending));
 
         handler.handleConfirmation(TELEGRAM_ID);
 
         ArgumentCaptor<CreateExistingInstallmentTransactionFromTelegramRequest> requestCaptor =
                 ArgumentCaptor.forClass(CreateExistingInstallmentTransactionFromTelegramRequest.class);
 
-        verify(financeBotApiClient).createExistingInstallmentTransaction(requestCaptor.capture());
+        verify(financeBotApiClient).createExistingInstallmentTransaction(requestCaptor.capture(), any());
 
         CreateExistingInstallmentTransactionFromTelegramRequest request = requestCaptor.getValue();
         assertThat(request.totalAmount()).isNull();
@@ -127,14 +128,14 @@ class TelegramPendingOperationHandlerTest {
     @DisplayName("deve mapear erro HTTP ao confirmar parcelamento existente")
     void shouldMapHttpErrorWhenConfirmingExistingInstallment() {
         PendingTelegramTransaction pending = existingInstallmentPending();
-        when(telegramPendingConfirmationService.getPending(TELEGRAM_ID)).thenReturn(pending);
+        when(telegramPendingConfirmationService.beginConfirmation(TELEGRAM_ID)).thenReturn(confirmation(pending));
         doThrow(HttpClientErrorException.create(
                 HttpStatus.NOT_FOUND,
                 "Not Found",
                 HttpHeaders.EMPTY,
                 new byte[0],
                 null
-        )).when(financeBotApiClient).createExistingInstallmentTransaction(any());
+        )).when(financeBotApiClient).createExistingInstallmentTransaction(any(), any());
 
         String result = handler.handleConfirmation(TELEGRAM_ID);
 
@@ -146,10 +147,10 @@ class TelegramPendingOperationHandlerTest {
     @DisplayName("deve manter pendencia quando erro inesperado acontece ao confirmar parcelamento existente")
     void shouldKeepPendingWhenUnexpectedErrorHappensOnExistingInstallmentConfirmation() {
         PendingTelegramTransaction pending = existingInstallmentPending();
-        when(telegramPendingConfirmationService.getPending(TELEGRAM_ID)).thenReturn(pending);
+        when(telegramPendingConfirmationService.beginConfirmation(TELEGRAM_ID)).thenReturn(confirmation(pending));
         doThrow(new IllegalStateException("API unavailable"))
                 .when(financeBotApiClient)
-                .createExistingInstallmentTransaction(any());
+                .createExistingInstallmentTransaction(any(), any());
 
         String result = handler.handleConfirmation(TELEGRAM_ID);
 
@@ -177,6 +178,10 @@ class TelegramPendingOperationHandlerTest {
         verify(telegramPendingConfirmationService, never()).clearPending(TELEGRAM_ID);
         verify(telegramPendingQueryService, never()).clearPending(TELEGRAM_ID);
         verify(telegramConversationContextService, never()).clearPendingContext(TELEGRAM_ID);
+    }
+
+    private PendingConfirmation confirmation(PendingTelegramTransaction pending) {
+        return new PendingConfirmation("test-key-123", pending, java.time.Instant.now().plusSeconds(600), true);
     }
 
     private PendingTelegramTransaction existingInstallmentPending() {
