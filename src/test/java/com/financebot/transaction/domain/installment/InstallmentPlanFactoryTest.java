@@ -16,6 +16,25 @@ class InstallmentPlanFactoryTest {
 
     private final InstallmentPlanFactory installmentPlanFactory = new InstallmentPlanFactory();
 
+    @Test
+    void smallTotalsPreserveEveryCentAndKeepEveryInstallmentPositive() {
+        for (int cents = 2; cents <= 100; cents++) {
+            BigDecimal total = BigDecimal.valueOf(cents, 2);
+            for (int count = 2; count <= Math.min(cents, 20); count++) {
+                InstallmentPlan plan = installmentPlanFactory.create(total, "Compra", LocalDate.of(2026, 1, 1),
+                        TransactionType.EXPENSE, count);
+                assertThat(plan.items()).as("total=%s, parcelas=%d", total, count).hasSize(count)
+                        .allSatisfy(item -> assertThat(item.amount()).isGreaterThanOrEqualTo(new BigDecimal("0.01")));
+                assertThat(plan.items().stream().map(InstallmentPlanItem::amount).reduce(BigDecimal.ZERO, BigDecimal::add))
+                        .isEqualByComparingTo(total);
+                InstallmentPlan remaining = installmentPlanFactory.createRemaining(total, "Compra",
+                        LocalDate.of(2026, 2, 1), TransactionType.EXPENSE, count, 2);
+                assertThat(remaining.items().stream().map(InstallmentPlanItem::amount).toList())
+                        .isEqualTo(plan.items().subList(1, count).stream().map(InstallmentPlanItem::amount).toList());
+            }
+        }
+    }
+
     @Nested
     @DisplayName("create")
     class CreateTests {

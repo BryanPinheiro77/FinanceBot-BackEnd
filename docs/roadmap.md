@@ -26,8 +26,9 @@ O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não 
 
 ## Frentes abertas de manutenção
 
-- [Limites de autenticação (#132)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/132): implementação validada localmente, aguardando revisão e integração; cotas por IP/operação no Redis, resposta `429`, proxies confiáveis e testes de concorrência. Contrato em [Limites de autenticação](security/auth-rate-limiting.md).
-- [Isolamento entre usuários (#134)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/134): suíte de integração implementada e validada localmente; cobre JWT, acesso por ID, listagens e referências cruzadas. Escopo e execução em [Isolamento entre usuários](security/user-isolation.md); issue permanece aberta até revisão e integração.
+- [Consistência de transações (#182)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/182): testes PostgreSQL de rollback, concorrência e retomada, com correção de centavos nos parcelamentos; escopo e limites em [Consistência de transações](transaction-consistency.md). Publicação pendente.
+- [Limites de autenticação (#132)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/132): integrado em develop pelo PR #213; publicação pendente. Contrato em [Limites de autenticação](security/auth-rate-limiting.md).
+- [Isolamento entre usuários (#134)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/134): integrado em develop pelo PR #212; publicação pendente. Escopo e execução em [Isolamento entre usuários](security/user-isolation.md).
 - [Evolução gradual da arquitetura (#37)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/37).
 - [Governança e contribuição open source (#117)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/117): guias públicos já existem; conferir os critérios e subtarefas restantes antes de fechar.
 - [Proteção de campos textuais pesquisáveis (#186)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/186): extensão da proteção inicial, com análise de impacto nas buscas.

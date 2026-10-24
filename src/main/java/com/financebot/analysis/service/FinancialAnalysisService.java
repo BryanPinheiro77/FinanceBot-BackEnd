@@ -6,6 +6,8 @@ import com.financebot.category.domain.Category;
 import com.financebot.recurring.domain.RecurringTransaction;
 import com.financebot.recurring.repository.RecurringTransactionRepository;
 import com.financebot.transaction.domain.TransactionType;
+import com.financebot.transaction.domain.installment.InstallmentPlan;
+import com.financebot.transaction.domain.installment.InstallmentPlanFactory;
 import com.financebot.transaction.application.dto.request.CreateInstallmentTransactionRequest;
 import com.financebot.transaction.application.dto.request.CreateTransactionRequest;
 import com.financebot.transaction.repository.TransactionRepository;
@@ -31,14 +33,12 @@ public class FinancialAnalysisService {
     private static final String USER_REQUIRED_MESSAGE = "User is required";
     private static final String TOTAL_AMOUNT_INVALID_MESSAGE = "Total amount must be greater than zero";
     private static final String TOTAL_INSTALLMENTS_INVALID_MESSAGE = "Total installments must be at least 2";
-    private static final String INSTALLMENT_ONLY_EXPENSE_MESSAGE =
-            "Installment transactions are allowed only for expenses";
-
     private final TransactionRepository transactionRepository;
     private final RecurringTransactionRepository recurringTransactionRepository;
     private final UserResourceResolver userResourceResolver;
     private final AuthenticatedUserResolver authenticatedUserResolver;
     private final TransactionCategoryValidator transactionCategoryValidator;
+    private final InstallmentPlanFactory installmentPlanFactory;
 
     @Transactional(readOnly = true)
     public FinancialCommitmentResponse getFinancialCommitment(Authentication authentication) {
@@ -152,7 +152,8 @@ public class FinancialAnalysisService {
     ) {
         User user = authenticatedUserResolver.resolve(authentication);
 
-        validateInstallmentRequest(request);
+        InstallmentPlan plan = installmentPlanFactory.create(request.totalAmount(), request.description(),
+                request.firstInstallmentDate(), request.type(), request.totalInstallments());
 
         validateAccountAndCategoryOwnership(
                 request.accountId(),
@@ -172,7 +173,7 @@ public class FinancialAnalysisService {
         Long activeInstallmentCount = currentAnalysis.activeInstallmentCount();
 
         InstallmentProjection projection = calculateInstallmentProjection(
-                request,
+                plan,
                 totalFutureInstallments,
                 nextMonthProjectedExpense
         );
@@ -204,16 +205,6 @@ public class FinancialAnalysisService {
         }
 
         if (totalInstallments == null || totalInstallments < 2) {
-            throw new IllegalArgumentException(TOTAL_INSTALLMENTS_INVALID_MESSAGE);
-        }
-    }
-
-    private void validateInstallmentRequest(CreateInstallmentTransactionRequest request) {
-        if (request.type() != TransactionType.EXPENSE) {
-            throw new IllegalArgumentException(INSTALLMENT_ONLY_EXPENSE_MESSAGE);
-        }
-
-        if (request.totalInstallments() == null || request.totalInstallments() < 2) {
             throw new IllegalArgumentException(TOTAL_INSTALLMENTS_INVALID_MESSAGE);
         }
     }
@@ -290,62 +281,24 @@ public class FinancialAnalysisService {
     }
 
     private InstallmentProjection calculateInstallmentProjection(
-            CreateInstallmentTransactionRequest request,
+            InstallmentPlan plan,
             BigDecimal totalFutureInstallments,
             BigDecimal nextMonthProjectedExpense
     ) {
-        int totalInstallments = request.totalInstallments();
-        BigDecimal totalAmount = request.totalAmount();
-
-        BigDecimal installmentAmount = totalAmount.divide(
-                BigDecimal.valueOf(totalInstallments),
-                2,
-                RoundingMode.HALF_UP
-        );
-
-        BigDecimal accumulated = BigDecimal.ZERO;
         YearMonth nextMonth = YearMonth.now().plusMonths(1);
         LocalDate today = LocalDate.now();
 
-        for (int i = 1; i <= totalInstallments; i++) {
-            BigDecimal currentAmount = calculateCurrentInstallmentAmount(
-                    i,
-                    totalInstallments,
-                    installmentAmount,
-                    totalAmount,
-                    accumulated
-            );
-
-            if (i < totalInstallments) {
-                accumulated = accumulated.add(currentAmount);
+        for (var item : plan.items()) {
+            if (item.date().isAfter(today)) {
+                totalFutureInstallments = totalFutureInstallments.add(item.amount());
             }
 
-            LocalDate installmentDate = request.firstInstallmentDate().plusMonths((long) i - 1);
-
-            if (installmentDate.isAfter(today)) {
-                totalFutureInstallments = totalFutureInstallments.add(currentAmount);
-            }
-
-            if (YearMonth.from(installmentDate).equals(nextMonth)) {
-                nextMonthProjectedExpense = nextMonthProjectedExpense.add(currentAmount);
+            if (YearMonth.from(item.date()).equals(nextMonth)) {
+                nextMonthProjectedExpense = nextMonthProjectedExpense.add(item.amount());
             }
         }
 
         return new InstallmentProjection(totalFutureInstallments, nextMonthProjectedExpense);
-    }
-
-    private BigDecimal calculateCurrentInstallmentAmount(
-            int currentInstallment,
-            int totalInstallments,
-            BigDecimal installmentAmount,
-            BigDecimal totalAmount,
-            BigDecimal accumulated
-    ) {
-        if (currentInstallment < totalInstallments) {
-            return installmentAmount;
-        }
-
-        return totalAmount.subtract(accumulated);
     }
 
     private FinancialCommitmentResponse buildCurrentAnalysis(User user) {
