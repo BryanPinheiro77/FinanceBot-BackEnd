@@ -28,10 +28,12 @@ import com.financebot.transaction.domain.SourceType;
 import com.financebot.transaction.domain.TransactionType;
 import com.financebot.transaction.dto.TransactionFilter;
 import com.financebot.transaction.mapper.TransactionMapper;
+import com.financebot.transaction.idempotency.TransactionIdempotencyService;
 import com.financebot.user.domain.User;
 import com.financebot.user.service.AuthenticatedUserResolver;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -46,6 +48,7 @@ import org.springframework.security.core.Authentication;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -53,6 +56,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.ArgumentMatchers.nullable;
 
 @ExtendWith(MockitoExtension.class)
 class TransactionControllerTest {
@@ -93,6 +98,15 @@ class TransactionControllerTest {
     @InjectMocks
     private TransactionController transactionController;
 
+    @Mock
+    private TransactionIdempotencyService idempotency;
+
+    @BeforeEach
+    void executeUnkeyedOperationsNormally() {
+        lenient().when(idempotency.execute(any(), any(), nullable(String.class), any(), any(), any()))
+                .thenAnswer(invocation -> ((Supplier<?>) invocation.getArgument(5)).get());
+    }
+
     @Test
     @DisplayName("deve criar transação e retornar análise financeira atualizada")
     void shouldCreateTransactionAndReturnFinancialAnalysis() {
@@ -128,7 +142,7 @@ class TransactionControllerTest {
         when(createTransactionUseCase.execute(command)).thenReturn(transactionResponse);
         when(financialAnalysisService.getFinancialCommitment(authentication)).thenReturn(financialAnalysis);
 
-        TransactionCreationResponse result = transactionController.create(request, authentication);
+        TransactionCreationResponse result = transactionController.create(request, authentication, null);
 
         assertThat(result.transaction()).isEqualTo(transactionResponse);
         assertThat(result.analysis()).isEqualTo(financialAnalysis);
@@ -177,7 +191,7 @@ class TransactionControllerTest {
         when(financialAnalysisService.getFinancialCommitment(authentication)).thenReturn(financialAnalysis);
 
         InstallmentTransactionCreationResponse result =
-                transactionController.createInstallment(request, authentication);
+                transactionController.createInstallment(request, authentication, null);
 
         assertThat(result.installment()).isEqualTo(installmentResponse);
         assertThat(result.analysis()).isEqualTo(financialAnalysis);
@@ -230,7 +244,7 @@ class TransactionControllerTest {
         when(financialAnalysisService.getFinancialCommitment(authentication)).thenReturn(financialAnalysis);
 
         InstallmentTransactionCreationResponse result =
-                transactionController.createExistingInstallment(request, authentication);
+                transactionController.createExistingInstallment(request, authentication, null);
 
         assertThat(result.installment()).isEqualTo(installmentResponse);
         assertThat(result.analysis()).isEqualTo(financialAnalysis);

@@ -97,9 +97,8 @@ Esses testes exercitam o PostgreSQL temporário e não alteram produção. Eles 
 validam queda física do servidor, failover ou todos os níveis de isolamento; o
 teste concorrente usa o padrão `READ COMMITTED` do PostgreSQL.
 
-A criação HTTP de transações e parcelamentos não possui chave de idempotência.
-Reenviar uma criação já confirmada após perder a resposta pode duplicar registros.
-Uma nova tentativa é segura aqui quando o rollback foi confirmado; o teste de
-reexecução automática cobre a agenda das recorrências. Idempotência geral de
-requisições deve ser tratada como um contrato próprio, com persistência e testes
-específicos.
+A criação REST de transações e parcelamentos passou a aceitar o header opcional
+`Idempotency-Key`, em contrato próprio de [Idempotência de criação REST](transaction-idempotency.md).
+Sem ele, reenviar uma criação confirmada ainda pode duplicar registros. A retomada
+validada nesta suíte cobre rollback confirmado e a agenda das recorrências;
+validade da chave, replay e concorrência de reenvios têm testes próprios.

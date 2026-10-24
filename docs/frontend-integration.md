@@ -19,8 +19,12 @@ a resposta será `503`, também com `Retry-After`. Detalhes em
 Na criação ou importação de parcelamentos, valores com fração de centavo e totais
 insuficientes para manter cada parcela em pelo menos R$ 0,01 retornam `400`.
 `monthlyAmount` também deve ser representável em centavos. A prévia usa o plano
-da criação; evite reenviar automaticamente uma criação se a resposta foi perdida,
-pois esses endpoints não oferecem chave de idempotência. Consulte
+da criação. Para reenviar uma criação após perder a resposta, preserve um
+`Idempotency-Key` gerado por operação lógica, junto do endpoint e conteúdo.
+Repetições devolvem o `201` e a resposta original; conteúdo diferente com a mesma
+chave retorna `409`. A validade padrão é de 24 horas. Sem chave ou após expirar,
+reconciliar os lançamentos antes de reenviar. Consulte
+[Idempotência de criação REST](transaction-idempotency.md) e
 [Consistência de transações](transaction-consistency.md).
 
 ## Quando o frontend for adicionado

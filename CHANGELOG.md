@@ -4,6 +4,11 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ## [Unreleased]
 
+### Added
+
+- Header opcional `Idempotency-Key` nos três endpoints REST de criação de transações/parcelamentos, com replay da resposta original, conflito `409` e reserva atômica com o lançamento (#215).
+- Migration V17 para respostas cifradas, validade padrão de 24 horas e limpeza em lotes; atualizado o procedimento de revogação de chaves para considerar esses snapshots.
+
 ### Fixed
 
 - Parcelamentos novos e existentes preservam o total em centavos sem gerar parcelas zeradas ou negativas por arredondamento; valores fracionários ou insuficientes retornam `400` (#182).
@@ -21,6 +26,7 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ### Tests
 
+- Adicionados testes PostgreSQL de idempotência, incluindo concorrência de chaves novas/expiradas, rollback, isolamento, cifragem, retenção e CORS (#215).
 - Adicionada integração com PostgreSQL 17 e Flyway para rollback de parcelamentos/edições, concorrência e retomada de recorrências, precisão de centavos e consistência da prévia (#182).
 - Adicionados testes de limite de autenticação com Redis real via Testcontainers, incluindo concorrência, expiração, spoofing de IP, CORS e indisponibilidade do contador.
 - Adicionada suíte de integração para isolamento entre usuários (#134), com JWT real, H2, tentativas de acesso e escrita cruzados, referências alheias e verificação de preservação dos dados.

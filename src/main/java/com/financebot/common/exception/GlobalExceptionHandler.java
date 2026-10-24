@@ -1,6 +1,9 @@
 package com.financebot.common.exception;
 
 import com.financebot.telegram.exception.TelegramUserNotFoundException;
+import com.financebot.transaction.idempotency.IdempotencyConflictException;
+import com.financebot.transaction.idempotency.IdempotencyUnavailableException;
+import org.springframework.http.ResponseEntity;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -16,6 +19,20 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     private static final String INVALID_REQUEST_TITLE = "Invalid request";
+
+    @ExceptionHandler(IdempotencyConflictException.class)
+    public ProblemDetail handleIdempotencyConflict(IdempotencyConflictException exception) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+        problem.setTitle("Idempotency conflict");
+        return problem;
+    }
+
+    @ExceptionHandler(IdempotencyUnavailableException.class)
+    public ResponseEntity<ProblemDetail> handleIdempotencyUnavailable(IdempotencyUnavailableException exception) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, exception.getMessage());
+        problem.setTitle("Idempotency unavailable");
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).header("Retry-After", "1").body(problem);
+    }
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ProblemDetail handleEntityNotFound(EntityNotFoundException ex) {
