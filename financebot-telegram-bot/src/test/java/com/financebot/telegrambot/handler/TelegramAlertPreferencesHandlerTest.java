@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import com.financebot.telegrambot.dto.response.TelegramLinkConfirmResponse;
 
 @ExtendWith(MockitoExtension.class)
 class TelegramAlertPreferencesHandlerTest {
@@ -59,5 +60,17 @@ class TelegramAlertPreferencesHandlerTest {
         when(client.getAlertPreferences(123L)).thenThrow(new IllegalStateException("API unavailable"));
         assertThat(handler.handleAlerts("/alertas desligar", 123L)).contains("Não foi possível");
         verify(client, never()).updateAlertPreferences(anyLong(), any());
+    }
+
+    @Test
+    void successfulConnectionExplainsHowToChooseAutomaticSummaries() {
+        when(client.confirmTelegramLink(any())).thenReturn(
+                new TelegramLinkConfirmResponse(true, "Conta conectada com sucesso ao Telegram."));
+        when(formatter.formatConnectSuccessMessage(anyString())).thenCallRealMethod();
+
+        String response = handler.handleConnect("/conectar FIN-ABC123", 123L, "bryan");
+
+        assertThat(response).contains("Resumos automáticos são opcionais", "/alertas",
+                "/alertas semanal ligar", "/alertas mensal ligar");
     }
 }

@@ -1,7 +1,9 @@
 package com.financebot.security.crypto;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Base64;
 
@@ -13,9 +15,18 @@ class EncryptionKeyHolderTest {
     private static final String ACTIVE_KEY = encode("0123456789abcdef0123456789abcdef");
     private static final String PREVIOUS_KEY = encode("abcdef0123456789abcdef0123456789");
 
+    private RotatingFieldEncryption previousEncryption;
+
+    @BeforeEach
+    void preserveHolder() {
+        previousEncryption = (RotatingFieldEncryption) ReflectionTestUtils.getField(
+                EncryptionKeyHolder.class, "encryption");
+    }
+
     @AfterEach
-    void clearHolder() {
-        EncryptionKeyHolder.configure("");
+    void restoreHolder() {
+        // Contextos Spring em cache continuam usando o chaveiro anterior ao teste.
+        ReflectionTestUtils.setField(EncryptionKeyHolder.class, "encryption", previousEncryption);
     }
 
     @Test

@@ -33,7 +33,13 @@ No Telegram:
 - `/alertas semanal ligar|desligar`: controlar somente o resumo semanal.
 - `/alertas mensal ligar|desligar`: controlar somente o resumo mensal.
 
-As preferências existentes começam ativadas. A geração respeita cada opção;
+Novos usuários começam com os resumos semanal e mensal desativados e escolhem
+explicitamente se desejam recebê-los. Alertas financeiros permanecem ativados
+por padrão e podem ser controlados separadamente. A migration V16 altera apenas
+o padrão de novas inserções; não modifica as preferências já persistidas. Ao
+vincular o Telegram, o bot apresenta os comandos de consulta e ativação.
+
+A geração respeita cada opção;
 a reserva de entrega verifica novamente preferências, vínculo Telegram,
 expiração e configuração global. Uma alteração não cancela uma chamada ao
 Telegram que já começou. Desativação ou desvinculação antes da reserva cancela

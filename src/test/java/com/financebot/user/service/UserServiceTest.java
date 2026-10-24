@@ -219,12 +219,16 @@ class UserServiceTest {
             assertThat(savedUser.getTelegramId()).isEqualTo(987654L);
             assertThat(savedUser.getTelegramLinkCode()).isNull();
             assertThat(savedUser.getTelegramLinkCodeExpiresAt()).isNull();
+            assertThat(savedUser.isWeeklySummaryEnabled()).isFalse();
+            assertThat(savedUser.isMonthlySummaryEnabled()).isFalse();
         }
 
         @Test
         @DisplayName("deve retornar sucesso quando Telegram ja estava vinculado ao mesmo usuario")
         void shouldReturnSuccessWhenTelegramWasAlreadyLinkedToSameUser() {
             User user = buildUser();
+            user.setWeeklySummaryEnabled(true);
+            user.setMonthlySummaryEnabled(true);
             user.setTelegramId(987654L);
             user.setTelegramLinkCode("FIN-ABC123");
             user.setTelegramLinkCodeExpiresAt(LocalDateTime.now().plusMinutes(5));
@@ -251,6 +255,8 @@ class UserServiceTest {
             assertThat(savedUser.getTelegramId()).isEqualTo(987654L);
             assertThat(savedUser.getTelegramLinkCode()).isNull();
             assertThat(savedUser.getTelegramLinkCodeExpiresAt()).isNull();
+            assertThat(savedUser.isWeeklySummaryEnabled()).isTrue();
+            assertThat(savedUser.isMonthlySummaryEnabled()).isTrue();
 
             verify(userRepository, never()).existsByTelegramId(anyLong());
         }

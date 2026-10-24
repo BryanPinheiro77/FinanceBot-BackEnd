@@ -151,7 +151,16 @@ public class TelegramAccountMessageFormatter {
             <code>/connect FIN-ABC123</code>
             """; }
 
-    public String formatConnectSuccessMessage(String message) { return escapeHtml(defaultText(message)); }
+    public String formatConnectSuccessMessage(String message) {
+        return """
+                %s
+
+                🔔 <b>Resumos automáticos são opcionais.</b>
+                Consulte suas preferências com <code>/alertas</code>.
+                Para ativar, use <code>/alertas semanal ligar</code> ou <code>/alertas mensal ligar</code>.
+                Você pode alterar essas opções quando quiser.
+                """.formatted(escapeHtml(defaultText(message))).strip();
+    }
 
     public String formatDisconnectSuccessMessage() { return """
             ✅ <b>Sua conta do Telegram foi desconectada com sucesso.</b>
