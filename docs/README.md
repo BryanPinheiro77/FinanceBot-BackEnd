@@ -7,6 +7,7 @@
 - [Política de segurança](../SECURITY.md)
 - [Privacidade](../PRIVACY.md)
 - [Proteção de dados](security/data-protection.md)
+- [Isolamento entre usuários](security/user-isolation.md)
 - [Rotação de chaves](security/key-rotation.md)
 - [Suporte](../SUPPORT.md)
 - [Roadmap](roadmap.md)
