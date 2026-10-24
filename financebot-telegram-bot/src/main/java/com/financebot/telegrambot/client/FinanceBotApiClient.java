@@ -61,25 +61,28 @@ public class FinanceBotApiClient implements com.financebot.telegrambot.reminder.
 
     private record DeliveryResult(String token, String outcome) { }
 
-    public void createTransaction(CreateTransactionFromTelegramRequest request) {
+    public void createTransaction(CreateTransactionFromTelegramRequest request, String idempotencyKey) {
         restClient.post()
                 .uri("/telegram/transactions")
+                .header("Idempotency-Key", idempotencyKey)
                 .body(request)
                 .retrieve()
                 .toBodilessEntity();
     }
 
-    public void createInstallmentTransaction(CreateInstallmentTransactionFromTelegramRequest request) {
+    public void createInstallmentTransaction(CreateInstallmentTransactionFromTelegramRequest request, String idempotencyKey) {
         restClient.post()
                 .uri("/telegram/transactions/installments")
+                .header("Idempotency-Key", idempotencyKey)
                 .body(request)
                 .retrieve()
                 .toBodilessEntity();
     }
 
-    public void createExistingInstallmentTransaction(CreateExistingInstallmentTransactionFromTelegramRequest request) {
+    public void createExistingInstallmentTransaction(CreateExistingInstallmentTransactionFromTelegramRequest request, String idempotencyKey) {
         restClient.post()
                 .uri("/telegram/transactions/installments/existing")
+                .header("Idempotency-Key", idempotencyKey)
                 .body(request)
                 .retrieve()
                 .toBodilessEntity();

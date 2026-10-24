@@ -1,5 +1,6 @@
 package com.financebot.telegrambot.service;
 
+import com.financebot.telegrambot.confirmation.PendingConfirmation;
 import com.financebot.telegrambot.client.FinanceBotApiClient;
 import com.financebot.telegrambot.conversation.application.TelegramConversationContinuationService;
 import com.financebot.telegrambot.conversation.application.TelegramConversationContextService;
@@ -320,7 +321,7 @@ class TelegramCommandServiceTest {
                 "gastei 50 no mercado pelo nubank"
         );
 
-        when(telegramPendingConfirmationService.getPending(123L)).thenReturn(pending);
+        when(telegramPendingConfirmationService.beginConfirmation(123L)).thenReturn(new PendingConfirmation("test-key-123", pending, java.time.Instant.now().plusSeconds(600), true));
 
         String result = telegramCommandService.handleMessage(
                 "confirmar",
@@ -332,8 +333,8 @@ class TelegramCommandServiceTest {
         ArgumentCaptor<CreateTransactionFromTelegramRequest> requestCaptor =
                 ArgumentCaptor.forClass(CreateTransactionFromTelegramRequest.class);
 
-        verify(financeBotApiClient).createTransaction(requestCaptor.capture());
-        verify(telegramPendingConfirmationService).clearPending(123L);
+        verify(financeBotApiClient).createTransaction(requestCaptor.capture(), any());
+        verify(telegramPendingConfirmationService).clearConfirmed(123L, "test-key-123");
 
         CreateTransactionFromTelegramRequest request = requestCaptor.getValue();
 
@@ -412,7 +413,7 @@ class TelegramCommandServiceTest {
                 "comprei notebook de 1200 em 12x no nubank"
         );
 
-        when(telegramPendingConfirmationService.getPending(123L)).thenReturn(pending);
+        when(telegramPendingConfirmationService.beginConfirmation(123L)).thenReturn(new PendingConfirmation("test-key-123", pending, java.time.Instant.now().plusSeconds(600), true));
 
         String result = telegramCommandService.handleMessage(
                 "sim",
@@ -424,8 +425,8 @@ class TelegramCommandServiceTest {
         ArgumentCaptor<CreateInstallmentTransactionFromTelegramRequest> requestCaptor =
                 ArgumentCaptor.forClass(CreateInstallmentTransactionFromTelegramRequest.class);
 
-        verify(financeBotApiClient).createInstallmentTransaction(requestCaptor.capture());
-        verify(telegramPendingConfirmationService).clearPending(123L);
+        verify(financeBotApiClient).createInstallmentTransaction(requestCaptor.capture(), any());
+        verify(telegramPendingConfirmationService).clearConfirmed(123L, "test-key-123");
 
         CreateInstallmentTransactionFromTelegramRequest request = requestCaptor.getValue();
 

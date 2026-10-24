@@ -6,6 +6,9 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ### Added
 
+- Confirmações idempotentes do Telegram nos três endpoints internos de criação,
+  com pendência e chave persistidas no Redis por 15 minutos, retry após reinício
+  e proteção contra edição/substituição após uma tentativa de confirmação (#217).
 - Header opcional `Idempotency-Key` nos três endpoints REST de criação de transações/parcelamentos, com replay da resposta original, conflito `409` e reserva atômica com o lançamento (#215).
 - Migration V17 para respostas cifradas, validade padrão de 24 horas e limpeza em lotes; atualizado o procedimento de revogação de chaves para considerar esses snapshots.
 

@@ -27,7 +27,8 @@ public class TelegramPendingOperationHandler {
     private final TelegramConversationContextService telegramConversationContextService;
 
     public String handleConfirmation(Long telegramId) {
-        PendingTelegramTransaction pending = telegramPendingConfirmationService.getPending(telegramId);
+        var confirmation = telegramPendingConfirmationService.beginConfirmation(telegramId);
+        PendingTelegramTransaction pending = confirmation == null ? null : confirmation.transaction();
 
         if (pending == null) {
             return "Não há nenhuma operação pendente para confirmar.";
@@ -47,7 +48,7 @@ public class TelegramPendingOperationHandler {
                                 pending.totalInstallments(),
                                 pending.firstRemainingInstallmentNumber()
                         );
-                financeBotApiClient.createExistingInstallmentTransaction(request);
+                financeBotApiClient.createExistingInstallmentTransaction(request, confirmation.key());
             } else if (pending.isInstallment()) {
                 CreateInstallmentTransactionFromTelegramRequest request =
                         new CreateInstallmentTransactionFromTelegramRequest(
@@ -60,7 +61,7 @@ public class TelegramPendingOperationHandler {
                                 pending.totalInstallments()
                         );
 
-                financeBotApiClient.createInstallmentTransaction(request);
+                financeBotApiClient.createInstallmentTransaction(request, confirmation.key());
             } else {
                 CreateTransactionFromTelegramRequest request =
                         new CreateTransactionFromTelegramRequest(
@@ -73,10 +74,10 @@ public class TelegramPendingOperationHandler {
                                 pending.accountName()
                         );
 
-                financeBotApiClient.createTransaction(request);
+                financeBotApiClient.createTransaction(request, confirmation.key());
             }
 
-            telegramPendingConfirmationService.clearPending(telegramId);
+            telegramPendingConfirmationService.clearConfirmed(telegramId, confirmation.key());
 
             return telegramMessageFormatter.formatTransactionSuccess(pending.intentType());
         } catch (RestClientResponseException e) {
@@ -98,11 +99,14 @@ public class TelegramPendingOperationHandler {
             return "Não há nenhuma operação pendente para cancelar.";
         }
 
+        var confirmation = telegramPendingConfirmationService.getConfirmation(telegramId);
         telegramPendingConfirmationService.clearPending(telegramId);
         telegramPendingQueryService.clearPending(telegramId);
         telegramConversationContextService.clearPendingContext(telegramId);
 
-        return "❌ Operação cancelada com sucesso.";
+        return confirmation != null && confirmation.attempted()
+                ? "❌ Confirmação cancelada. Uma tentativa anterior pode ter sido salva. Confira seus lançamentos antes de registrar novamente."
+                : "❌ Operação cancelada com sucesso.";
     }
 
     private String mapIntentToTransactionType(TelegramIntentType intentType) {

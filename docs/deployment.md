@@ -73,3 +73,12 @@ O rollback atual é manual: identifique o commit anterior saudável, volte o che
 - substituir `git pull` no servidor por checkout imutável do SHA do workflow;
 - separar ambientes e usar aprovação para produção;
 - avaliar armazenamento seguro de secrets.
+
+## Ordem de atualização da idempotência Telegram
+
+Ao publicar a #217, atualize a API antes do bot. A API antiga ignora o header e
+não oferece deduplicação ao bot novo. Use `TELEGRAM_STATE_STORE=redis` para retomar
+confirmações após reinícios; o modo `memory` não preserva esse estado. As pendências
+anteriores guardadas só em memória não são migradas. O Redis precisa permitir os
+scripts Lua de leitura, gravação com TTL e remoção condicional. Detalhes em
+[Idempotência](transaction-idempotency.md#confirmações-do-telegram).

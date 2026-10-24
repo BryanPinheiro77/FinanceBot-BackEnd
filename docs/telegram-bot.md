@@ -65,3 +65,18 @@ com log técnico, sem registrar descrição financeira ou identificador do Teleg
 - Mudanças nos endpoints da API devem ser refletidas em `FinanceBotApiClient` e seus testes.
 - Alterações no formato das mensagens devem ter testes dos handlers/formatters.
 - O bot pode usar Redis para preservar contexto entre reinícios; em `memory`, esse contexto é perdido ao reiniciar.
+
+## Confirmação idempotente
+
+O bot envia `Idempotency-Key` nas criações simples e parceladas. Cada pendência
+tem uma chave estável por 15 minutos; uma falha de comunicação mantém a mesma
+chave e o conteúdo para a próxima confirmação. Após iniciar uma tentativa,
+edição e substituição ficam bloqueadas até confirmação ou cancelamento explícito.
+Cancelar não desfaz um lançamento já gravado: confira os registros antes de recriar.
+
+`TELEGRAM_STATE_STORE=redis` persiste também as confirmações pendentes e permite
+retomar a mesma operação após reiniciar o bot, enquanto o estado existir no Redis.
+O modo `memory` perde essas pendências ao reiniciar. Redis indisponível não deve
+ser contornado criando outra chave ou usando memória automaticamente.
+
+Veja [contrato, retenção e limites de idempotência](transaction-idempotency.md#confirmações-do-telegram).

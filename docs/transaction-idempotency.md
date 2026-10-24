@@ -125,7 +125,58 @@ A suíte completa da API também validou a compatibilidade da V17 com os testes 
 
 A garantia depende de o consumidor adotar o header e conservar a chave. Não há
 deduplicação por semelhança de texto/valor, nem garantia após a validade. Endpoints
-internos e cliente Telegram, edições, exclusões e recorrências ficam fora desse
+de edição, exclusões e recorrências ficam fora desse
 contrato inicial. A consistência de recorrências continua descrita em
 [Consistência de transações](transaction-consistency.md). Failover com perda de
 dados confirmados depende das garantias de durabilidade e backup da instalação.
+
+## Confirmações do Telegram
+
+Validação da #217: `./mvnw clean verify` aprovado com 549 testes da API e
+200 testes do bot, sem falhas, erros ou skips (PostgreSQL e Redis via containers).
+
+Os três endpoints internos `POST /telegram/transactions`,
+`/telegram/transactions/installments` e `/telegram/transactions/installments/existing`
+aceitam o mesmo header opcional `Idempotency-Key`. Continuam exigindo
+`X-Internal-Service-Token` e retornando `200` sem corpo, inclusive em replay.
+Sem chave, preservam o comportamento anterior. Chaves inválidas retornam `400`,
+conteúdo diferente retorna `409` e indisponibilidade retorna `503`.
+
+O usuário vinculado ao `telegramId` define o escopo da chave. As operações
+Telegram têm namespaces separados dos endpoints REST. Resolução de conta e
+categoria, criação e marcador participam da mesma transação; um replay válido
+não resolve novamente contas/categorias e não cria lançamentos. Antes da criação,
+o vínculo é relido com lock na mesma transação. Se tiver mudado para outro usuário
+enquanto a reserva aguardava, a tentativa retorna `404` e reverte o marcador,
+sem criar uma transação para o novo usuário usando o escopo antigo. O marcador
+armazena uma confirmação booleana criptografada, sem payload financeiro.
+
+O bot gera um UUID por pendência e persiste junto com o conteúdo e a expiração.
+Com `TELEGRAM_STATE_STORE=redis`, o estado sobrevive ao reinício do processo,
+dependendo da retenção/persistência do próprio Redis. O modo `memory` mantém
+retry protegido durante a vida do processo, mas perde pendências no reinício.
+Não há fallback automático para memória se o Redis falhar.
+
+A pendência dura **15 minutos**, sem renovação em leituras ou retries. O marcador
+Telegram dura o maior valor entre a retenção configurada da API e **uma hora**,
+para permanecer válido além da janela de retry do bot. Não recoloque manualmente
+pendências expiradas em circulação. Expiração, cancelamento ou um novo pedido
+explícito encerram a identidade daquela operação; não se promete deduplicação
+permanente de mensagens do Telegram.
+
+Antes de chamar a API, o bot marca a tentativa atomicamente no store. A chave e o
+conteúdo ficam congelados: não é possível editar ou substituir uma pendência
+já tentada sem resolver a confirmação ou cancelar explicitamente. Isso também
+vale para respostas de erro: confirme novamente após resolver a causa ou cancele
+para iniciar outra operação. Cancelar uma tentativa não desfaz uma transação que
+a API já tenha gravado; o bot orienta conferir os lançamentos antes de recriar.
+Uma confirmação antiga só remove a pendência se a chave ainda for a mesma.
+
+O Redis armazena dados pessoais e financeiros da pendência em JSON, como os
+contextos de conversa existentes: mantenha-o privado, com autenticação e TLS
+quando houver tráfego fora de uma rede confiável. O TTL não substitui políticas
+de backups/segurança do Redis. Não registrar payloads ou chaves em logs.
+
+Os testes usam PostgreSQL 17/Flyway e Redis 7 reais em containers para validar
+replay, conflito, autenticação interna, isolamento, rollback, concorrência,
+retomada após reinício, bloqueio de edição e remoção condicional.
