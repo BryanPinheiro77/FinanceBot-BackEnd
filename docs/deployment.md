@@ -44,6 +44,13 @@ docker network create backend-network
 
 ## Publicação
 
+Login e cadastro passam a depender do contador Redis: falha de acesso retorna `503`.
+Antes de promover a mudança de limites de autenticação, confirme disponibilidade,
+permissão para executar scripts Redis e a topologia do proxy. Os valores padrão não
+exigem novas variáveis; para ajustar cotas, janelas e proxies, consulte
+[Limites de autenticação](security/auth-rate-limiting.md). O Compose carrega essas
+variáveis opcionais pelo `env_file` existente.
+
 1. Prepare a promoção conforme [Governança de releases](releases.md) e faça merge na `main` após revisão, CI e autorização.
 2. Acompanhe o workflow no GitHub.
 3. No servidor, confirme os containers com `docker compose -f compose.prod.yml ps` em cada módulo

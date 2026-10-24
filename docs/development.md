@@ -126,6 +126,15 @@ apontar para a mesma instância do RabbitMQ.
 
 ## Testes e qualidade
 
+Mantenha Docker ativo: os testes de limite de autenticação iniciam e removem um
+Redis isolado via Testcontainers. Eles não dependem do Redis configurado no `.env`.
+Se usar um contexto como Colima, exponha o socket ao Testcontainers na sessão:
+
+```bash
+export DOCKER_HOST="$(docker context inspect --format '{{.Endpoints.docker.Host}}')"
+export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
+```
+
 ```bash
 ./mvnw clean verify
 (cd financebot-telegram-bot && ./mvnw clean verify)
