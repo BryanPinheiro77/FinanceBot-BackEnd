@@ -24,6 +24,8 @@
 - [Frontend e integração](frontend-integration.md)
 - [Contribuição](contributing.md)
 - [Deploy](deployment.md)
+- [Runbook de operação](operations/runbook.md)
+- [Playbook de incidentes](operations/incident-playbook.md)
 - [Servidor remoto](operations/remote-server.md)
 - [Backup e restauração](operations/backup-restore.md)
 - [Observabilidade](observability.md)
@@ -44,6 +46,8 @@
 | Entender o serviço do Telegram | [Back-end do bot Telegram](telegram-bot.md) |
 | Integrar ou documentar o frontend | [Frontend e integração](frontend-integration.md) |
 | Criar branch, PR e testes | [Contribuição](contributing.md) |
+| Executar a rotina operacional | [Runbook](operations/runbook.md) |
+| Responder a uma falha ou resultado incerto | [Playbook de incidentes](operations/incident-playbook.md) |
 | Publicar em produção | [Deploy](deployment.md) |
 | Acessar/manter o notebook via Tailscale | [Servidor remoto](operations/remote-server.md) |
 | Consultar métricas, dashboards e logs | [Observabilidade](observability.md) |
