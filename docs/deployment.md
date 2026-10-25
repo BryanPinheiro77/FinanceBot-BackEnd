@@ -76,7 +76,14 @@ variáveis opcionais pelo `env_file` existente.
 
 ## Rollback operacional
 
-O rollback atual é manual: identifique o commit anterior saudável, volte o checkout do servidor para esse commit e execute novamente os dois comandos `docker compose ... up -d --build`. Antes de automatizar rollback, confirme backup do PostgreSQL e compatibilidade das migrations.
+O rollback é manual e exige autorização. Identifique SHA/imagens anteriores saudáveis,
+schema aplicado e compatibilidade dos dois módulos antes de escolher a ação. Voltar
+uma imagem não desfaz migrations; API e bot precisam de reversão coordenada quando
+seus contratos mudarem. Não executar `repair`, alterar migrations aplicadas ou
+restaurar dados automaticamente para contornar a falha. Preserve o estado atual,
+confirme backup/restauração e siga o [playbook de incidentes](operations/incident-playbook.md).
+Os comandos de reversão devem ser definidos para o caso concreto e validados antes
+que a versão seja novamente apresentada como saudável.
 
 ## Melhorias planejadas
 

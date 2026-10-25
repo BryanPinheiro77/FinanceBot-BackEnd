@@ -114,3 +114,11 @@ Validação local em 24/10/2026: `clean verify` com ordem alfabética aprovado,
 com 488 testes da API, incluindo 32 testes desta mudança, sem falhas, erros ou
 skips. `git diff --check` também aprovado. A execução local com Colima utilizou
 as variáveis de socket descritas em [Desenvolvimento local](../development.md).
+
+## Proxy do frontend web
+
+A declaração HMAC opcional do servidor web preserva a origem da cota sem ampliar
+os CIDRs confiáveis. Configuração, limites e ordem de publicação estão em
+[web-session.md](web-session.md). Sem assinatura válida, permanece a resolução
+normal do peer/chain; isso pode agregar a cota do proxy, mas não libera tentativas
+sem contagem.

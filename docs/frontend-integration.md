@@ -5,7 +5,7 @@ O frontend não faz parte deste repositório. Esta página registra a fronteira 
 ## Integração atual
 
 - URL base local da API: `http://localhost:8080`;
-- autenticação: JWT;
+- autenticação da API: JWT por Bearer; evolução da sessão web via servidor do frontend e cookie protegido em [web-session.md](security/web-session.md);
 - documentação interativa: `/swagger-ui/index.html`;
 - health check: `/api/health`;
 - CORS: configurado por `CORS_ALLOWED_ORIGINS`.
@@ -27,8 +27,10 @@ reconciliar os lançamentos antes de reenviar. Consulte
 [Idempotência de criação REST](transaction-idempotency.md) e
 [Consistência de transações](transaction-consistency.md).
 
-## Quando o frontend for adicionado
+## Repositório do frontend
 
-O repositório do frontend deve ter seu próprio `AGENTS.md`, README e documentação de setup. Nesse projeto, devemos registrar apenas contratos compartilhados: URL da API, autenticação, endpoints utilizados, variáveis públicas e compatibilidade de versões.
-
-Pendência: identificar o repositório oficial do frontend e documentar seus comandos, stack, ambiente local e processo de deploy sem misturar responsabilidades com este backend.
+O frontend é mantido em [FinanceBot-FrontEnd](https://github.com/BryanPinheiro77/FinanceBot-FrontEnd).
+Setup, stack e processo de publicação pertencem ao README/documentação daquele
+repositório. Aqui ficam os contratos da API e a [ordem de compatibilidade da sessão
+web](security/web-session.md), incluindo a assinatura opcional da origem usada
+nas cotas de login/cadastro. Preparar esse contrato não comprova publicação do frontend.

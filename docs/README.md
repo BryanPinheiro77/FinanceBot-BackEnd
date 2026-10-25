@@ -9,6 +9,7 @@
 - [Proteção de dados](security/data-protection.md)
 - [Isolamento entre usuários](security/user-isolation.md)
 - [Limites de autenticação](security/auth-rate-limiting.md)
+- [Contrato de sessão web](security/web-session.md)
 - [Rotação de chaves](security/key-rotation.md)
 - [Builds e imagens dos serviços Java](security/container-builds.md)
 - [Verificação de dependências](security/dependency-audit.md)
@@ -24,8 +25,11 @@
 - [Frontend e integração](frontend-integration.md)
 - [Contribuição](contributing.md)
 - [Deploy](deployment.md)
+- [Runbook de operação](operations/runbook.md)
+- [Playbook de incidentes](operations/incident-playbook.md)
 - [Servidor remoto](operations/remote-server.md)
 - [Backup e restauração](operations/backup-restore.md)
+- [Automação de backup](operations/automated-backup.md)
 - [Observabilidade](observability.md)
 - [Alertas e resumos financeiros](alerts.md)
 
@@ -44,6 +48,8 @@
 | Entender o serviço do Telegram | [Back-end do bot Telegram](telegram-bot.md) |
 | Integrar ou documentar o frontend | [Frontend e integração](frontend-integration.md) |
 | Criar branch, PR e testes | [Contribuição](contributing.md) |
+| Executar a rotina operacional | [Runbook](operations/runbook.md) |
+| Responder a uma falha ou resultado incerto | [Playbook de incidentes](operations/incident-playbook.md) |
 | Publicar em produção | [Deploy](deployment.md) |
 | Acessar/manter o notebook via Tailscale | [Servidor remoto](operations/remote-server.md) |
 | Consultar métricas, dashboards e logs | [Observabilidade](observability.md) |
