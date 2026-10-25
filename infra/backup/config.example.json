@@ -1,0 +1,11 @@
+{
+  "repository": "s3:https://storage.example.invalid/bucket/financebot",
+  "password_file": "/etc/financebot-backup/repository-password",
+  "source_container": "financebot-backend",
+  "postgres_container": "postgres",
+  "backup_host": "financebot-primary",
+  "state_dir": "/var/lib/financebot-backup",
+  "staging_root": "/dev/shm",
+  "max_dump_mib": 256,
+  "apply_retention": false
+}

@@ -1,0 +1,26 @@
+[Unit]
+Description=FinanceBot - backup externo cifrado e restore isolado
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+EnvironmentFile=/etc/financebot-backup/credentials.env
+ExecStart=/usr/bin/python3 /opt/financebot-backup/financebot_backup.py --config /etc/financebot-backup/config.json backup
+TimeoutStartSec=45min
+TimeoutStopSec=90s
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+MemoryMax=768M
+LimitCORE=0
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+StateDirectory=financebot-backup
+ReadWritePaths=/dev/shm
+# Acesso ao socket Docker equivale a root; estas opções não são isolamento desse acesso.

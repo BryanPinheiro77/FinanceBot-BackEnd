@@ -6,6 +6,8 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ### Added
 
+- Automação opt-in de backup externo com Restic, limite de capacidade, chaveiro protegido, restore PostgreSQL isolado, retenção simulada por padrão e templates systemd (#220); ativação operacional permanece pendente.
+
 - Runbook de rotina e playbook de incidentes, com triagem, critérios de recuperação e proteção de evidências.
 
 ### Fixed
