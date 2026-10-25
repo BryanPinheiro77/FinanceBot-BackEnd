@@ -74,6 +74,8 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install --yes restic
           docker pull postgres:17
+      - name: Validate systemd templates
+        run: systemd-analyze verify infra/backup/financebot-backup.service infra/backup/financebot-backup.timer
       - name: Test backup safety and real isolated recovery
         env:
           FINANCEBOT_BACKUP_SMOKE: "1"

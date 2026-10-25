@@ -22,5 +22,6 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=read-only
 StateDirectory=financebot-backup
+StateDirectoryMode=0700
 ReadWritePaths=/dev/shm
 # Acesso ao socket Docker equivale a root; estas opções não são isolamento desse acesso.
