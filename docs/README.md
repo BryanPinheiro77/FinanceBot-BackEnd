@@ -9,6 +9,7 @@
 - [Proteção de dados](security/data-protection.md)
 - [Isolamento entre usuários](security/user-isolation.md)
 - [Limites de autenticação](security/auth-rate-limiting.md)
+- [Contrato de sessão web](security/web-session.md)
 - [Rotação de chaves](security/key-rotation.md)
 - [Builds e imagens dos serviços Java](security/container-builds.md)
 - [Verificação de dependências](security/dependency-audit.md)

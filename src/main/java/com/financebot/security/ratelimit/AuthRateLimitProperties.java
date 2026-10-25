@@ -17,6 +17,7 @@ import java.util.List;
 @ConfigurationProperties("app.auth-rate-limit")
 public class AuthRateLimitProperties {
     private boolean enabled = true;
+    private String webProxySecret = "";
     @Valid @NotNull private Rule login = new Rule(10, 60);
     @Valid @NotNull private Rule register = new Rule(5, 3600);
     @NotNull private List<String> trustedProxies = List.of();

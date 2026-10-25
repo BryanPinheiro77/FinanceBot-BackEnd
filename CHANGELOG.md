@@ -6,6 +6,8 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ### Added
 
+- Declaração HMAC opcional do IP de origem do servidor web, preservando cotas de login/cadastro na migração para cookies no frontend; sem mudança no contrato Bearer ou ativação por padrão.
+
 - Automação opt-in de backup externo com Restic, limite de capacidade, chaveiro protegido, restore PostgreSQL isolado, retenção simulada por padrão e templates systemd (#220); ativação operacional permanece pendente.
 
 - Runbook de rotina e playbook de incidentes, com triagem, critérios de recuperação e proteção de evidências.
