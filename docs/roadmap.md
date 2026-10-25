@@ -1,6 +1,8 @@
 # Roadmap
 
-O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não uma promessa de datas. Estado reconciliado em 24/10/2026 (UTC). Última release publicada: v1.11.0.
+O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não uma promessa de datas. Estado reconciliado em 25/10/2026 (UTC). Última release publicada: v1.11.0.
+Candidata em preparação: v1.11.1, com contrato de sessão web e ferramentas operacionais.
+A publicação coordenada ainda precisa ser verificada; backup contínuo permanece pendente.
 
 ## Entregue
 
