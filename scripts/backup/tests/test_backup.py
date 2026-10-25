@@ -170,6 +170,37 @@ class BackupTests(unittest.TestCase):
                 self.op.preflight()
             restic.assert_not_called()
 
+    def test_failed_run_preserves_previous_success_and_emits_alert(self):
+        import contextlib
+        import io
+        import sys
+        state = Path(self.cfg["state_dir"])
+        state.mkdir(mode=0o700)
+        success = state / "last-success.json"
+        success.write_text("previous-evidence")
+        with patch.object(sys, "argv", ["backup", "--config", str(self.config()), "backup"]), \
+                patch.object(b.Operation, "backup", side_effect=RuntimeError("secret-that-must-not-leak")), \
+                patch.object(b, "notify_failure") as notify, contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(1, b.main())
+            notify.assert_called_once()
+            self.assertNotIn("secret-that-must-not-leak", output.getvalue())
+        self.assertEqual("previous-evidence", success.read_text())
+        self.assertFalse((state / "last-success.json.partial").exists())
+
+    def test_concurrent_run_cannot_start_another_backup(self):
+        import contextlib
+        import io
+        import sys
+        state = Path(self.cfg["state_dir"])
+        state.mkdir(mode=0o700)
+        with (state / "operation.lock").open("a") as lock:
+            b.fcntl.flock(lock, b.fcntl.LOCK_EX | b.fcntl.LOCK_NB)
+            with patch.object(sys, "argv", ["backup", "--config", str(self.config()), "backup"]), \
+                    patch.object(b.Operation, "backup") as backup, \
+                    patch.object(b, "notify_failure"), contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(1, b.main())
+                backup.assert_not_called()
+
     def test_restore_container_is_always_removed_on_failure(self):
         calls = []
         def run(args, **kwargs):
