@@ -4,6 +4,8 @@ Este é o runbook manual de backup PostgreSQL. Agendamento, cópia externa,
 monitoramento e teste periódico ainda são acompanhados na #220. Um backup pontual
 aprovado não comprova que essa rotina esteja automatizada.
 
+A automação opt-in e suas pendências estão em [automated-backup.md](automated-backup.md).
+
 ## Preparação
 
 O operador autorizado precisa de Docker, Bash e OpenSSL compatível com PBKDF2,

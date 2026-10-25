@@ -62,6 +62,26 @@ jobs:
       - name: Verify build context and runtime image
         run: python3 scripts/verify-container-images.py --module "${{ matrix.module }}"
 
+  backup-tools:
+    name: Backup - safety and restore smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install test prerequisites
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install --yes restic
+          docker pull postgres:17
+      - name: Validate systemd templates
+        run: systemd-analyze verify infra/backup/financebot-backup.service infra/backup/financebot-backup.timer
+      - name: Test backup safety and real isolated recovery
+        env:
+          FINANCEBOT_BACKUP_SMOKE: "1"
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python3 -m unittest discover -s scripts/backup/tests -v
+
   hygiene:
     name: Repository hygiene
     runs-on: ubuntu-latest
