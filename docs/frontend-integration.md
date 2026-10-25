@@ -5,7 +5,7 @@ O frontend não faz parte deste repositório. Esta página registra a fronteira 
 ## Integração atual
 
 - URL base local da API: `http://localhost:8080`;
-- autenticação da API: JWT por Bearer; evolução da sessão web via servidor do frontend e cookie protegido em [web-session.md](security/web-session.md);
+- autenticação da API: JWT por Bearer; sessão web publicada via servidor do frontend e cookie protegido em [web-session.md](security/web-session.md);
 - documentação interativa: `/swagger-ui/index.html`;
 - health check: `/api/health`;
 - CORS: configurado por `CORS_ALLOWED_ORIGINS`.
@@ -33,4 +33,4 @@ O frontend é mantido em [FinanceBot-FrontEnd](https://github.com/BryanPinheiro7
 Setup, stack e processo de publicação pertencem ao README/documentação daquele
 repositório. Aqui ficam os contratos da API e a [ordem de compatibilidade da sessão
 web](security/web-session.md), incluindo a assinatura opcional da origem usada
-nas cotas de login/cadastro. Preparar esse contrato não comprova publicação do frontend.
+nas cotas de login/cadastro. A publicação coordenada foi validada na [v1.11.1](releases/v1.11.1.md). Os guias de configuração continuam exigindo validação própria para outras instalações.
