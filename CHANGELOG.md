@@ -4,9 +4,13 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ## [Unreleased]
 
-### Added
+## [v1.11.1] — 2026-10-25
 
-- Declaração HMAC opcional do IP de origem do servidor web, preservando cotas de login/cadastro na migração para cookies no frontend; sem mudança no contrato Bearer ou ativação por padrão.
+### Security
+
+- Declaração HMAC opcional do IP de origem do servidor web, preservando cotas de login/cadastro na migração para cookies no frontend; sem mudança no contrato Bearer. A ativação exige configuração privada coordenada com o frontend.
+
+### Added
 
 - Automação opt-in de backup externo com Restic, limite de capacidade, chaveiro protegido, restore PostgreSQL isolado, retenção simulada por padrão e templates systemd (#220); ativação operacional permanece pendente.
 
@@ -16,6 +20,10 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 - Guia de backup exige `pipefail`, arquivo parcial e parâmetros explícitos de derivação na criação/restauração; diferencia cópias antigas e recuperação pontual de rotina automatizada.
 - Corrigidas orientações operacionais de rollback, acesso à observabilidade e estado de proteção de Redis/RabbitMQ.
+
+### Tests
+
+- Candidata validada com 560 testes da API e CI dos dois módulos Java, imagens e ferramentas de backup. A publicação web e suas evidências pertencem ao repositório do frontend.
 
 ## [v1.11.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.11.0) — 2026-10-24
 
