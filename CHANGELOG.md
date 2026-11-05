@@ -18,6 +18,14 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 - Integração com as sessões revogáveis da v1.13.0 preservada no frontend.
   A #167 não introduz migrations, dependências ou variáveis novas.
 
+### Tests
+
+- Frontend integrado à main: 73 testes unitários/proxy, 36 cenários de transações,
+  18 de dashboard e 8 de sessão aprovados. Landing: 41 aprovados e 4 skips existentes.
+- Typecheck, build e lint dos arquivos alterados aprovados; npm audit com nove
+  avisos moderados existentes e nenhum alto/crítico. Não houve mudança de Java
+  nesta entrega; validação Maven local não foi reexecutada para a #167.
+
 ## v1.13.0 — 2026-11-05
 
 ### Security
