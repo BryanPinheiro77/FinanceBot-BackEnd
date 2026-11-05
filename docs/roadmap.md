@@ -1,7 +1,14 @@
 # Roadmap
 
 O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não uma promessa de datas. Estado reconciliado em 05/11/2026 (UTC). Última release publicada: v1.12.0.
-Sessão web e dashboard mensal publicados; backup contínuo permanece pendente.
+Sessões revogáveis e dashboard mensal publicados; CRUD web de transações em
+preparação para v1.14.0. Backup contínuo permanece pendente.
+
+## Preparado para publicação
+
+- CRUD web de transações com filtros e paginação (#167), no repositório frontend.
+  Integrado às sessões revogáveis da v1.13.0; aguarda CI e deploy da v1.14.0.
+  [Contratos e limites](frontend-transactions.md).
 
 ## Entregue
 
@@ -42,7 +49,7 @@ Sessão web e dashboard mensal publicados; backup contínuo permanece pendente.
 - [Melhorias da landing page (#208)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/208): identidade visual, animações, responsividade e acessibilidade, no repositório do frontend.
 
 - [Planos, assinatura e limites (#121)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/121): definir o contrato do produto antes de cobrança; preservar a instalação self-hosted.
-- [Dashboard web inicial (#122)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/122): neste repositório, limitar o trabalho aos contratos e endpoints da API; o frontend não está aqui. O resumo mensal da [#164](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/164) foi publicado; os demais fluxos e CRUDs web continuam nesta frente.
+- [Dashboard web inicial (#122)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/122): neste repositório, limitar o trabalho aos contratos e endpoints da API; o frontend não está aqui. O resumo mensal da [#164](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/164) foi publicado; o CRUD de transações (#167) está preparado para v1.14.0; os demais fluxos continuam nesta frente.
 - [IA como camada de enriquecimento com fallback determinístico (#120)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/120): evolução além da interpretação OpenAI já disponível.
 
 ## Frentes abertas de manutenção
