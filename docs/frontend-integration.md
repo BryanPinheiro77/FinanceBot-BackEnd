@@ -27,6 +27,15 @@ reconciliar os lançamentos antes de reenviar. Consulte
 [Idempotência de criação REST](transaction-idempotency.md) e
 [Consistência de transações](transaction-consistency.md).
 
+## Dashboard mensal
+
+A #164 adiciona `GET /dashboard/monthly-summary?month=AAAA-MM`: totais, resultado,
+contagem de lançamentos, série diária completa e despesas por categoria, sempre
+limitados ao usuário autenticado. Regras e exemplos em [Resumo mensal](dashboard.md).
+A API deve ser publicada antes do frontend consumidor; falhas não representam
+totais zerados. O navegador usa o proxy de sessão web e não recalcula regras
+financeiras nem soma páginas de transações para construir o resumo.
+
 ## Repositório do frontend
 
 O frontend é mantido em [FinanceBot-FrontEnd](https://github.com/BryanPinheiro77/FinanceBot-FrontEnd).

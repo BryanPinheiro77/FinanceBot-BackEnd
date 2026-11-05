@@ -4,6 +4,29 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ## [Unreleased]
 
+## [v1.12.0] — 2026-11-05
+
+### Added
+
+- Resumo mensal autenticado para o dashboard web (#164), com totais em centavos,
+  série diária completa e despesas por categoria, calculados na API em uma consulta
+  agregada e isolados por usuário. Contrato e ordem de publicação documentados.
+- Dashboard web no repositório próprio, com seleção de mês, receitas, despesas,
+  resultado, gráficos, tabela acessível e tratamento de carregamento, vazio,
+  falha/retry e sessão expirada; sem cálculos financeiros duplicados no navegador.
+
+### Tests
+
+- API validada localmente com 573 testes, incluindo 13 cenários do novo resumo.
+- Frontend validado com 22 testes unitários, 18 cenários de dashboard e 4 de sessão,
+  além de typecheck, build e lint dos arquivos alterados.
+
+### Operation
+
+- Publicar a API antes do frontend consumidor. Sem migrations ou novos secrets.
+- Backup contínuo permanece pendente na #220. Auditoria npm pré-publicação retornou
+  nove avisos moderados, sem avisos altos/críticos; não foram alteradas dependências.
+
 ## [v1.11.1](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.11.1) — 2026-10-25
 
 ### Security

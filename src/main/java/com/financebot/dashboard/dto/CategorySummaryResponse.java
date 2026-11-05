@@ -1,4 +1,6 @@
 package com.financebot.dashboard.dto;
 
-public class CategorySummaryResponse {
+import java.math.BigDecimal;
+
+public record CategorySummaryResponse(Long categoryId, String categoryName, BigDecimal totalExpense) {
 }
