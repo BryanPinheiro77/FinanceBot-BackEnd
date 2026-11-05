@@ -107,9 +107,10 @@ class AuthSessionIntegrationTest {
         UUID sid = sessionId(issued);
         Instant earlier = Instant.now().minusSeconds(3500);
         jdbc.update("update auth_sessions set last_activity_at = ? where id = ?", earlier, sid);
+        Instant storedActivity = jdbc.queryForObject("select last_activity_at from auth_sessions where id = ?", Instant.class, sid);
         JsonNode rotated = refresh(issued, 200);
         Instant activity = jdbc.queryForObject("select last_activity_at from auth_sessions where id = ?", Instant.class, sid);
-        assertThat(activity).isEqualTo(earlier);
+        assertThat(activity).isEqualTo(storedActivity);
         mvc.perform(post("/auth/activity").header("Authorization", "Bearer " + rotated.get("token").asString()))
                 .andExpect(status().isOk()).andExpect(jsonPath("idleWarningAt").exists())
                 .andExpect(jsonPath("idleExpiresAt").exists());
