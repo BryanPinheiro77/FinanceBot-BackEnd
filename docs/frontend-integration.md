@@ -36,6 +36,12 @@ A API deve ser publicada antes do frontend consumidor; falhas não representam
 totais zerados. O navegador usa o proxy de sessão web e não recalcula regras
 financeiras nem soma páginas de transações para construir o resumo.
 
+## Transações no site
+
+A #167 integra o CRUD unitário existente, filtros e paginação ao proxy de sessão
+web. Consulte [contratos, centavos, idempotência e limites](frontend-transactions.md).
+Não há alteração da API nem suporte novo a parcelamento em grupo nesta interface.
+
 ## Repositório do frontend
 
 O frontend é mantido em [FinanceBot-FrontEnd](https://github.com/BryanPinheiro77/FinanceBot-FrontEnd).

@@ -24,6 +24,7 @@
 - [Idempotência de criação REST e Telegram](transaction-idempotency.md)
 - [Back-end do bot Telegram](telegram-bot.md)
 - [Frontend e integração](frontend-integration.md)
+- [Contrato web de transações](frontend-transactions.md)
 - [Contribuição](contributing.md)
 - [Deploy](deployment.md)
 - [Runbook de operação](operations/runbook.md)

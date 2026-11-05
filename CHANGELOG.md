@@ -4,6 +4,12 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ## [Unreleased]
 
+### Added
+
+- Documentado o contrato do CRUD web de transações (#167), com filtros, paginação,
+  preservação de centavos/origem e tratamento de resultados incertos no frontend.
+  A API e suas regras financeiras permanecem sem alteração.
+
 ## [v1.12.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.12.0) — 2026-11-05
 
 ### Added
