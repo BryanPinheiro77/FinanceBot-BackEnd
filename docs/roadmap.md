@@ -1,17 +1,14 @@
 # Roadmap
 
-O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não uma promessa de datas. Estado reconciliado em 25/10/2026 (UTC). Última release publicada: v1.11.1.
-Sessão web publicada e validada; backup contínuo permanece pendente.
-
-## Promoção em andamento — v1.12.0
-
-- [Dashboard mensal (#164)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/164):
-  implementação pronta e validada localmente nos dois repositórios; publicação
-  coordenada da API antes do frontend. [Escopo e validação](releases/v1.12.0.md).
-- A #122 continua acompanhando os demais fluxos web; esta entrega não inclui os
-  CRUDs de transações, contas ou categorias.
+O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não uma promessa de datas. Estado reconciliado em 05/11/2026 (UTC). Última release publicada: v1.12.0.
+Sessão web e dashboard mensal publicados; backup contínuo permanece pendente.
 
 ## Entregue
+
+- Dashboard mensal com cards, gráficos, tabela acessível e resumo autenticado da API:
+  [v1.12.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.12.0),
+  issue [#164](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/164).
+  [Notas e evidências](releases/v1.12.0.md). Os demais fluxos da #122 continuam abertos.
 
 - Lembretes assíncronos via RabbitMQ: [v1.8.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.8.0).
 - Observabilidade inicial: [v1.8.1](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.8.1); deploy e acesso privado: [v1.9.1](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.9.1).
@@ -37,7 +34,7 @@ Sessão web publicada e validada; backup contínuo permanece pendente.
 - [Melhorias da landing page (#208)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/208): identidade visual, animações, responsividade e acessibilidade, no repositório do frontend.
 
 - [Planos, assinatura e limites (#121)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/121): definir o contrato do produto antes de cobrança; preservar a instalação self-hosted.
-- [Dashboard web inicial (#122)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/122): neste repositório, limitar o trabalho aos contratos e endpoints da API; o frontend não está aqui. A [#164](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/164) detalha a finalização visual e funcional dos cards e gráficos.
+- [Dashboard web inicial (#122)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/122): neste repositório, limitar o trabalho aos contratos e endpoints da API; o frontend não está aqui. O resumo mensal da [#164](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/164) foi publicado; os demais fluxos e CRUDs web continuam nesta frente.
 - [IA como camada de enriquecimento com fallback determinístico (#120)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/120): evolução além da interpretação OpenAI já disponível.
 
 ## Frentes abertas de manutenção
