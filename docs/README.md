@@ -19,6 +19,7 @@
 - [Desenvolvimento local](development.md)
 - [Arquitetura](architecture.md)
 - [Back-end da API](api.md)
+- [Resumo mensal do dashboard](dashboard.md)
 - [Consistência de transações](transaction-consistency.md)
 - [Idempotência de criação REST e Telegram](transaction-idempotency.md)
 - [Back-end do bot Telegram](telegram-bot.md)

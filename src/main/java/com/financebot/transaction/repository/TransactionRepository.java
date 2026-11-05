@@ -3,6 +3,7 @@ package com.financebot.transaction.repository;
 import com.financebot.alert.port.ExpenseHistoryPort;
 import com.financebot.alert.port.InstallmentRiskPort;
 import com.financebot.alert.port.SummaryTransactionPort;
+import com.financebot.dashboard.port.DashboardTransactionPort;
 import com.financebot.transaction.domain.Transaction;
 import com.financebot.transaction.domain.TransactionType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,7 +17,19 @@ import java.util.List;
 import java.util.Optional;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long>, JpaSpecificationExecutor<Transaction>,
-        ExpenseHistoryPort, InstallmentRiskPort, SummaryTransactionPort {
+        ExpenseHistoryPort, InstallmentRiskPort, SummaryTransactionPort, DashboardTransactionPort {
+
+    @Query("""
+           select new com.financebot.dashboard.port.DashboardTransactionPort$Total(
+               t.date, t.type, t.category.id, t.category.name, sum(t.amount), count(t))
+           from Transaction t
+           where t.user.id = :userId and t.date between :startDate and :endDate
+           group by t.date, t.type, t.category.id, t.category.name
+           """)
+    List<DashboardTransactionPort.Total> summarizeForDashboard(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 
     Optional<Transaction> findByIdAndUserId(Long id, Long userId);
 

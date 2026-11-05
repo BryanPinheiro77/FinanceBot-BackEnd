@@ -4,6 +4,12 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ## [Unreleased]
 
+### Added
+
+- Resumo mensal autenticado para o dashboard web (#164), com totais em centavos,
+  série diária completa e despesas por categoria, calculados na API em uma consulta
+  agregada e isolados por usuário. Contrato e ordem de publicação documentados.
+
 ## [v1.11.1](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.11.1) — 2026-10-25
 
 ### Security
