@@ -4,6 +4,28 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ## [Unreleased]
 
+## v1.14.0 — 2026-11-05
+
+### Added
+
+- CRUD web de transações (#167) no repositório frontend, com filtros por período,
+  tipo, conta e categoria, paginação, confirmação de exclusão e centavos exatos.
+- Contrato e limites documentados, incluindo parcelas individuais e recuperação
+  conservadora de resultados incertos. A API mantém suas regras e endpoints.
+
+### Operation
+
+- Integração com as sessões revogáveis da v1.13.0 preservada no frontend.
+  A #167 não introduz migrations, dependências ou variáveis novas.
+
+### Tests
+
+- Frontend integrado à main: 73 testes unitários/proxy, 36 cenários de transações,
+  18 de dashboard e 8 de sessão aprovados. Landing: 41 aprovados e 4 skips existentes.
+- Typecheck, build e lint dos arquivos alterados aprovados; npm audit com nove
+  avisos moderados existentes e nenhum alto/crítico. Não houve mudança de Java
+  nesta entrega; validação Maven local não foi reexecutada para a #167.
+
 ## v1.13.0 — 2026-11-05
 
 ### Security
