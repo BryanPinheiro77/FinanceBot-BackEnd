@@ -1,6 +1,9 @@
 package com.financebot.security.jwt;
 
 import com.financebot.security.userdetails.CustomUserDetailsService;
+import com.financebot.auth.session.AuthSessionService;
+import com.financebot.user.domain.User;
+import com.financebot.user.domain.UserRole;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +22,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class JwtAuthenticationFilterTest {
     @Mock JwtService jwtService;
+    @Mock AuthSessionService sessions;
     @Mock CustomUserDetailsService userDetailsService;
     @Mock FilterChain filterChain;
 
@@ -29,7 +33,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void shouldSkipPublicRoutes() throws Exception {
-        TestableFilter filter = new TestableFilter(jwtService, userDetailsService);
+        TestableFilter filter = new TestableFilter(jwtService, userDetailsService, sessions);
         MockHttpServletRequest request = request("/auth/login", null);
 
         filter.invoke(request, new MockHttpServletResponse(), filterChain);
@@ -40,7 +44,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void shouldSkipRequestWithoutBearerToken() throws Exception {
-        TestableFilter filter = new TestableFilter(jwtService, userDetailsService);
+        TestableFilter filter = new TestableFilter(jwtService, userDetailsService, sessions);
         MockHttpServletRequest request = request("/transactions", "Basic abc");
 
         filter.invoke(request, new MockHttpServletResponse(), filterChain);
@@ -51,13 +55,17 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void shouldAuthenticateValidBearerToken() throws Exception {
-        TestableFilter filter = new TestableFilter(jwtService, userDetailsService);
-        UserDetails details = org.springframework.security.core.userdetails.User.withUsername("a@b.com")
-                .password("secret").roles("USER").build();
+        TestableFilter filter = new TestableFilter(jwtService, userDetailsService, sessions);
+        User details = new User();
+        details.setId(1L);
+        details.setEmail("a@b.com");
+        details.setRole(UserRole.USER);
         MockHttpServletRequest request = request("/transactions", "Bearer token");
         when(jwtService.extractUsername("token")).thenReturn("a@b.com");
         when(userDetailsService.loadUserByUsername("a@b.com")).thenReturn(details);
         when(jwtService.isTokenValid("token", details)).thenReturn(true);
+        when(jwtService.extractClaim(eq("token"), any())).thenReturn("session");
+        when(sessions.isActive("session", 1L)).thenReturn(true);
 
         filter.invoke(request, new MockHttpServletResponse(), filterChain);
 
@@ -68,7 +76,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void shouldClearContextWhenTokenIsInvalid() throws Exception {
-        TestableFilter filter = new TestableFilter(jwtService, userDetailsService);
+        TestableFilter filter = new TestableFilter(jwtService, userDetailsService, sessions);
         MockHttpServletRequest request = request("/transactions", "Bearer invalid");
         when(jwtService.extractUsername("invalid")).thenThrow(new io.jsonwebtoken.JwtException("invalid"));
 
@@ -80,7 +88,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void shouldKeepExistingAuthentication() throws Exception {
-        TestableFilter filter = new TestableFilter(jwtService, userDetailsService);
+        TestableFilter filter = new TestableFilter(jwtService, userDetailsService, sessions);
         var existing = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken("existing", null);
         SecurityContextHolder.getContext().setAuthentication(existing);
         MockHttpServletRequest request = request("/transactions", "Bearer token");
@@ -100,8 +108,8 @@ class JwtAuthenticationFilterTest {
     }
 
     private static class TestableFilter extends JwtAuthenticationFilter {
-        TestableFilter(JwtService jwtService, CustomUserDetailsService service) {
-            super(jwtService, service);
+        TestableFilter(JwtService jwtService, CustomUserDetailsService service, AuthSessionService sessions) {
+            super(jwtService, service, sessions);
         }
 
         void invoke(MockHttpServletRequest request, MockHttpServletResponse response, FilterChain chain)

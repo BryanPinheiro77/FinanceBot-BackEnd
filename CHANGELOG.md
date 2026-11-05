@@ -4,6 +4,17 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ## [Unreleased]
 
+## v1.13.0 — 2026-11-05
+
+### Security
+
+- Logout revoga todos os tokens da sessão no servidor, preservando outros logins.
+- Access token limitado a 15 minutos, refresh opaco rotativo com detecção de replay
+  e sessão absoluta de 8 horas, persistidos pela nova migration V18.
+- API valida ociosidade de 1 hora mais aviso de 60 segundos; contratos de consulta
+  da sessão e confirmação de atividade para integração web.
+- JWTs legados sem sessão deixam de ser aceitos; usuários precisam entrar novamente.
+
 ## [v1.12.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.12.0) — 2026-11-05
 
 ### Added
