@@ -7,7 +7,8 @@ import com.financebot.auth.mapper.AuthMapper;
 import com.financebot.category.service.CategoryService;
 import com.financebot.common.exception.UnauthorizedException;
 import com.financebot.common.exception.ValidationException;
-import com.financebot.security.jwt.JwtService;
+import com.financebot.auth.session.AuthSessionService;
+import com.financebot.auth.dto.response.SessionTokens;
 import com.financebot.user.domain.User;
 import com.financebot.user.domain.UserRole;
 import com.financebot.user.repository.UserRepository;
@@ -20,18 +21,18 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
+    private final AuthSessionService sessions;
     private final CategoryService categoryService;
     private final AuthMapper authMapper;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
-                       JwtService jwtService,
+                       AuthSessionService sessions,
                        CategoryService categoryService,
                        AuthMapper authMapper) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
+        this.sessions = sessions;
         this.categoryService = categoryService;
         this.authMapper = authMapper;
     }
@@ -55,11 +56,12 @@ public class AuthService {
 
         categoryService.createDefaultCategoriesForUser(savedUser);
 
-        String token = jwtService.generateToken(savedUser);
+        SessionTokens token = sessions.create(savedUser);
 
         return authMapper.toResponse(token, savedUser);
     }
 
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         String normalizedEmail = request.getEmail().trim().toLowerCase();
 
@@ -72,7 +74,7 @@ public class AuthService {
             throw new UnauthorizedException("Email ou senha inválidos");
         }
 
-        String token = jwtService.generateToken(user);
+        SessionTokens token = sessions.create(user);
 
         return authMapper.toResponse(token, user);
     }

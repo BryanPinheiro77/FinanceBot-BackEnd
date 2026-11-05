@@ -7,7 +7,8 @@ import com.financebot.auth.mapper.AuthMapper;
 import com.financebot.category.service.CategoryService;
 import com.financebot.common.exception.UnauthorizedException;
 import com.financebot.common.exception.ValidationException;
-import com.financebot.security.jwt.JwtService;
+import com.financebot.auth.session.AuthSessionService;
+import com.financebot.auth.dto.response.SessionTokens;
 import com.financebot.user.domain.User;
 import com.financebot.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,7 @@ import static org.mockito.Mockito.*;
 class AuthServiceTest {
     @Mock UserRepository userRepository;
     @Mock PasswordEncoder passwordEncoder;
-    @Mock JwtService jwtService;
+    @Mock AuthSessionService sessions;
     @Mock CategoryService categoryService;
     @Mock AuthMapper authMapper;
     @InjectMocks AuthService authService;
@@ -41,12 +42,12 @@ class AuthServiceTest {
         request.setEmail(" Bryan@Email.COM ");
         request.setPassword("secret");
         User saved = user(1L, "bryan@email.com");
-        AuthResponse expected = new AuthResponse("token", "Bearer", 1L, "Bryan", "bryan@email.com", "USER");
+        AuthResponse expected = new AuthResponse("token", "Bearer", 1L, "Bryan", "bryan@email.com", "USER", "refresh", null, null);
         when(userRepository.existsByEmail("bryan@email.com")).thenReturn(false);
         when(passwordEncoder.encode("secret")).thenReturn("encoded");
         when(userRepository.save(any(User.class))).thenReturn(saved);
-        when(jwtService.generateToken(saved)).thenReturn("token");
-        when(authMapper.toResponse("token", saved)).thenReturn(expected);
+        when(sessions.create(saved)).thenReturn(new SessionTokens("token", "refresh", null, null));
+        when(authMapper.toResponse(new SessionTokens("token", "refresh", null, null), saved)).thenReturn(expected);
 
         AuthResponse response = authService.register(request);
 
@@ -76,11 +77,11 @@ class AuthServiceTest {
         request.setEmail(" Bryan@Email.com ");
         request.setPassword("secret");
         User user = user(1L, "bryan@email.com");
-        AuthResponse expected = new AuthResponse("token", "Bearer", 1L, "Bryan", "bryan@email.com", "USER");
+        AuthResponse expected = new AuthResponse("token", "Bearer", 1L, "Bryan", "bryan@email.com", "USER", "refresh", null, null);
         when(userRepository.findByEmail("bryan@email.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("secret", user.getPassword())).thenReturn(true);
-        when(jwtService.generateToken(user)).thenReturn("token");
-        when(authMapper.toResponse("token", user)).thenReturn(expected);
+        when(sessions.create(user)).thenReturn(new SessionTokens("token", "refresh", null, null));
+        when(authMapper.toResponse(new SessionTokens("token", "refresh", null, null), user)).thenReturn(expected);
 
         assertThat(authService.login(request)).isEqualTo(expected);
     }

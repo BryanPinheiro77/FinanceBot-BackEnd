@@ -6,7 +6,7 @@ import com.financebot.account.repository.AccountRepository;
 import com.financebot.category.domain.Category;
 import com.financebot.category.domain.CategoryType;
 import com.financebot.category.repository.CategoryRepository;
-import com.financebot.security.jwt.JwtService;
+import com.financebot.auth.session.AuthSessionService;
 import com.financebot.transaction.idempotency.TransactionIdempotencyService;
 import com.financebot.user.domain.User;
 import com.financebot.user.domain.UserRole;
@@ -93,7 +93,7 @@ class TransactionIdempotencyIntegrationTest {
     @Autowired UserRepository users;
     @Autowired AccountRepository accounts;
     @Autowired CategoryRepository categories;
-    @Autowired JwtService jwt;
+    @Autowired AuthSessionService sessions;
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired TransactionIdempotencyService idempotency;
@@ -514,7 +514,7 @@ class TransactionIdempotencyIntegrationTest {
         Category category = new Category();
         category.setName("Categoria"); category.setType(CategoryType.EXPENSE); category.setUser(user);
         category = categories.save(category);
-        return new Actor(user.getId(), account.getId(), category.getId(), "Bearer " + jwt.generateToken(user));
+        return new Actor(user.getId(), account.getId(), category.getId(), "Bearer " + sessions.create(user).token());
     }
 
     private long transactionCount() { return jdbc.queryForObject("SELECT count(*) FROM transactions", Long.class); }

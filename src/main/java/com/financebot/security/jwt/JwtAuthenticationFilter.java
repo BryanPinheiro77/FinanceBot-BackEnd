@@ -2,6 +2,8 @@ package com.financebot.security.jwt;
 
 import com.financebot.security.userdetails.CustomUserDetailsService;
 import io.jsonwebtoken.JwtException;
+import com.financebot.auth.session.AuthSessionService;
+import com.financebot.user.domain.User;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,11 +22,13 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final AuthSessionService sessions;
     private final CustomUserDetailsService customUserDetailsService;
 
     public JwtAuthenticationFilter(JwtService jwtService,
-                                   CustomUserDetailsService customUserDetailsService) {
+                                   CustomUserDetailsService customUserDetailsService, AuthSessionService sessions) {
         this.jwtService = jwtService;
+        this.sessions = sessions;
         this.customUserDetailsService = customUserDetailsService;
     }
 
@@ -35,7 +39,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String requestPath = request.getServletPath();
 
-        if (requestPath.startsWith("/auth")
+        if ((requestPath.equals("/auth/login") || requestPath.equals("/auth/register")
+                || requestPath.equals("/auth/refresh") || requestPath.equals("/auth/logout"))
                 || requestPath.startsWith("/swagger-ui")
                 || requestPath.startsWith("/v3/api-docs")
                 || requestPath.startsWith("/actuator")) {
@@ -57,7 +62,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = customUserDetailsService.loadUserByUsername(userEmail);
 
-                if (jwtService.isTokenValid(jwt, userDetails)) {
+                if (jwtService.isTokenValid(jwt, userDetails)
+                        && userDetails instanceof User user
+                        && sessions.isActive(jwtService.extractClaim(jwt, claims -> claims.get("sid", String.class)), user.getId())) {
                     UsernamePasswordAuthenticationToken authenticationToken =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,

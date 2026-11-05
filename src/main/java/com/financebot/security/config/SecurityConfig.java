@@ -55,7 +55,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(new DispatcherTypeRequestMatcher(DispatcherType.ERROR)).permitAll()
                         .requestMatchers(
-                                "/auth/**",
+                                "/auth/login", "/auth/register", "/auth/refresh", "/auth/logout",
                                 "/error",
                                 "/api/health",
                                 "/actuator/health",
