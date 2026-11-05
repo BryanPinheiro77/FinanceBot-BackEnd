@@ -59,6 +59,13 @@ quando o ano ou o mês não é informado, ele usa a próxima ocorrência válida
 Para recorrências ativas, frases como `me avise dois dias antes da internet vencer` vinculam
 o lembrete pela descrição e calculam o aviso a partir do próximo vencimento.
 
+## Dashboard mensal
+
+`GET /dashboard/monthly-summary?month=AAAA-MM` retorna receitas, despesas,
+resultado, contagem, série diária completa e despesas por categoria do usuário
+autenticado. O período é obrigatório; totais são calculados com `BigDecimal`.
+Consulte [contrato, semântica e ordem de publicação](dashboard.md).
+
 ## Dependências de runtime
 
 - PostgreSQL: dados da aplicação e migrations Flyway;

@@ -5,7 +5,7 @@ O frontend não faz parte deste repositório. Esta página registra a fronteira 
 ## Integração atual
 
 - URL base local da API: `http://localhost:8080`;
-- autenticação da API: JWT por Bearer; evolução da sessão web via servidor do frontend e cookie protegido em [web-session.md](security/web-session.md);
+- autenticação da API: JWT por Bearer; sessão web publicada via servidor do frontend e cookie protegido em [web-session.md](security/web-session.md);
 - documentação interativa: `/swagger-ui/index.html`;
 - health check: `/api/health`;
 - CORS: configurado por `CORS_ALLOWED_ORIGINS`.
@@ -27,10 +27,19 @@ reconciliar os lançamentos antes de reenviar. Consulte
 [Idempotência de criação REST](transaction-idempotency.md) e
 [Consistência de transações](transaction-consistency.md).
 
+## Dashboard mensal
+
+A #164 adiciona `GET /dashboard/monthly-summary?month=AAAA-MM`: totais, resultado,
+contagem de lançamentos, série diária completa e despesas por categoria, sempre
+limitados ao usuário autenticado. Regras e exemplos em [Resumo mensal](dashboard.md).
+A API deve ser publicada antes do frontend consumidor; falhas não representam
+totais zerados. O navegador usa o proxy de sessão web e não recalcula regras
+financeiras nem soma páginas de transações para construir o resumo.
+
 ## Repositório do frontend
 
 O frontend é mantido em [FinanceBot-FrontEnd](https://github.com/BryanPinheiro77/FinanceBot-FrontEnd).
 Setup, stack e processo de publicação pertencem ao README/documentação daquele
 repositório. Aqui ficam os contratos da API e a [ordem de compatibilidade da sessão
 web](security/web-session.md), incluindo a assinatura opcional da origem usada
-nas cotas de login/cadastro. Preparar esse contrato não comprova publicação do frontend.
+nas cotas de login/cadastro. A publicação coordenada foi validada na [v1.11.1](releases/v1.11.1.md). Os guias de configuração continuam exigindo validação própria para outras instalações.

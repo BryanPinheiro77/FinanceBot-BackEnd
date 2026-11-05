@@ -1,8 +1,15 @@
 # Roadmap
 
-O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não uma promessa de datas. Estado reconciliado em 25/10/2026 (UTC). Última release publicada: v1.11.0.
-Candidata em preparação: v1.11.1, com contrato de sessão web e ferramentas operacionais.
-A publicação coordenada ainda precisa ser verificada; backup contínuo permanece pendente.
+O FinanceBot está em desenvolvimento inicial. O roadmap indica direção, não uma promessa de datas. Estado reconciliado em 25/10/2026 (UTC). Última release publicada: v1.11.1.
+Sessão web publicada e validada; backup contínuo permanece pendente.
+
+## Promoção em andamento — v1.12.0
+
+- [Dashboard mensal (#164)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/164):
+  implementação pronta e validada localmente nos dois repositórios; publicação
+  coordenada da API antes do frontend. [Escopo e validação](releases/v1.12.0.md).
+- A #122 continua acompanhando os demais fluxos web; esta entrega não inclui os
+  CRUDs de transações, contas ou categorias.
 
 ## Entregue
 
@@ -20,6 +27,10 @@ A publicação coordenada ainda precisa ser verificada; backup contínuo permane
   isolamento, resumos opt-in e builds Java sem root: [v1.11.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.11.0).
   Issues #132, #134, #182, #215 e #217; promoção no PR #224.
   [Notas e evidências da publicação](releases/v1.11.0.md).
+
+- Sessão web com cookie protegido no frontend, contrato de origem assinada da API,
+  runbook/playbook e ferramentas opt-in de backup: [v1.11.1](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.11.1).
+  [Notas e evidências da publicação](releases/v1.11.1.md). Backup contínuo não ativado.
 
 ## Próximos temas
 
