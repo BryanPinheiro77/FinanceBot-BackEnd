@@ -17,9 +17,73 @@ O backend não precisa aceitar cookies entre sites nem liberar CORS para esse tr
 A proteção CSRF fica na fronteira que recebe cookies: origem exata configurada,
 header próprio exigido para mutações e rejeição de Fetch Metadata de outro site/origem.
 Não desabilitar essas verificações para contornar problemas de configuração.
-Logout remove o cookie; não revoga uma cópia do JWT que já tenha sido roubada.
-O JWT da API conserva sua expiração própria e a sessão web limita o cookie a no
-máximo oito horas, nunca além de `exp`. Não há refresh token nesta etapa.
+Logout exige confirmação da revogação na API antes de limpar os cookies. Todos os
+access tokens e refresh tokens da mesma sessão deixam de funcionar, inclusive cópias
+roubadas. Outras sessões do usuário continuam válidas. Se a API estiver indisponível,
+o frontend informa a falha e preserva a credencial para tentar a revogação novamente.
+
+## Access token, refresh e ociosidade
+
+- Senhas continuam com hash BCrypt. JWT continua assinado com HMAC; não há chave
+  JWT no frontend. Assinatura assimétrica separaria emissores de validadores, mas
+  não implementaria revogação por si só.
+- Access token: no máximo **15 minutos**. `JWT_EXPIRATION` é em milissegundos, com
+  padrão `900000` e teto de `900000`, mesmo se o ambiente ainda configurar 24 horas.
+- Cada JWT de login/cadastro/refresh contém `sid`, um identificador aleatório da
+  sessão. A API verifica usuário, validade e sessão ativa em cada chamada protegida.
+  JWTs antigos sem `sid` são rejeitados: será necessário entrar novamente.
+- Refresh token: segredo opaco de 256 bits, persistido somente como SHA-256 em
+  `auth_refresh_tokens`. Rotação em toda renovação; o histórico de tokens consumidos
+  permite detectar replay. Reutilização revoga a sessão inteira e retorna `401`.
+  Renovação, atividade e logout usam lock no banco para serializar alterações.
+- Sessão: máximo absoluto de **8 horas**, sem extensão pelo refresh. Após **1 hora
+  sem interação**, o navegador mostra “Você será desconectado” por **60 segundos**,
+  com “Continuar conectado” e “Sair agora”. Ao final, solicita logout. A própria API
+  rejeita a sessão após 1 hora + 60 segundos sem atividade, mesmo sem JavaScript.
+- “Continuar conectado” confirma atividade no servidor. Foco da janela, consultas,
+  refresh e timers não atualizam o prazo de ociosidade. A confirmação não estende o
+  limite absoluto de 8 horas; nesse limite é necessário entrar novamente.
+- O browser solicita refresh de 15 em 15 minutos e quando uma chamada protegida
+  retorna `401`; só repete a chamada original após renovação bem sucedida. O proxy
+  não consome outro refresh se já recebeu um access com mais de 30 segundos de vida.
+  Web Locks serializa renovações entre abas da mesma origem; sem suporte a Web Locks,
+  apenas chamadas na mesma aba são agrupadas e uma corrida pode exigir novo login.
+- Cookies separados: `__Host-financebot.session` (access, nunca além de `exp`) e
+  `__Host-financebot.refresh` (até o fim absoluto da sessão), ambos host-only,
+  `HttpOnly`, `Secure` e `SameSite=Lax`. Desenvolvimento loopback usa os nomes sem
+  `__Host-` e sem `Secure`. Nenhum dos dois aparece no JSON entregue ao browser.
+- Eventos entre abas carregam apenas prazos de atividade ou aviso de logout, sem
+  credenciais. Reload e retorno de suspensão consultam o prazo do servidor. GET/SSR
+  não rotaciona refresh: quando necessário, o guard envia a uma página de renovação
+  que faz POST protegido por CSRF no navegador.
+- Migration nova: `V18__create_auth_sessions.sql`. Limpeza diária remove sessões
+  além das 8 horas e seu histórico de refresh por `ON DELETE CASCADE`. Não editar
+  migrations anteriores. A indisponibilidade do banco não libera acesso autenticado.
+
+### Contrato REST (servidor web e demais clientes)
+
+| Endpoint | Entrada | Saída / efeito |
+|---|---|---|
+| `POST /auth/login`, `POST /auth/register` | Credenciais existentes | Campos anteriores + `refreshToken`, `sessionExpiresAt`, `lastActivityAt` |
+| `POST /auth/refresh` | JSON `{ "refreshToken": "..." }` | `token`, novo `refreshToken`, `sessionExpiresAt`, `lastActivityAt`; não altera atividade |
+| `POST /auth/logout` | JSON `{ "refreshToken": "..." }` | `204`, revoga a sessão; refresh consumido também permite logout; token desconhecido válido é idempotente |
+| `GET /auth/session` | Bearer válido | `lastActivityAt`, `idleWarningAt`, `idleExpiresAt`, `sessionExpiresAt` |
+| `POST /auth/activity` | Bearer válido | Confirma interação e devolve os mesmos prazos; sessão encerrada retorna `401` |
+
+O proxy web obtém o refresh exclusivamente de seu cookie, nunca do JSON ou do
+Authorization enviados pelo JavaScript. Renovação e logout estão sujeitos às mesmas
+verificações CSRF das demais mutações. Respostas de autenticação usam `no-store`.
+O contrato de token em JSON da API é destinado a clientes REST/servidor web; o proxy
+substitui esse corpo por `{ "authenticated": true }` antes de responder ao navegador.
+
+### Publicação coordenada
+
+Preparar API e frontend juntos. A API exige `sid` e aplica expiração curta, portanto
+clientes legados precisarão entrar novamente e atualizar seu fluxo de refresh.
+Aplicar V18 pela inicialização normal do Flyway, publicar a API e então o frontend
+compatível em janela autorizada. Não é necessário trocar `JWT_SECRET` nem o hash das
+senhas. Configurar `JWT_EXPIRATION=900000` para explicitar o limite. Nenhum deploy,
+commit ou push faz parte da preparação local desta mudança.
 
 ## Preservação da cota de login/cadastro
 
