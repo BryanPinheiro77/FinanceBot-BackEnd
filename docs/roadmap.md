@@ -29,6 +29,14 @@ Sessão web e dashboard mensal publicados; backup contínuo permanece pendente.
   runbook/playbook e ferramentas opt-in de backup: [v1.11.1](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.11.1).
   [Notas e evidências da publicação](releases/v1.11.1.md). Backup contínuo não ativado.
 
+## Release preparada
+
+- **v1.13.0 — sessões revogáveis:** logout no servidor, access de 15 minutos,
+  refresh rotativo, ociosidade de 1 hora com aviso de 60 segundos e coordenação
+  entre abas no frontend. Migration V18 e novo login obrigatórios na publicação.
+  [Escopo e validação](releases/v1.13.0.md). Confirmar promoção pelo SHA e health
+  checks; a implementação preparada não comprova publicação em produção.
+
 ## Próximos temas
 
 - [Melhorias da landing page (#208)](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/issues/208): identidade visual, animações, responsividade e acessibilidade, no repositório do frontend.

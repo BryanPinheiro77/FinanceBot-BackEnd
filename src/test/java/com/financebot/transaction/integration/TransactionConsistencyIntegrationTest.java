@@ -10,7 +10,7 @@ import com.financebot.recurring.domain.RecurrenceFrequency;
 import com.financebot.recurring.domain.RecurringTransaction;
 import com.financebot.recurring.repository.RecurringTransactionRepository;
 import com.financebot.recurring.service.RecurringTransactionExecutionService;
-import com.financebot.security.jwt.JwtService;
+import com.financebot.auth.session.AuthSessionService;
 import com.financebot.transaction.application.command.CreateExistingInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.CreateInstallmentTransactionCommand;
 import com.financebot.transaction.application.command.UpdateTransactionCommand;
@@ -120,7 +120,7 @@ class TransactionConsistencyIntegrationTest {
     @Autowired UpdateTransactionUseCase updateTransaction;
     @Autowired RecurringTransactionExecutionService executeRecurring;
     @Autowired MockMvc mvc;
-    @Autowired JwtService jwt;
+    @Autowired AuthSessionService sessions;
     @Autowired tools.jackson.databind.ObjectMapper json;
 
     private Fixture fixture;
@@ -184,7 +184,7 @@ class TransactionConsistencyIntegrationTest {
     void fractionalMonthlyAmountCannotBeHiddenByMultiplication() throws Exception {
         List<Map<String, Object>> before = transactionSnapshot();
         mvc.perform(post("/transactions/installments/existing")
-                        .header("Authorization", "Bearer " + jwt.generateToken(fixture.user))
+                        .header("Authorization", "Bearer " + sessions.create(fixture.user).token())
                         .contentType(MediaType.APPLICATION_JSON).content("""
                         {"monthlyAmount":0.015,"description":"Compra pequena",
                          "firstRemainingInstallmentDate":"2026-01-01","type":"EXPENSE","sourceType":"WEB",
@@ -212,7 +212,7 @@ class TransactionConsistencyIntegrationTest {
         String body = json.writeValueAsString(new CreateInstallmentTransactionRequest(new BigDecimal("0.15"),
                 "Compra pequena", firstDate, TransactionType.EXPENSE, SourceType.WEB,
                 fixture.accountId, fixture.expenseCategoryId, 10));
-        String token = "Bearer " + jwt.generateToken(fixture.user);
+        String token = "Bearer " + sessions.create(fixture.user).token();
         var preview = json.readTree(mvc.perform(post("/analysis/financial-commitment/precheck/installment")
                         .header("Authorization", token).contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
@@ -253,7 +253,7 @@ class TransactionConsistencyIntegrationTest {
         List<Map<String, Object>> before = transactionSnapshot();
         BigDecimal balanceBefore = balance();
         mvc.perform(put("/transactions/" + fixture.transactionId)
-                        .header("Authorization", "Bearer " + jwt.generateToken(fixture.user))
+                        .header("Authorization", "Bearer " + sessions.create(fixture.user).token())
                         .contentType(MediaType.APPLICATION_JSON).content("""
                         {"amount":%s,"description":"Tentativa inválida","date":"2026-03-01",
                          "type":"EXPENSE","sourceType":"WEB","accountId":%d,"categoryId":%d}
@@ -342,7 +342,7 @@ class TransactionConsistencyIntegrationTest {
             InstallmentKind kind, String amount, int count) {
         boolean existing = kind == InstallmentKind.EXISTING;
         return post(existing ? "/transactions/installments/existing" : "/transactions/installments")
-                .header("Authorization", "Bearer " + jwt.generateToken(fixture.user))
+                .header("Authorization", "Bearer " + sessions.create(fixture.user).token())
                 .contentType(MediaType.APPLICATION_JSON).content("""
                         {"totalAmount":%s,"description":"Compra pequena","%s":"2026-01-01",
                          "type":"EXPENSE","sourceType":"WEB","accountId":%d,"categoryId":%d,

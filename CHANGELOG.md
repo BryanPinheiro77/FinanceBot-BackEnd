@@ -4,11 +4,30 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ## [Unreleased]
 
+## v1.14.0 — 2026-11-05
+
 ### Added
 
-- Documentado o contrato do CRUD web de transações (#167), com filtros, paginação,
-  preservação de centavos/origem e tratamento de resultados incertos no frontend.
-  A API e suas regras financeiras permanecem sem alteração.
+- CRUD web de transações (#167) no repositório frontend, com filtros por período,
+  tipo, conta e categoria, paginação, confirmação de exclusão e centavos exatos.
+- Contrato e limites documentados, incluindo parcelas individuais e recuperação
+  conservadora de resultados incertos. A API mantém suas regras e endpoints.
+
+### Operation
+
+- Integração com as sessões revogáveis da v1.13.0 preservada no frontend.
+  A #167 não introduz migrations, dependências ou variáveis novas.
+
+## v1.13.0 — 2026-11-05
+
+### Security
+
+- Logout revoga todos os tokens da sessão no servidor, preservando outros logins.
+- Access token limitado a 15 minutos, refresh opaco rotativo com detecção de replay
+  e sessão absoluta de 8 horas, persistidos pela nova migration V18.
+- API valida ociosidade de 1 hora mais aviso de 60 segundos; contratos de consulta
+  da sessão e confirmação de atividade para integração web.
+- JWTs legados sem sessão deixam de ser aceitos; usuários precisam entrar novamente.
 
 ## [v1.12.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.12.0) — 2026-11-05
 

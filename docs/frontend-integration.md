@@ -49,3 +49,11 @@ Setup, stack e processo de publicação pertencem ao README/documentação daque
 repositório. Aqui ficam os contratos da API e a [ordem de compatibilidade da sessão
 web](security/web-session.md), incluindo a assinatura opcional da origem usada
 nas cotas de login/cadastro. A publicação coordenada foi validada na [v1.11.1](releases/v1.11.1.md). Os guias de configuração continuam exigindo validação própria para outras instalações.
+
+## Sessões revogáveis
+
+O contrato de autenticação agora inclui access de até 15 minutos, refresh opaco com
+rotação, revogação por sessão no logout e inatividade de 1 hora com aviso de 60
+segundos. Consultar endpoints, cookies, concorrência entre abas e publicação
+coordenada em [sessão web](security/web-session.md#access-token-refresh-e-ociosidade).
+A interface é implementada exclusivamente no repositório FinanceBot-FrontEnd.

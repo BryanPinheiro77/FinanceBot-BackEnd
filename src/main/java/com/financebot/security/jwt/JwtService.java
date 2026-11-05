@@ -33,7 +33,7 @@ public class JwtService {
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
         Date now = new Date();
-        Date expirationDate = new Date(now.getTime() + jwtExpiration);
+        Date expirationDate = new Date(now.getTime() + Math.min(jwtExpiration, 900_000L));
 
         return Jwts.builder()
                 .claims(extraClaims)
