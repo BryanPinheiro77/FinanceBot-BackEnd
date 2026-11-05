@@ -4,7 +4,7 @@ As versões do produto seguem as [regras de release](docs/releases.md). O histó
 
 ## [Unreleased]
 
-## [v1.12.0] — 2026-11-05
+## [v1.12.0](https://github.com/BryanPinheiro77/FinanceBot-BackEnd/releases/tag/v1.12.0) — 2026-11-05
 
 ### Added
 
